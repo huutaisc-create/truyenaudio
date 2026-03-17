@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack -H 0.0.0.0",
     "dev:https": "node https-proxy.js",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start -H 0.0.0.0",
     "start:https": "node https-proxy.js",
     "lint": "eslint"
