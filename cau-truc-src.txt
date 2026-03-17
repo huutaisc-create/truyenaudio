@@ -1,0 +1,80 @@
+src/
+├── auth.ts                      # Cấu hình NextAuth (Xác thực người dùng)
+├── auth.config.ts               # Các cấu hình Auth bổ sung
+├── middleware.ts                # Middleware của Next.js (bảo vệ routes)
+│
+├── actions/                     # Các Server Actions (Xử lý form, mutate data)
+│   ├── admin.ts
+│   ├── interactions.ts
+│   └── stories.ts
+│
+├── app/                         # App Router của Next.js (Pages, API, Layout)
+│   ├── layout.tsx               # Layout gốc (Root Layout)
+│   ├── page.tsx                 # Trang chủ
+│   ├── globals.css              # File CSS Style toàn cục
+│   │
+│   ├── (auth)/                  # Nhóm route xác thực (bỏ qua tiền tố URL)
+│   │   ├── login/ page.tsx      # Trang Đăng nhập
+│   │   └── register/ page.tsx   # Trang Đăng ký
+│   │
+│   ├── admin/                   # Khu vực quản trị (CMS dành cho Admin)
+│   │   ├── stories/             # Quản lý Truyện
+│   │   │   ├── page.tsx
+│   │   │   ├── create/ page.tsx # Thêm truyện
+│   │   │   └── [id]/            # Quản lý chi tiết Truyện (Sửa, Danh sách chương)
+│   │   │       ├── EditStoryForm.tsx
+│   │   │       └── chapters/    # Quản lý Chương truyển
+│   │   │           ├── create/ CreateChapterForm.tsx
+│   │   │           └── [chapterId]/ edit/ page.tsx
+│   │   └── users/               # Quản lý Users
+│   │
+│   ├── api/                     # Các API Routes (Phục vụ cho Web và Mobile App)
+│   │   ├── auth/                # API Đăng nhập, Đăng ký, Lấy session
+│   │   ├── chapters/            # API gọi nội dung chương
+│   │   ├── chat/                # API hệ thống bình luận / thảo luận
+│   │   ├── history/             # API lưu lịch sử đọc
+│   │   ├── library/             # API lưu tủ kho sách cá nhân
+│   │   ├── stories/             # API kho truyện, danh sách chương
+│   │   ├── tts/                 # API xử lý giọng đọc Text-to-speech
+│   │   └── upload/              # API upload ảnh / âm thanh
+│   │
+│   ├── tai-khoan/               # Khu vực trang cá nhân
+│   │   ├── page.tsx
+│   │   └── cai-dat/ page.tsx
+│   │
+│   ├── tim-kiem/                # Trang tìm kiếm
+│   │   └── page.tsx
+│   │
+│   ├── truyen/                  # View truyện dành cho người đọc
+│   │   └── [slug]/              # Chi tiết truyện
+│   │       ├── page.tsx
+│   │       └── [chapter]/       # Trình đọc chương truyện (Reader)
+│   │           ├── page.tsx
+│   │           └── ReadingClient.tsx
+│   │
+│   ├── tts-test/                # Test tính năng chuyển đổi văn bản sang giọng đọc
+│   └── xep-hang/                # Trang Xếp hạng (Bảng xếp hạng)
+│
+├── components/                  # Chứa các UI Components (Tái sử dụng)
+│   ├── common/                  # Dùng chung (BackToTop, LoadingProgressBar)
+│   ├── home/                    # Component riêng cho trang chủ
+│   ├── layout/                  # Các khối cấu trúc trang (Header, Footer, Search)
+│   ├── providers/               # Context Providers (SessionWrapper cho Auth)
+│   ├── story/                   # Các component tương tác (Review, Nút thao tác)
+│   ├── TTSDemo/                 # Demo Test thử Âm thanh (TTS)
+│   └── ui/                      # Thư mục UI Components cơ bản (shadcn-ui)
+│
+├── config/                      # Cấu hình nâng cao / Data tĩnh
+│   └── customVoices.ts
+│
+├── hooks/                       # Custom React Hooks (Client)
+│   └── useReadingHistory.ts
+│
+├── lib/                         # Thư viện tiện ích, Cấu hình core
+│   ├── constants.ts             # Hằng số
+│   ├── db.ts                    # Kết nối tới Database (Prisma/Mongoose/...)
+│   ├── Piper.ts                 # Cấu hình Piper CLI TTS (Text to Speech)
+│   └── utils.ts                 # Các hàm giúp xử lý string, date,...
+│
+└── types/                       # Khai báo các Type/Interface cho TypeScript
+    └── next-auth.d.ts           # Type hỗ trợ NextAuth

@@ -1,0 +1,225 @@
+═══════════════════════════════════════════════════════════════════
+  WebTruyen TTS — ListeningClient.tsx CHANGELOG
+═══════════════════════════════════════════════════════════════════
+
+v3.2 (current)
+───────────────────────────────────────────────────────────────────
+LOGIC CHANGES:
+- playFromPrefetchBuffer: rewrite hoàn toàn — thay vì gọi
+  streamChapter lại từ đầu khi prefetch chưa xong, dùng
+  pollNewChunks (100ms) để schedule chunks mới từ prefetchedPCMRef
+  khi prefetch generate thêm — không generate lại, không delay
+- Bỏ restart workers hoàn toàn — RAM ổn định ~210MB, workers giữ
+  model cached → generate nhanh hơn
+
+FLOW CHI TIẾT:
+  Chương 1 (streamChapter):
+    1. Generate chunks → play khi đủ BUFFER_AHEAD
+    2. Generate xong (pipelineDone=true) → trigger prefetch chương 2 ngay
+    3. Prefetch chương 2 chạy ngầm song song với audio đang phát
+    4. Audio hết chương 1 → xét 2 case:
+       Case A — prefetch chương 2 Done:
+         - Play toàn bộ buffer chương 2 ngay
+         - Đồng thời trigger prefetch chương 3
+       Case B — prefetch chương 2 chưa Done:
+         - Play chunks đã có ngay (dù chỉ 10/108 chunks)
+         - Poll schedule chunks mới vào AudioContext khi prefetch generate thêm
+         - Khi generate xong chương 2 → trigger prefetch chương 3
+  Chương 2, 3, 4... (playFromPrefetchBuffer):
+    - Lặp lại y chang pattern trên
+    - Không restart RAM ở bất kỳ đâu
+
+───────────────────────────────────────────────────────────────────
+v3.1
+───────────────────────────────────────────────────────────────────
+LOGIC CHANGES:
+- Bỏ restart workers trong finally block
+- Trigger prefetch ngay tại BUFFER_AHEAD (workers còn model cached)
+- Backup trigger prefetch trong finally nếu chưa được trigger
+
+───────────────────────────────────────────────────────────────────
+v3.0
+───────────────────────────────────────────────────────────────────
+LOGIC CHANGES:
+- pollFromBuffer: gọi prefetchNextChapter qua prefetchNextChapterRef.current
+  thay vì trực tiếp — fix race condition selectedVoice='' (closure stale)
+
+BUG CONTEXT:
+- playFromPrefetchBuffer capture prefetchNextChapter cũ (selectedVoice='')
+  → khi trigger prefetch chương 3 từ pollFromBuffer → modelBase thành
+  /models/custom/.onnx.json → 404
+- Không ổn định vì tùy thời điểm closure được tạo
+
+───────────────────────────────────────────────────────────────────
+v2.9
+───────────────────────────────────────────────────────────────────
+LOGIC CHANGES:
+- prefetchNextChapter: bỏ check prefetchingIdRef===id (SKIP bug)
+  chỉ giữ check prefetchDoneRef
+
+BUG CONTEXT:
+- finally set prefetchingIdRef = nextMetaP.id trước khi gọi
+  prefetchNextChapter → bên trong check trùng → SKIP ngay lập tức
+  → prefetch không bao giờ chạy
+
+───────────────────────────────────────────────────────────────────
+v2.8
+───────────────────────────────────────────────────────────────────
+LOGIC CHANGES:
+- Bỏ trigger prefetch trong pollPlayed — workers cũ bị terminate
+  trong finally → prefetch bị stuck chờ response không bao giờ đến
+- Chỉ trigger prefetch trong finally sau restart workers
+- finally: reset prefetchingIdRef=null nếu bị set sớm từ pollPlayed
+
+───────────────────────────────────────────────────────────────────
+v2.7
+───────────────────────────────────────────────────────────────────
+LOGIC CHANGES:
+- Đổi tất cả prefix log thành [W:...] để filter [W thấy được:
+  [W:Step1] [W:Step2] [W:Step3] [W:Poll] [W:AutoNext] [W:Prefetch]
+
+───────────────────────────────────────────────────────────────────
+v2.6
+───────────────────────────────────────────────────────────────────
+LOGIC CHANGES:
+- finally block: thêm log [Step1][Step2][Step3] từng bước
+- audioEmpty handler: thêm audioHandledRef.current = true (thiếu
+  → pollPlayed loop vô hạn sau audioEmpty)
+- audioHandled → audioHandledRef (object) để finally có thể reset
+
+───────────────────────────────────────────────────────────────────
+v1.7
+───────────────────────────────────────────────────────────────────
+LOGIC CHANGES:
+- finally: kick pollPlayed sau restart workers
+- finally: reset audioHandled để poll tiếp tục
+
+───────────────────────────────────────────────────────────────────
+v1.6 (previous)
+───────────────────────────────────────────────────────────────────
+LOGIC CHANGES:
+- pollPlayed: thêm verbose log mỗi tick — log t=, pipelineDone,
+  endTimes count, lastEnd để debug audioEmpty không trigger
+- pollPlayed: fix prefetch trigger condition — bỏ điều kiện
+  `prefetchingIdRef.current === null`, chỉ check `!prefetchDoneRef.current`
+  vì prefetchingIdRef không được reset về null sau khi prefetch xong
+- pollPlayed: [Poll] already handled giờ silent (không log) để
+  tránh spam console
+
+BUG CONTEXT:
+- Vấn đề: chương 1 xong không tự chuyển sang chương 2
+- Nguyên nhân tìm được: prefetchingIdRef giữ giá trị cũ sau prefetch
+  xong → trigger condition luôn false → prefetch không bao giờ chạy
+  → useBuffer = false → fetch bình thường nhưng streamChapterRef
+  có thể bị stale
+
+───────────────────────────────────────────────────────────────────
+v1.5
+───────────────────────────────────────────────────────────────────
+LOGIC CHANGES:
+- finally block (streamChapter): thêm restart workers sau khi
+  pipeline xong — terminate toàn bộ workers, tạo lại pool mới
+  cùng số lượng để clear ONNX memory leak tích lũy qua nhiều infer
+- finally block: set stopFlagRef.current = false sau restart để
+  đảm bảo pollPlayed đang chạy không bị block bởi stopFlag cũ
+
+BUG CONTEXT:
+- Vấn đề: infer time tăng dần qua các chương (chunk đầu chương 1
+  ~300ms, chunk giữa ~4000ms+)
+- Giả thuyết: ONNX WASM tích lũy memory allocation qua nhiều lần
+  infer → restart sạch mỗi chương để reset
+
+───────────────────────────────────────────────────────────────────
+v1.4
+───────────────────────────────────────────────────────────────────
+LOGIC CHANGES:
+- pollPlayed: thêm log khi dừng — '[Poll] stopped by stopFlag',
+  '[Poll] already handled', '[Poll] no actx' để debug
+- auto-next else branch: thêm log '[AutoNext] No buffer — fetching'
+  và '[AutoNext] Fetched' để trace flow fetch bình thường
+- auto-next else branch: set prefetchStopRef.current = true trước
+  khi fetch để dừng prefetch đang chạy dở, tránh tranh worker
+  với streamChapter mới; reset về false sau khi fetch xong
+
+BUG CONTEXT:
+- Log cho thấy audioEmpty trigger 4-5 lần liên tiếp do pollPlayed
+  không dừng sau return
+
+───────────────────────────────────────────────────────────────────
+v1.3
+───────────────────────────────────────────────────────────────────
+LOGIC CHANGES:
+- Version header + changelog comment thêm vào đầu file
+- Version badge UI: hiển thị góc dưới phải màn hình với version
+  number và danh sách thay đổi
+- finally block: restart workers (đã được move sang v1.5 do bị
+  mất trong quá trình edit)
+
+───────────────────────────────────────────────────────────────────
+v1.2
+───────────────────────────────────────────────────────────────────
+LOGIC CHANGES:
+- pollPlayed: thêm `let audioHandled = false` flag — tránh
+  audioEmpty handler trigger nhiều lần liên tiếp gây race condition
+  khi nhiều setTimeout pollPlayed chạy song song
+- audioEmpty handler: set audioHandled = true ngay khi vào để
+  block các lần trigger sau
+- prefetchNextChapter: thêm log id của chapter khi prefetch done
+  để verify nextMeta.id vs prefetchChap.id có khớp không
+
+BUG CONTEXT:
+- Log cho thấy [AutoNext] audioEmpty xuất hiện 4 lần liên tiếp
+  với nextMeta khác nhau → race condition
+- nextMeta.id và prefetchChap.id không khớp vì allChapters sort
+  trả về kết quả khác nhau mỗi lần
+
+───────────────────────────────────────────────────────────────────
+v1.1
+───────────────────────────────────────────────────────────────────
+LOGIC CHANGES:
+- consumer loop (streamChapter): thêm performance.now() timing
+  cho infer — log `infer=Xms wait=Yms pcm=Zms` mỗi chunk
+  để đo bottleneck thực sự
+- auto-next: thêm log '[AutoNext] audioEmpty' với đầy đủ state
+  (nextMeta, prefetchId, prefetchDone, prefetchChap) để debug
+- auto-next else branch: thêm log chi tiết
+- prefetchNextChapter: thêm log từng chunk `[Prefetch:WX] chunk Y done`
+- streamChapter start: log chapter title
+
+BUG CONTEXT:
+- Phát hiện infer time cao bất thường: chunk 10 = 4354ms,
+  chunk 13 = 2682ms, chunk 18 = 4447ms
+- Chỉ Worker:1 làm việc dù set ⚡3 — Worker:2 bị block bởi
+  slotPromise chain (đã fix trong v1.0 pipeline)
+
+───────────────────────────────────────────────────────────────────
+v1.0 (baseline)
+───────────────────────────────────────────────────────────────────
+ARCHITECTURE:
+- Pipeline 2-stage song song:
+  Stage 1: worker[0] phonemize tất cả chunks tuần tự (~5ms/chunk)
+  Stage 2: worker[1..N] infer song song với phonemeQueue + resolver
+  pattern (Promise-based, không polling)
+- slotPromise chain: đảm bảo schedule PCM đúng thứ tự audio dù
+  infer song song
+
+KEY FEATURES:
+- prefetchNextChapter: generate ngầm chương tiếp theo với pipeline
+  song song giống streamChapter, lưu PCM vào prefetchedPCMRef
+- playFromPrefetchBuffer: phát từ buffer có sẵn, không generate lại
+- Trigger prefetch: ngay sau pipelineDone=true (không chờ 50%)
+- Worker +/- buttons: resize pool realtime, terminate/create ngay
+- Loading overlay: fullscreen khi generate, sóng âm animation,
+  counter câu realtime
+- Audio: fade in/out 10ms, AudioBufferSourceNode zero-copy PCM
+- Title reading: đọc tên chương trước nội dung mỗi chương
+- cleanTitle: strip prefix "C1", "C1 Chương 1" từ DB title
+- pauseMs: -20% so với bản gốc (sentence=400ms, paragraph=640ms,
+  clause=192ms, connector=320ms, dash/ellipsis=288ms, longclause=240ms)
+
+KNOWN ISSUES AT v1.0:
+- Auto-next không hoạt động (fetch response shape sai)
+- prefetchNextChapter tuần tự thay vì song song (được fix trong v1.0)
+- Worker count UI không có hiệu lực realtime
+
+═══════════════════════════════════════════════════════════════════

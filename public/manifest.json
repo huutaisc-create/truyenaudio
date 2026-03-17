@@ -1,0 +1,38 @@
+{
+  "name": "WebTruyen - Đọc & Nghe Truyện",
+  "short_name": "WebTruyen",
+  "description": "Nền tảng đọc và nghe truyện online miễn phí",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0d0a",
+  "theme_color": "#e8580a",
+  "orientation": "portrait-primary",
+  "lang": "vi",
+  "categories": ["books", "entertainment"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Trang chủ",
+      "url": "/",
+      "description": "Về trang chủ"
+    },
+    {
+      "name": "Đang đọc",
+      "url": "/lich-su-doc",
+      "description": "Truyện đang đọc"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+Có nhiều lớp bảo vệ, từ dễ đến khó, nhưng không có cái nào tuyệt đối. Tôi liệt kê thực tế:
+
+Lớp 1 — CSS/JS đơn giản
+
+Disable chuột phải (onContextMenu)
+Disable Ctrl+C, Ctrl+A, Ctrl+U
+CSS user-select: none
+
+Rủi ro bị vượt: Cực dễ — tắt JS là xong, hoặc dùng DevTools copy DOM, hoặc dùng browser extension.
+
+Lớp 2 — Làm rối nội dung
+
+Chia text thành nhiều <span> nhỏ, xen CSS ẩn vào giữa
+Render text bằng Canvas thay vì DOM
+Trộn ký tự invisible Unicode vào giữa chữ
+
+Rủi ro bị vượt: Span/Canvas có thể bị parse lại bằng script. Unicode invisible bị lộ khi paste vào editor. Trung bình khó.
+
+Lớp 3 — Watermark
+
+Nhúng thông tin user (IP, userId, timestamp) ẩn trong nội dung
+Nếu nội dung bị leak, biết ngay ai copy
+
+Rủi ro bị vượt: Không ngăn copy được, chỉ giúp truy vết. Kẻ xấu có thể strip watermark nếu biết pattern.
+
+Lớp 4 — Server-side kiểm soát
+
+Yêu cầu đăng nhập mới đọc
+Rate limit số request/phút per user
+Không trả toàn bộ chương 1 lần — trả từng đoạn theo scroll
+Token xác thực mỗi request, hết hạn sau vài phút
+
+Rủi ro bị vượt: Vẫn có thể viết script tự động đăng nhập và crawl từng đoạn. Khó hơn nhiều nhưng không impossible.
+
+Lớp 5 — Anti-crawl
+
+Honeypot: nhúng text ẩn, nếu xuất hiện trên site khác thì biết bị crawl
+Fingerprint browser — phát hiện headless browser (Puppeteer, Playwright)
+CAPTCHA khi phát hiện hành vi bất thường
+
+Rủi ro bị vượt: Headless browser ngày càng giống browser thật, fingerprint không đủ tin cậy.
+
+Thực tế:
+Không có cách nào ngăn 100%. Nếu text hiển thị được trên màn hình, người dùng đọc được, thì máy cũng đọc được.
+Mục tiêu thực tế chỉ nên là tăng chi phí và công sức để kẻ xấu nản lòng, kết hợp với watermark để truy vết khi bị leak.

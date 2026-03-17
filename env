@@ -1,0 +1,2 @@
+# Production Database - Neon Postgres
+DATABASE_URL="postgresql://neondb_owner:npg_QiKjk3SUrzO1@ep-solitary-poetry-a1pp99ef-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"

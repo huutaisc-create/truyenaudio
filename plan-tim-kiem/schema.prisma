@@ -1,0 +1,187 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// --- USER MANAGEMENT ---
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  password      String?   // Nullable: Google users won't have a password
+  googleId      String?   @unique
+  role          String    @default("USER") // USER, ADMIN, AUTHOR
+  chaptersRead  Int       @default(0)       // Tổng chương đã đọc (tích lũy)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  readingHistory ReadingHistory[]
+  library        Library[]
+  reviews        Review[]
+  comments       Comment[]
+  likes          Like[]
+  nominations    Nomination[]
+  chatMessages   ChatMessage[]
+}
+
+// --- STORY MANAGEMENT ---
+
+model Story {
+  id            String    @id @default(uuid())
+  slug          String    @unique // seo-url-like-this
+  title         String
+  author        String
+  description   String?
+  coverImage    String?
+  status        String    @default("ONGOING") // ONGOING, COMPLETED, TRANSLATED, CONVERTED
+  totalChapters Int       @default(0)
+  viewCount     Int       @default(0)
+  ratingScore   Float     @default(0)
+  ratingCount   Int       @default(0)
+  followCount   Int       @default(0)
+  likeCount     Int       @default(0)
+  nominationCount Int     @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  chapters      Chapter[]
+  genres        Genre[]
+  reviews       Review[]
+  libraryEntries Library[]
+  historyEntries ReadingHistory[]
+  comments      Comment[]
+  likes         Like[]
+  nominations   Nomination[]
+}
+
+model Chapter {
+  id          String   @id @default(uuid())
+  index       Int      // 1, 2, 3...
+  title       String   // "Chương 1: Mở đầu"
+  content     String   // Long text content
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  storyId     String
+  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  
+  historyEntries ReadingHistory[]
+  
+  @@index([storyId, index])
+}
+
+model Genre {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  type        String   @default("GENRE") // GENRE, ATTRIBUTE, WORLD, FACTION
+  description String?
+  
+  // Relations
+  stories     Story[]
+}
+
+// --- USER INTERACTION ---
+
+model ReadingHistory {
+  id          String   @id @default(uuid())
+  visitedAt   DateTime @default(now())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  storyId     String
+  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  
+  chapterId   String?
+  chapter     Chapter? @relation(fields: [chapterId], references: [id])
+
+  @@unique([userId, storyId]) // Each user has one history entry per story
+}
+
+model Library {
+  id          String   @id @default(uuid())
+  addedAt     DateTime @default(now())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  storyId     String
+  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storyId])
+}
+
+model Nomination {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  storyId     String
+  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+}
+
+model Like {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  storyId     String
+  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storyId])
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  rating      Int      // 1-5
+  content     String?
+  createdAt   DateTime @default(now())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  storyId     String
+  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id          String   @id @default(uuid())
+  content     String
+  createdAt   DateTime @default(now())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  storyId     String
+  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id          String   @id @default(uuid())
+  storySlug   String
+  content     String
+  likeCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([storySlug, createdAt])
+}

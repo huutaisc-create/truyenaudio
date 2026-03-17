@@ -1,0 +1,608 @@
+[
+  {
+    "id": "1b368fc7-4644-46db-bbfd-f7bb1b3f0998",
+    "name": "Tiên Hiệp",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "cc52abf1-2ff1-4ab2-9346-84891969fdea",
+    "name": "Huyền Huyễn",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "78b42263-f931-4e41-9337-64d640edb142",
+    "name": "Khoa Huyễn",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "1ca9ebc9-4914-4527-a57d-35088a8d4440",
+    "name": "Võ Hiệp",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "4dd42641-1a19-4346-b3de-1b01ce0bb402",
+    "name": "Đô Thị",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "7c347fbb-a03c-4c8a-8c18-ce92bad23a21",
+    "name": "Đồng Nhân",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "2897a4e2-323f-48fe-afc8-a1dd19f90afd",
+    "name": "Dã Sử",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "195d736f-bfde-460b-bb11-bfb66b5ba81c",
+    "name": "Cạnh Kỹ",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "712b9f2a-5a25-4057-aaee-39987de0332d",
+    "name": "Huyền Nghi",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "4fbc0be3-1695-46b5-91a5-7ddacf475c53",
+    "name": "Kiếm Hiệp",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "23a99408-93a0-4507-812a-a989ec0450ed",
+    "name": "Kỳ Ảo",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "b2a85054-62dd-4d92-9cf4-5965e5cdcacc",
+    "name": "Linh Dị",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "e2274076-3c7e-4af6-8be6-64a4fdcc95a6",
+    "name": "Mạt Thế",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "a54b6441-41f8-47cd-8aab-abe70ba03918",
+    "name": "Ngôn Tình",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "ff517695-ac10-4bce-b3f5-173634cf1b97",
+    "name": "Ngược",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "4b1bd8db-2992-4738-a662-9ff0f5ab0d19",
+    "name": "Quân Sự",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "efb0aa4a-3beb-4b76-b8be-9411ebd40d13",
+    "name": "Quan Trường",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "355a7080-1471-43f0-b388-dc5c0a0eb940",
+    "name": "Sắc",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "4caaea7b-224d-4331-9aad-dd673608c5a8",
+    "name": "Sủng",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "de74b0a4-3ac6-4dbf-9f96-85c8e479a370",
+    "name": "Thám Hiểm",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "4c62097b-2c39-46c4-a85e-357ccebcb4c1",
+    "name": "Trinh Thám",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "a189aa3d-ffa7-4ed8-bcc8-575cd0dfc85a",
+    "name": "Trọng Sinh",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "bbba422f-02ac-4886-917c-19015757dd10",
+    "name": "Võng Du",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "1655a585-c5b4-4f4b-a1ab-3b606c09143f",
+    "name": "Xuyên Không",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "71117d9e-f3ad-4471-9942-fe2e9dd64cc0",
+    "name": "Xuyên Nhanh",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "27cdfd6f-e14f-457c-8da2-3ddb8eee6c6e",
+    "name": "Phương Tây",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "7c9f4c7e-7af4-4399-9186-01c2bb13f26f",
+    "name": "Việt Nam",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "9617c119-b0fa-449c-9844-c25ff1341322",
+    "name": "Light Novel",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "259dd3c7-ef40-4dc7-8549-11693b107c37",
+    "name": "Nữ Cường",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "a21eeb58-6d9b-4a52-a8eb-c92b37d37383",
+    "name": "Đam Mỹ",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "1e2748fe-d268-41f9-aca5-8c852129b818",
+    "name": "Bách Hợp",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "1d2c61cb-ac90-431c-857d-088f5c7dbae9",
+    "name": "Cung Đấu",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "9a482384-4d34-48d4-9414-99559f57bf4c",
+    "name": "Gia Đấu",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "12b875dd-c4b2-4f87-97d9-04bda787fcb3",
+    "name": "Điền Văn",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "6f564bb3-912a-455c-82a5-6f5c2bef1f17",
+    "name": "Hài Hước",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "2fcf4a57-658b-46a7-bead-8191beec62d0",
+    "name": "Lịch Sử",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "61b4f0f5-e217-4cf6-b051-21c03cb91488",
+    "name": "Đông Phương",
+    "type": "CONTEXT",
+    "description": null
+  },
+  {
+    "id": "3f491d83-c71d-4ca0-87ab-e52fbf566776",
+    "name": "Tây Phương",
+    "type": "CONTEXT",
+    "description": null
+  },
+  {
+    "id": "bb018b91-6eaa-4e5e-8ad3-369df8a92ec9",
+    "name": "Hiện Đại",
+    "type": "CONTEXT",
+    "description": null
+  },
+  {
+    "id": "567aa4b9-1e42-46d5-858a-971296e40005",
+    "name": "Cổ Đại",
+    "type": "CONTEXT",
+    "description": null
+  },
+  {
+    "id": "2f8970a1-0daf-4dfe-bbbf-6b8b248296b5",
+    "name": "Tương Lai",
+    "type": "CONTEXT",
+    "description": null
+  },
+  {
+    "id": "1f9768f4-3c55-40d1-81d0-7b797fba6fc2",
+    "name": "Dị Giới",
+    "type": "CONTEXT",
+    "description": null
+  },
+  {
+    "id": "04d37957-f2c4-451c-a76b-ce039e1a2d47",
+    "name": "Huyền Ảo",
+    "type": "CONTEXT",
+    "description": null
+  },
+  {
+    "id": "0914e066-598c-443f-93e4-5a5f531853aa",
+    "name": "Điềm Đạm",
+    "type": "PERSONALITY",
+    "description": null
+  },
+  {
+    "id": "0f030f97-3bc0-4cca-a24a-4d2b9c7d7d9a",
+    "name": "Nhiệt Huyết",
+    "type": "PERSONALITY",
+    "description": null
+  },
+  {
+    "id": "97ab208b-919e-4f0d-af20-7712526871cc",
+    "name": "Vô Sỉ",
+    "type": "PERSONALITY",
+    "description": null
+  },
+  {
+    "id": "33af0de5-fa46-4fd1-85d5-b69d99a548f1",
+    "name": "Thiết Huyết",
+    "type": "PERSONALITY",
+    "description": null
+  },
+  {
+    "id": "76f94198-896a-4e05-83fb-937feab23fcc",
+    "name": "Nhẹ Nhàng",
+    "type": "PERSONALITY",
+    "description": null
+  },
+  {
+    "id": "06b9e066-7fde-4f0a-83d1-9b18c842ff2f",
+    "name": "Cơ Trí",
+    "type": "PERSONALITY",
+    "description": null
+  },
+  {
+    "id": "c7c8726f-a884-4736-ba19-ee9d7cf29533",
+    "name": "Lãnh Khốc",
+    "type": "PERSONALITY",
+    "description": null
+  },
+  {
+    "id": "341fd06d-2e6a-40b5-a0c3-1a3e054a6cf9",
+    "name": "Kiêu Ngạo",
+    "type": "PERSONALITY",
+    "description": null
+  },
+  {
+    "id": "8a437f67-88df-4c52-821e-3d30e7fe939b",
+    "name": "Ngây Thơ",
+    "type": "PERSONALITY",
+    "description": null
+  },
+  {
+    "id": "2c6ad047-109f-4c89-a9a8-c7c5f5686b63",
+    "name": "Hệ Thống",
+    "type": "FACTION",
+    "description": null
+  },
+  {
+    "id": "0fcc30c4-4e7c-47c0-ad7e-720be78f372c",
+    "name": "Lão Gia",
+    "type": "FACTION",
+    "description": null
+  },
+  {
+    "id": "801e11e8-1bad-4831-adca-c3fc546dcf37",
+    "name": "Bàn Thờ",
+    "type": "FACTION",
+    "description": null
+  },
+  {
+    "id": "6ba414de-c39d-42e1-a4a4-1c8fbac4d99e",
+    "name": "Tùy Thân",
+    "type": "FACTION",
+    "description": null
+  },
+  {
+    "id": "59391f58-411f-4daa-8d59-39471a626fb8",
+    "name": "Nhạc Lý",
+    "type": "FACTION",
+    "description": null
+  },
+  {
+    "id": "33411053-8a25-4829-bd36-9ed4dbcbb780",
+    "name": "Ẩm Thực",
+    "type": "FACTION",
+    "description": null
+  },
+  {
+    "id": "9a79f667-e337-4e35-a489-40d199d50847",
+    "name": "Vô Địch",
+    "type": "FACTION",
+    "description": null
+  },
+  {
+    "id": "b232ae4f-41b5-45c1-b488-e15562b89088",
+    "name": "Xuyên Qua",
+    "type": "FACTION",
+    "description": null
+  },
+  {
+    "id": "585797f0-b68d-4936-80af-e298abca197f",
+    "name": "Nam Chủ",
+    "type": "PERSPECTIVE",
+    "description": null
+  },
+  {
+    "id": "43a0426f-ba99-4689-a26a-d643294e8d09",
+    "name": "Nữ Chủ",
+    "type": "PERSPECTIVE",
+    "description": null
+  },
+  {
+    "id": "28551eea-74e1-42da-9005-e8a8281693e7",
+    "name": "Ngôi Thứ Nhất",
+    "type": "PERSPECTIVE",
+    "description": null
+  },
+  {
+    "id": "afe09582-21e6-400a-b8fa-5229993dbb78",
+    "name": "Tình cảm",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "3de5654a-cd92-4161-8696-ea6f785aa8ab",
+    "name": "Huyền huyễn",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "1c782810-9afd-4dbd-a560-84e2f0c319e7",
+    "name": "Mạt thế",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "c595d03e-b3f5-4e6f-b600-f9d6d12e035b",
+    "name": "Cổ đại",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "feaaffc7-be03-45d3-b3c6-6fd67b70ec24",
+    "name": "Tiên hiệp",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "e6aa10a4-d6b0-47c0-a8af-fab7ac2641a3",
+    "name": "Nữ Phụ",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "baf246eb-4e6f-4a85-a271-f3a1f01586d6",
+    "name": "Khác",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "746498d5-dfc4-4f27-ba30-06351e309e64",
+    "name": "Truyện Teen",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "f0b99149-a260-4dd8-9879-216471497e13",
+    "name": "Dị Năng",
+    "type": "GENRE",
+    "description": null
+  },
+  {
+    "id": "c7fe18b9-b9ca-47da-a6e0-ee305e9e3a6e",
+    "name": "Đông Phương",
+    "type": "BOI_CANH",
+    "description": null
+  },
+  {
+    "id": "2ef470d4-d662-47e7-bc6f-d909fc50b118",
+    "name": "Tây Phương",
+    "type": "BOI_CANH",
+    "description": null
+  },
+  {
+    "id": "57fd21d3-829e-4836-a751-bc4d913491dc",
+    "name": "Hiện Đại",
+    "type": "BOI_CANH",
+    "description": null
+  },
+  {
+    "id": "3b8f11f9-f98a-4006-8beb-48d96c10a17f",
+    "name": "Cổ Đại",
+    "type": "BOI_CANH",
+    "description": null
+  },
+  {
+    "id": "5a5dc2dc-9a2c-4143-905e-a356e616a767",
+    "name": "Mạt Thế",
+    "type": "BOI_CANH",
+    "description": null
+  },
+  {
+    "id": "5085b0a8-d1e0-4bcf-a1db-1d502374ec31",
+    "name": "Tương Lai",
+    "type": "BOI_CANH",
+    "description": null
+  },
+  {
+    "id": "7752a100-661b-43ca-8fc5-1fd09521efe3",
+    "name": "Dị Giới",
+    "type": "BOI_CANH",
+    "description": null
+  },
+  {
+    "id": "b7665c64-d1a5-4ce1-a53d-f84627ff983f",
+    "name": "Huyền Ảo",
+    "type": "BOI_CANH",
+    "description": null
+  },
+  {
+    "id": "9f3b3051-9dc7-4c81-afd7-6d7a6879ecb9",
+    "name": "Hệ Thống",
+    "type": "LUU_PHAI",
+    "description": null
+  },
+  {
+    "id": "ba6f7ba5-b02d-4b23-bdd1-2329b210ee4a",
+    "name": "Lão Gia",
+    "type": "LUU_PHAI",
+    "description": null
+  },
+  {
+    "id": "a339846e-7d73-4c84-971a-886c674cd82b",
+    "name": "Bàn Thờ",
+    "type": "LUU_PHAI",
+    "description": null
+  },
+  {
+    "id": "eb4570e3-e3b4-47e0-a8ed-354e08be7eed",
+    "name": "Tùy Thân",
+    "type": "LUU_PHAI",
+    "description": null
+  },
+  {
+    "id": "58d13dfd-62da-4741-9736-145c7d71f4bb",
+    "name": "Nhạc Lý",
+    "type": "LUU_PHAI",
+    "description": null
+  },
+  {
+    "id": "9573782b-fed7-422a-b5a3-74ff087fbeda",
+    "name": "Ẩm Thực",
+    "type": "LUU_PHAI",
+    "description": null
+  },
+  {
+    "id": "5271c451-fca0-427c-86be-08f50b151862",
+    "name": "Vô Địch",
+    "type": "LUU_PHAI",
+    "description": null
+  },
+  {
+    "id": "d2aadf47-f36a-4202-8b1a-d833736653b1",
+    "name": "Xuyên Qua",
+    "type": "LUU_PHAI",
+    "description": null
+  },
+  {
+    "id": "2565fe9b-7bc9-4bb0-a019-442419817c3c",
+    "name": "Trọng Sinh",
+    "type": "LUU_PHAI",
+    "description": null
+  },
+  {
+    "id": "fb3e1023-8efb-45a2-bed3-d5ae555fa553",
+    "name": "Điềm Đạm",
+    "type": "TINH_CACH",
+    "description": null
+  },
+  {
+    "id": "5d20c2ce-3697-4e4a-8c64-5a3bba0f5be6",
+    "name": "Nhiệt Huyết",
+    "type": "TINH_CACH",
+    "description": null
+  },
+  {
+    "id": "80e58598-0f77-4bc2-8538-67a9a0c59f73",
+    "name": "Vô Sỉ",
+    "type": "TINH_CACH",
+    "description": null
+  },
+  {
+    "id": "111de7fc-a30e-44cd-967d-491a5b44fd2c",
+    "name": "Thiết Huyết",
+    "type": "TINH_CACH",
+    "description": null
+  },
+  {
+    "id": "495316d3-562c-47f0-b098-53cda5723ecb",
+    "name": "Nhẹ Nhàng",
+    "type": "TINH_CACH",
+    "description": null
+  },
+  {
+    "id": "dbed6403-d3b5-4c68-a4d8-1f52651dcaf0",
+    "name": "Cơ Trí",
+    "type": "TINH_CACH",
+    "description": null
+  },
+  {
+    "id": "2b3e7116-e4a0-43e8-b886-fab3bb242193",
+    "name": "Lãnh Khốc",
+    "type": "TINH_CACH",
+    "description": null
+  },
+  {
+    "id": "72603585-3542-42b3-8f2c-9851fb1d2889",
+    "name": "Kiêu Ngạo",
+    "type": "TINH_CACH",
+    "description": null
+  },
+  {
+    "id": "93e52387-0b2b-4dab-8f1b-3087c3b25ce8",
+    "name": "Ngây Thơ",
+    "type": "TINH_CACH",
+    "description": null
+  },
+  {
+    "id": "76dd5b22-27e1-4128-87b9-cecc3ec465d0",
+    "name": "Nam Chủ",
+    "type": "THI_GIAC",
+    "description": null
+  },
+  {
+    "id": "d6b42484-df57-45a4-8916-a80f05923869",
+    "name": "Nữ Chủ",
+    "type": "THI_GIAC",
+    "description": null
+  },
+  {
+    "id": "d7b0a2f1-f422-4186-ad59-35f9d80bbd5c",
+    "name": "Ngôi Thứ Nhất",
+    "type": "THI_GIAC",
+    "description": null
+  }
+]

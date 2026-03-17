@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#e8580a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.json">
+<title>Test Media Session v6</title>
+<style>
+  body { font-family: sans-serif; padding: 20px; background: #0f0d0a; color: #f0ebe4; }
+  button { padding: 12px 24px; font-size: 16px; border-radius: 8px; border: none; cursor: pointer; margin: 8px; }
+  #btn-play  { background: #e8580a; color: white; }
+  #btn-pause { background: #333; color: white; }
+  #log { margin-top: 20px; background: #1a1612; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 13px; min-height: 100px; white-space: pre-wrap; color: #8a7e72; max-height: 300px; overflow-y: auto; }
+  .stat { display: inline-block; margin: 4px; padding: 6px 12px; background: #1a1612; border-radius: 8px; font-size: 12px; }
+  .ok  { color: #4ade80; }
+  .err { color: #e8580a; }
+  .badge { position: fixed; top: 10px; right: 10px; background: #e8580a; color: white; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="badge">v6</div>
+<h2>Test Silent Audio + Media Session</h2>
+<p style="color:#8a7e72;font-size:13px;">Nhấn Play → tắt màn hình → kiểm tra lock screen</p>
+
+<div style="margin-bottom:12px;">
+  <span class="stat">Audio: <b id="audio-state">—</b></span>
+  <span class="stat">MediaSession: <b id="ms-state">—</b></span>
+  <span class="stat">playbackState: <b id="pb-state">—</b></span>
+  <span class="stat">HTTPS: <b id="https-state">—</b></span>
+  <span class="stat">Notification: <b id="notif-state">—</b></span>
+</div>
+
+<br>
+<button id="btn-play" onclick="handlePlay()">▶ Play</button>
+<button id="btn-pause" onclick="handlePause()" disabled>⏸ Pause</button>
+<button onclick="requestNotif()" style="background:#1a1612;color:#f0ebe4;border:1px solid #333;">🔔 Request Notif</button>
+<button id="btn-install" onclick="installPWA()" style="background:#1D9E75;color:white;display:none;">📲 Thêm vào màn hình chính</button>
+
+<audio id="silent" loop style="display:none;" src="/silent.mp3"></audio>
+
+<div id="log">Sẵn sàng...\n</div>
+
+<script>
+const audio = document.getElementById('silent');
+
+// Register Service Worker — cần thiết để Chrome hiện nút cài PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js')
+    .then(function(reg) { log('SW: registered scope=' + reg.scope, 'ok'); })
+    .catch(function(err) { log('SW: register failed — ' + err.message, 'err'); });
+}
+
+function log(msg, cls) {
+  const t = new Date().toLocaleTimeString('vi-VN');
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  line.textContent = '[' + t + '] ' + msg;
+  if (cls) line.className = cls;
+  el.prepend(line);
+}
+
+function updateStats(playing) {
+  document.getElementById('audio-state').textContent = playing ? 'playing' : 'paused';
+  document.getElementById('audio-state').className = playing ? 'ok' : '';
+  document.getElementById('btn-play').disabled = playing;
+  document.getElementById('btn-pause').disabled = !playing;
+  if ('mediaSession' in navigator) {
+    document.getElementById('pb-state').textContent = navigator.mediaSession.playbackState;
+  }
+}
+
+const isHttps = location.protocol === 'https:';
+document.getElementById('https-state').textContent = isHttps ? 'yes' : 'NO';
+document.getElementById('https-state').className = isHttps ? 'ok' : 'err';
+
+function checkNotif() {
+  if ('Notification' in window) {
+    document.getElementById('notif-state').textContent = Notification.permission;
+    document.getElementById('notif-state').className = Notification.permission === 'granted' ? 'ok' : 'err';
+  } else {
+    document.getElementById('notif-state').textContent = 'N/A';
+  }
+}
+checkNotif();
+
+function requestNotif() {
+  if ('Notification' in window) {
+    Notification.requestPermission().then(function(p) {
+      log('Notification permission: ' + p, p === 'granted' ? 'ok' : 'err');
+      checkNotif();
+    });
+  }
+}
+
+if ('mediaSession' in navigator) {
+  document.getElementById('ms-state').textContent = 'supported';
+  document.getElementById('ms-state').className = 'ok';
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: 'Chương Test v3',
+    artist: 'TTS App',
+    album: 'Test Truyện',
+    artwork: [
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png' }
+    ]
+  });
+  navigator.mediaSession.setActionHandler('play',          function() { log('Lock screen: Play nhấn', 'ok'); handlePlay(); });
+  navigator.mediaSession.setActionHandler('pause',         function() { log('Lock screen: Pause nhấn', 'ok'); handlePause(); });
+  navigator.mediaSession.setActionHandler('previoustrack', function() { log('Lock screen: Prev nhấn', 'ok'); });
+  navigator.mediaSession.setActionHandler('nexttrack',     function() { log('Lock screen: Next nhấn', 'ok'); });
+  log('MediaSession OK + artwork set', 'ok');
+} else {
+  document.getElementById('ms-state').textContent = 'not supported';
+  document.getElementById('ms-state').className = 'err';
+  log('MediaSession: KHÔNG hỗ trợ', 'err');
+}
+
+audio.addEventListener('play',  function() { log('audio event: play', 'ok'); });
+audio.addEventListener('pause', function() { log('audio event: pause'); });
+audio.addEventListener('error', function(e) { log('audio error: ' + (e.target.error ? e.target.error.message : 'unknown'), 'err'); });
+
+function handlePlay() {
+  audio.play()
+    .then(function() {
+      log('audio.play() OK — tắt màn hình kiểm tra lock screen', 'ok');
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+      updateStats(true);
+    })
+    .catch(function(err) {
+      log('audio.play() THẤT BẠI: ' + err.message, 'err');
+    });
+}
+
+function handlePause() {
+  audio.pause();
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+  log('Paused');
+  updateStats(false);
+}
+// PWA install prompt
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('btn-install').style.display = 'inline-block';
+  log('PWA: sẵn sàng cài đặt — nhấn nút xanh', 'ok');
+});
+
+window.addEventListener('appinstalled', function() {
+  log('PWA: đã cài đặt thành công!', 'ok');
+  document.getElementById('btn-install').style.display = 'none';
+  deferredPrompt = null;
+});
+
+function installPWA() {
+  if (!deferredPrompt) {
+    log('PWA: không có prompt — có thể đã cài rồi hoặc dùng menu Chrome ⋮ → Thêm vào màn hình chính', 'err');
+    return;
+  }
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(function(result) {
+    log('PWA install: ' + result.outcome, result.outcome === 'accepted' ? 'ok' : 'err');
+    deferredPrompt = null;
+  });
+}
+</script>
+</body>
+</html>
