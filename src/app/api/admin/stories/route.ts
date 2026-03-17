@@ -2,8 +2,30 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
-const UPLOAD_SECRET = "df5e8753a931894d842645d812d2b23fe89917d87def1633c8926f2c67728a5c";
+const UPLOAD_SECRET = process.env.UPLOAD_SECRET || "df5e8753a931894d842645d812d2b23fe89917d87def1633c8926f2c67728a5c";
+
+const s3 = new S3Client({
+    region: "auto",
+    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+    },
+    maxAttempts: 3,
+});
+
+async function uploadChapterToR2(slug: string, index: number, content: string): Promise<string> {
+    const key = `chapters/${slug}/${index}.txt`;
+    await s3.send(new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME!,
+        Key: key,
+        Body: Buffer.from(content, "utf-8"),
+        ContentType: "text/plain; charset=utf-8",
+    }));
+    return `${process.env.R2_PUBLIC_URL}/${key}`;
+}
 
 export async function POST(request: NextRequest) {
     const secret = request.headers.get("X-Upload-Secret");
@@ -31,7 +53,6 @@ export async function POST(request: NextRequest) {
         const resolvedCover = s.cover_url || s.coverImage || "";
 
         // ── Gom tất cả tags theo đúng type ────────────────────
-        // Python gửi: category (string), genres[], boiCanh[], luuPhai[], tinhCach[], thiGiac[]
         const buildTags = (names: string[] | string | undefined, type: string) => {
             if (!names) return [];
             const arr = Array.isArray(names)
@@ -52,7 +73,7 @@ export async function POST(request: NextRequest) {
         const genreIds: { id: string }[] = await Promise.all(
             allTags.map(async ({ name, type }) => {
                 const genre = await db.genre.upsert({
-                    where:  { name_type: { name, type } }, // composite unique key
+                    where:  { name_type: { name, type } },
                     update: {},
                     create: { name, type },
                 });
@@ -108,17 +129,23 @@ export async function POST(request: NextRequest) {
             });
             const existingSet = new Set(existing.map((c) => c.index));
 
-            const newChapters = chapters
-                .filter((c: any) => !existingSet.has(c.index))
-                .map((c: any) => ({
-                    storyId: story.id,
-                    index:   c.index,
-                    title:   c.title   || `Chương ${c.index}`,
-                    content: c.content || "",
-                }));
+            const newChapters = chapters.filter((c: any) => !existingSet.has(c.index));
 
-            for (const ch of newChapters) {
-                await db.chapter.create({ data: ch });
+            for (const c of newChapters) {
+                // Upload content lên R2
+                const content = c.content || "";
+                const contentUrl = content
+                    ? await uploadChapterToR2(s.slug, c.index, content)
+                    : null;
+
+                await db.chapter.create({
+                    data: {
+                        storyId:    story.id,
+                        index:      c.index,
+                        title:      c.title || `Chương ${c.index}`,
+                        contentUrl,
+                    }
+                });
             }
             insertedCount = newChapters.length;
 

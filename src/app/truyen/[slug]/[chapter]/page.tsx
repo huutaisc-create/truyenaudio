@@ -2,6 +2,18 @@ import React from 'react';
 import { getChapterBySlugAndIndex, getChaptersByStoryId, getStoryBySlug } from '@/actions/stories';
 import ReadingClient from './ReadingClient';
 
+// Helper: fetch content từ R2
+async function fetchContentFromR2(contentUrl: string | null): Promise<string> {
+    if (!contentUrl) return '';
+    try {
+        const res = await fetch(contentUrl, { next: { revalidate: 3600 } });
+        if (!res.ok) return '';
+        return await res.text();
+    } catch {
+        return '';
+    }
+}
+
 const ReadingPage = async ({ params: paramsPromise }: { params: Promise<{ slug: string; chapter: string }> }) => {
     const params = await paramsPromise;
     const chapterIndex = parseInt(params.chapter.replace('chuong-', ''));
@@ -18,11 +30,12 @@ const ReadingPage = async ({ params: paramsPromise }: { params: Promise<{ slug: 
 
     const { storyTitle, storyCover, chapter, prev, next } = data;
 
-    // Fetch song song: auth + storyData + next chapter
-    const [{ auth }, storyData, nextData] = await Promise.all([
+    // Fetch song song: auth + storyData + next chapter + content từ R2
+    const [{ auth }, storyData, nextData, chapterContent] = await Promise.all([
         import('@/auth'),
         getStoryBySlug(params.slug),
         next !== null ? getChapterBySlugAndIndex(params.slug, next) : Promise.resolve(null),
+        fetchContentFromR2(chapter.contentUrl),
     ]);
 
     const session = await auth();
@@ -41,18 +54,23 @@ const ReadingPage = async ({ params: paramsPromise }: { params: Promise<{ slug: 
         }));
     }
 
+    // Fetch next chapter content từ R2 nếu có
+    const nextChapterContent = nextData
+        ? await fetchContentFromR2(nextData.chapter.contentUrl)
+        : '';
+
     const sanitizedChapter = {
         id: chapter.id,
         index: chapter.index,
         title: chapter.title,
-        content: chapter.content,
+        content: chapterContent, // content từ R2
     };
 
     const sanitizedNextChapter = nextData ? {
         id: nextData.chapter.id,
         index: nextData.chapter.index,
         title: nextData.chapter.title,
-        content: nextData.chapter.content,
+        content: nextChapterContent, // content từ R2
     } : null;
 
     return (

@@ -16,14 +16,15 @@ export async function GET(
         }
 
         const chapter = await db.chapter.findUnique({
-            where: {
-                id: chapterId,
-            },
+            where: { id: chapterId },
             include: {
                 story: {
                     select: {
+                        id: true,
                         title: true,
                         slug: true,
+                        author: true,
+                        coverImage: true,
                     }
                 }
             }
@@ -36,13 +37,27 @@ export async function GET(
             );
         }
 
-        // Optionally increment view count on the chapter (or story) when fetched.
-        // For read-heavy API this should be queued or optimistic, but simple approach is await:
-        // await prisma.chapter.update({ where: { id: chapterId }, data: { viewCount: { increment: 1 } } });
+        // Fetch content từ R2
+        let content = '';
+        if (chapter.contentUrl) {
+            try {
+                const r2Res = await fetch(chapter.contentUrl, {
+                    next: { revalidate: 3600 } // cache 1 tiếng
+                });
+                if (r2Res.ok) {
+                    content = await r2Res.text();
+                }
+            } catch (e) {
+                console.error('Failed to fetch content from R2:', e);
+            }
+        }
 
         return NextResponse.json({
             success: true,
-            data: chapter,
+            data: {
+                ...chapter,
+                content, // trả về content để client dùng như cũ
+            },
         });
     } catch (error) {
         console.error(`Error fetching chapter API:`, error);

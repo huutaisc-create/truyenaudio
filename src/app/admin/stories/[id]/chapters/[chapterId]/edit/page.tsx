@@ -1,4 +1,3 @@
-
 import { updateChapter } from "@/actions/admin";
 import db from "@/lib/db";
 import Link from "next/link";
@@ -8,7 +7,19 @@ import { ArrowLeft } from "lucide-react";
 async function getChapter(id: string) {
     const chapter = await db.chapter.findUnique({ where: { id } });
     if (!chapter) notFound();
-    return chapter;
+
+    // Fetch content từ R2
+    let content = '';
+    if (chapter.contentUrl) {
+        try {
+            const res = await fetch(chapter.contentUrl, { cache: 'no-store' });
+            if (res.ok) content = await res.text();
+        } catch {
+            content = '';
+        }
+    }
+
+    return { ...chapter, content };
 }
 
 export default async function EditChapterPage({ params }: { params: Promise<{ id: string; chapterId: string }> }) {

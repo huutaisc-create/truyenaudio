@@ -343,9 +343,38 @@ export async function updateChapterContent(chapterId: string, newContent: string
     }
 
     try {
+        // Lấy thông tin chapter + story slug để upload R2
+        const chapter = await db.chapter.findUnique({
+            where: { id: chapterId },
+            include: { story: { select: { slug: true } } }
+        });
+
+        if (!chapter) return { success: false, error: 'Chapter not found' };
+
+        // Upload content lên R2
+        const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+        const s3 = new S3Client({
+            region: 'auto',
+            endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+            credentials: {
+                accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+                secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+            },
+        });
+
+        const key = `chapters/${chapter.story.slug}/${chapter.index}.txt`;
+        await s3.send(new PutObjectCommand({
+            Bucket: process.env.R2_BUCKET_NAME!,
+            Key: key,
+            Body: Buffer.from(newContent, 'utf-8'),
+            ContentType: 'text/plain; charset=utf-8',
+        }));
+
+        const contentUrl = `${process.env.R2_PUBLIC_URL}/${key}`;
+
         await db.chapter.update({
             where: { id: chapterId },
-            data: { content: newContent }
+            data: { contentUrl }
         });
         return { success: true };
     } catch (error) {

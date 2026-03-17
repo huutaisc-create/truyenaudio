@@ -9,6 +9,17 @@ interface Props {
   searchParams: Promise<{ chuong?: string }>;
 }
 
+async function fetchContentFromR2(contentUrl: string | null): Promise<string> {
+  if (!contentUrl) return '';
+  try {
+    const res = await fetch(contentUrl, { next: { revalidate: 3600 } });
+    if (!res.ok) return '';
+    return await res.text();
+  } catch {
+    return '';
+  }
+}
+
 export default async function ListeningPage({ params: paramsPromise, searchParams: spPromise }: Props) {
   const params = await paramsPromise;
   const sp = await spPromise;
@@ -25,7 +36,10 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
 
   if (!storyData || !chapterData) notFound();
 
-  const chaptersResult = await getChaptersByStoryId(storyData.id, 1);
+  const [chaptersResult, content] = await Promise.all([
+    getChaptersByStoryId(storyData.id, 1),
+    fetchContentFromR2(chapterData.chapter.contentUrl),
+  ]);
 
   const initialChapters = chaptersResult.chapters.map((c) => ({
     id: c.id,
@@ -46,7 +60,7 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
       id: chapterData.chapter.id,
       index: chapterData.chapter.index,
       title: chapterData.chapter.title,
-      content: chapterData.chapter.content,
+      content, // content từ R2
     },
   };
 

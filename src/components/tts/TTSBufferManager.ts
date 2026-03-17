@@ -61,14 +61,27 @@ export class TTSBufferManager {
     this.config = config;
   }
 
-  /** Fetch nội dung chương từ API */
+  /** Fetch nội dung chương từ API + content từ R2 */
   private async fetchChapter(chapterId: string): Promise<ChapterMeta | null> {
     try {
       const res = await fetch(`/api/chapters/${chapterId}`);
       if (!res.ok) return null;
       const json = await res.json();
-      // Route trả về { success: true, data: chapter }
-      return json.data as ChapterMeta;
+      const chapter = json.data as ChapterMeta & { contentUrl?: string };
+
+      // Fetch content từ R2 nếu có contentUrl
+      if (chapter.contentUrl) {
+        try {
+          const contentRes = await fetch(chapter.contentUrl);
+          chapter.content = contentRes.ok ? await contentRes.text() : '';
+        } catch {
+          chapter.content = '';
+        }
+      } else {
+        chapter.content = chapter.content || '';
+      }
+
+      return chapter;
     } catch {
       return null;
     }
