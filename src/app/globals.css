@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+@variant dark {
+  /* disabled — force light mode always */
+}
+
 @theme inline {
   --color-brand-primary: #f27024;
   --color-brand-secondary: #323232;
