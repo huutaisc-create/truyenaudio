@@ -79,6 +79,20 @@ export default function RootLayout({
           </Suspense>
           <ClientLayout>{children}</ClientLayout>
           <BackToTop />
+          <div style={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            background: 'rgba(242,112,36,0.15)',
+            border: '1px solid rgba(242,112,36,0.3)',
+            borderRadius: 999,
+            padding: '3px 10px',
+            fontSize: 11,
+            color: '#f27024',
+            fontWeight: 500,
+            zIndex: 9999,
+            pointerEvents: 'none',
+          }}>v1.0</div>
         </SessionWrapper>
       </body>
     </html>
