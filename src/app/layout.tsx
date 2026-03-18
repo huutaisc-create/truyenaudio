@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Roboto } from "next/font/google";
+import { Roboto } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "@/components/layout/ClientLayout";
 import RegisterSW from "@/components/common/RegisterSW";
@@ -8,21 +8,15 @@ import BackToTop from "@/components/common/BackToTop";
 import { Suspense } from 'react';
 import { SessionWrapper } from "@/components/providers/SessionWrapper";
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin", "vietnamese"],
-  // FIX FONT BLOCKING (ảnh 5):
-  // "swap" → browser tải font sau, dùng fallback trước → gây layout shift khi font load xong
-  // "optional" → browser chỉ dùng font nếu đã cache, không block render, không layout shift
-  display: "optional",
-  preload: true,
-});
-
+// ✅ Bỏ Inter — không dùng trong CSS (--font-sans dùng --font-inter nhưng body dùng --font-roboto)
+// Giảm từ 2 font request xuống còn 1
 const roboto = Roboto({
-  weight: ['400', '500', '700'], // Bỏ '300' — ít dùng, giảm 1 file woff2
+  weight: ['400', '500', '700'],
   subsets: ["latin", "vietnamese"],
   variable: "--font-roboto",
-  display: "optional", // FIX FONT BLOCKING
+  display: "swap",   // ✅ Đổi từ "optional" → "swap"
+                     // "optional" = browser bỏ qua font nếu chưa cache → chữ dùng fallback mãi
+                     // "swap" = hiển thị fallback trước, swap khi font load xong → đúng hơn cho UX
   preload: true,
 });
 
@@ -30,7 +24,6 @@ export const viewport: Viewport = {
   themeColor: '#e8580a',
   width: 'device-width',
   initialScale: 1,
-  // FIX A11Y: Bỏ maximumScale=1 — người thị lực kém cần zoom trang
 };
 
 export const metadata: Metadata = {
@@ -71,17 +64,10 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="WebTruyen" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512.png" />
-
-        {/* next/image tự xử lý optimize ảnh R2 qua /_next/image
-            Không cần preconnect R2 ở đây vì browser không load R2 trực tiếp */}
-
-        {/* ĐÃ XÓA: preconnect fonts.googleapis.com + fonts.gstatic.com
-            Lý do: next/font/google tự xử lý, preconnect thủ công gây
-            cảnh báo "Kết nối trước chưa sử dụng" trên PageSpeed (ảnh 5) */}
       </head>
       <body
         suppressHydrationWarning
-        className={`${inter.variable} ${roboto.variable} min-h-screen antialiased`}
+        className={`${roboto.variable} min-h-screen antialiased`}
         style={{ fontFamily: 'var(--font-roboto), sans-serif' }}
       >
         <SessionWrapper>
@@ -91,6 +77,7 @@ export default function RootLayout({
           </Suspense>
           <ClientLayout>{children}</ClientLayout>
           <BackToTop />
+          {/* Version badge */}
           <div style={{
             position: 'fixed',
             bottom: 16,
@@ -104,7 +91,7 @@ export default function RootLayout({
             fontWeight: 500,
             zIndex: 9999,
             pointerEvents: 'none',
-          }}>v 2.2</div>
+          }}>v 2.3</div>
         </SessionWrapper>
       </body>
     </html>

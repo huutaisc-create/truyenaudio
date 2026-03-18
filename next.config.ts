@@ -4,11 +4,16 @@ const nextConfig: NextConfig = {
   turbopack: {},
 
   experimental: {
-    workerThreads: false,
-    cpus: 1,
-    // FIX CSS BLOCKING (ảnh 2): inline critical CSS, defer non-critical
+    // ✅ Bỏ workerThreads: false và cpus: 1
+    // Các option này giới hạn hiệu năng build, không có lợi ích gì trên Vercel
+
+    // ✅ Giữ optimizeCss — inline critical CSS, giảm blocking render ~190ms
     // Cần cài: npm install critters --save-dev
     optimizeCss: true,
+
+    // ✅ Thêm browsersListForSwc — ngăn polyfill không cần thiết cho trình duyệt hiện đại
+    // Giảm ~14 KiB legacy JS (Array.at, Object.hasOwn, String.trimEnd, v.v.)
+    browsersListForSwc: true,
   },
 
   images: {
@@ -19,14 +24,6 @@ const nextConfig: NextConfig = {
     deviceSizes: [640, 828, 1080, 1200, 1920],
     imageSizes: [36, 48, 64, 96, 128, 160, 256],
     formats: ['image/avif', 'image/webp'],
-
-    // FIX CACHE:
-    // KHÔNG dùng 1 năm cho ảnh bìa vì ảnh có thể được update.
-    // next/image cache tại /_next/image — khi R2 URL không đổi
-    // nhưng nội dung ảnh đổi → user vẫn thấy ảnh cũ nếu TTL quá dài.
-    //
-    // Giải pháp: TTL 7 ngày — đủ để cache hiệu quả,
-    // không quá dài khi ảnh bìa được cập nhật.
     minimumCacheTTL: 60 * 60 * 24 * 7, // 7 ngày
   },
 
@@ -45,7 +42,6 @@ const nextConfig: NextConfig = {
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ],
       },
-      // Cache ảnh optimize 7 ngày — khớp với minimumCacheTTL
       {
         source: '/_next/image(.*)',
         headers: [
@@ -53,20 +49,14 @@ const nextConfig: NextConfig = {
           { key: 'Vary', value: 'Accept' },
         ],
       },
-      // Static assets (JS/CSS) — 1 năm vì Next.js tự đổi hash khi build mới
       {
         source: '/_next/static/(.*)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
-      {
-        source: '/_next/static/chunks/(.*)\\.js',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-          { key: 'Content-Encoding', value: 'br' },
-        ],
-      },
+      // ✅ Bỏ block set Content-Encoding: br thủ công
+      // Vercel/server tự xử lý compression — set thủ công gây lỗi double-encoding
       {
         source: '/(.*)',
         headers: [
