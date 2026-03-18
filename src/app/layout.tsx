@@ -66,6 +66,14 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="WebTruyen" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512.png" />
+
+        {/* FIX LCP: Preconnect R2 — giảm 80ms DNS lookup cho ảnh cover */}
+        <link rel="preconnect" href="https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev" />
+
+        {/* FIX LCP: Preconnect font — giảm 815ms font blocking (ảnh 5) */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body
         suppressHydrationWarning
@@ -92,7 +100,7 @@ export default function RootLayout({
             fontWeight: 500,
             zIndex: 9999,
             pointerEvents: 'none',
-          }}>v1.1</div>
+          }}>V 2.0</div>
         </SessionWrapper>
       </body>
     </html>

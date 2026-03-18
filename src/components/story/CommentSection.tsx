@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Heart, CornerDownRight, Send, Loader2 } from "lucide-react";
+import Image from "next/image"; // FIX LCP
 
 type Comment = {
     id: string;
@@ -44,12 +45,23 @@ function Avatar({ name, image, size = 38 }: { name: string; image?: string | nul
     const color = colors[name.charCodeAt(0) % colors.length];
 
     if (image) {
-        return <img src={image} alt={name} className="rounded-full object-cover shrink-0"
-            style={{ width: size, height: size }} />;
+        return (
+            // FIX LCP: next/image thay <img>
+            <Image
+                src={image}
+                alt={`Ảnh đại diện của ${name}`} // FIX A11Y: alt mô tả rõ
+                width={size}
+                height={size}
+                className="rounded-full object-cover shrink-0"
+            />
+        );
     }
     return (
-        <div className="rounded-full flex items-center justify-center shrink-0 text-white font-black"
-            style={{ width: size, height: size, background: color, fontSize: size * 0.38 }}>
+        <div
+            className="rounded-full flex items-center justify-center shrink-0 text-white font-black"
+            style={{ width: size, height: size, background: color, fontSize: size * 0.38 }}
+            aria-label={name} // FIX A11Y: tên user cho screen reader
+        >
             {name.charAt(0).toUpperCase()}
         </div>
     );
@@ -64,7 +76,6 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
     const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Load comments
     useEffect(() => {
         const fetchComments = async () => {
             try {
@@ -72,7 +83,6 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                 if (res.ok) {
                     const data = await res.json();
                     setComments(data);
-                    // Init fake like counts
                     const counts: Record<string, number> = {};
                     data.forEach((c: Comment) => { counts[c.id] = Math.floor(Math.random() * 20); });
                     setLikeCounts(counts);
@@ -136,9 +146,12 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
     };
 
     return (
-        <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-6 md:p-8">
+        <section
+            aria-label="Bình luận" // FIX A11Y
+            className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-6 md:p-8"
+        >
             <h2 className="font-bold text-base mb-5 text-warm-ink flex items-center gap-2.5">
-                <span className="w-1 h-5 rounded-sm bg-warm-primary shrink-0"></span>
+                <span className="w-1 h-5 rounded-sm bg-warm-primary shrink-0" aria-hidden="true"></span>
                 Bình luận
                 {comments.length > 0 && (
                     <span className="text-xs font-semibold text-warm-ink-light ml-1">({comments.length})</span>
@@ -147,11 +160,7 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
 
             {/* Input box */}
             <div className="flex gap-3 mb-6">
-                <Avatar
-                    name={currentUser?.name || "U"}
-                    image={currentUser?.image}
-                    size={38}
-                />
+                <Avatar name={currentUser?.name || "U"} image={currentUser?.image} size={38} />
                 <div className="flex-1 flex flex-col gap-2">
                     <textarea
                         ref={textareaRef}
@@ -160,18 +169,21 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                         onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) handleSend(); }}
                         placeholder={currentUser ? "Chia sẻ cảm nhận của bạn về truyện..." : "Đăng nhập để bình luận..."}
                         rows={3}
-                        className="w-full px-4 py-3 text-sm rounded-xl resize-none outline-none transition-all bg-warm-bg border border-warm-border text-warm-ink-mid placeholder:text-warm-ink-light focus:border-warm-primary"
+                        aria-label="Nội dung bình luận" // FIX A11Y
+                        disabled={!currentUser}
+                        className="w-full px-4 py-3 text-sm rounded-xl resize-none outline-none transition-all bg-warm-bg border border-warm-border text-warm-ink-mid placeholder:text-warm-ink-light focus:border-warm-primary disabled:opacity-60"
                     />
                     <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-warm-ink-light">Ctrl+Enter để gửi</span>
+                        <span className="text-[10px] text-warm-ink-light" aria-hidden="true">Ctrl+Enter để gửi</span>
                         <button
                             onClick={handleSend}
                             disabled={isSending || !content.trim()}
+                            aria-label={isSending ? "Đang gửi bình luận..." : "Gửi bình luận"} // FIX A11Y
                             className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold text-white bg-warm-primary hover:bg-warm-primary-soft transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isSending
-                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                : <Send className="h-3.5 w-3.5" />
+                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                                : <Send className="h-3.5 w-3.5" aria-hidden="true" />
                             }
                             Gửi bình luận
                         </button>
@@ -181,18 +193,19 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
 
             {/* Comment list */}
             {isLoading ? (
-                <div className="flex justify-center py-8">
-                    <Loader2 className="h-5 w-5 animate-spin text-warm-ink-light" />
+                <div className="flex justify-center py-8" role="status" aria-label="Đang tải bình luận...">
+                    <Loader2 className="h-5 w-5 animate-spin text-warm-ink-light" aria-hidden="true" />
                 </div>
             ) : comments.length === 0 ? (
                 <p className="text-sm italic text-warm-ink-light text-center py-6">
                     Chưa có bình luận nào. Hãy là người đầu tiên! 💬
                 </p>
             ) : (
-                <div className="space-y-3">
+                <ol className="space-y-3" aria-label="Danh sách bình luận"> {/* FIX A11Y: ol thay div */}
                     {comments.map(comment => (
-                        <div key={comment.id}
-                            className="flex gap-3 p-4 rounded-xl bg-warm-bg border border-warm-border-soft">
+                        <li key={comment.id}
+                            className="flex gap-3 p-4 rounded-xl bg-warm-bg border border-warm-border-soft"
+                        >
                             <Avatar name={comment.user.name} image={comment.user.image} size={36} />
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -203,24 +216,29 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                                 </div>
                                 <p className="text-sm text-warm-ink-mid leading-relaxed mb-2">{comment.content}</p>
                                 <div className="flex items-center gap-4 text-xs text-warm-ink-light">
-                                    <span>{timeAgo(comment.createdAt)}</span>
+                                    <time dateTime={comment.createdAt}>{timeAgo(comment.createdAt)}</time> {/* FIX A11Y: <time> */}
                                     <button
                                         onClick={() => handleLike(comment.id)}
+                                        aria-label={`${likedIds.has(comment.id) ? 'Bỏ thích' : 'Thích'} bình luận của ${comment.user.name}. ${likeCounts[comment.id] || 0} lượt thích`}
+                                        aria-pressed={likedIds.has(comment.id)} // FIX A11Y
                                         className={`flex items-center gap-1 transition-colors ${likedIds.has(comment.id) ? 'text-red-500' : 'hover:text-red-400'}`}
                                     >
-                                        <Heart className={`h-3.5 w-3.5 ${likedIds.has(comment.id) ? 'fill-current' : ''}`} />
-                                        {likeCounts[comment.id] || 0}
+                                        <Heart className={`h-3.5 w-3.5 ${likedIds.has(comment.id) ? 'fill-current' : ''}`} aria-hidden="true" />
+                                        <span aria-hidden="true">{likeCounts[comment.id] || 0}</span>
                                     </button>
-                                    <button className="flex items-center gap-1 hover:text-warm-primary transition-colors">
-                                        <CornerDownRight className="h-3.5 w-3.5" />
+                                    <button
+                                        className="flex items-center gap-1 hover:text-warm-primary transition-colors"
+                                        aria-label={`Trả lời bình luận của ${comment.user.name}`} // FIX A11Y
+                                    >
+                                        <CornerDownRight className="h-3.5 w-3.5" aria-hidden="true" />
                                         Trả lời
                                     </button>
                                 </div>
                             </div>
-                        </div>
+                        </li>
                     ))}
-                </div>
+                </ol>
             )}
-        </div>
+        </section>
     );
 }
