@@ -1,26 +1,20 @@
 import { BookOpen, User, Clock, Eye, Star, List, ChevronRight, PlayCircle, Heart, Bookmark, Trophy } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link'; // đã có trong file gốc nhưng thiếu import
+import Link from 'next/link';
 
 import ReviewButton from '@/components/story/ReviewButton';
 import StoryInteractions from '@/components/story/StoryInteractions';
 import CommentSection from '@/components/story/CommentSection';
 
 import { getStoryBySlug, getChaptersByStoryId, getRelatedStories, getStoriesByAuthor } from '@/actions/stories';
-import { getStoryInteractions } from '@/actions/interactions';
 import { notFound } from 'next/navigation';
-
-import { auth } from '@/auth';
 import { formatNumber } from '@/lib/utils';
 
-// FIX SERVER SLOW (ảnh 2): Cache trang chi tiết 60 giây
-// Giảm số lần query Neon DB — trang sẽ được serve từ cache Vercel Edge
+// ✅ Bỏ auth() và getStoryInteractions() hoàn toàn
+// → Next.js cache toàn bộ trang, revalidate = 60 hoạt động đúng
+// → Phần like/follow/lịch sử đọc: StoryInteractions tự xử lý client-side
 export const revalidate = 60;
-
-// FIX: Dynamic params vẫn được hỗ trợ
 export const dynamicParams = true;
-
-const CHAPTERS_PER_PAGE = 20;
 
 const StoryDetail = async ({
     params,
@@ -33,18 +27,19 @@ const StoryDetail = async ({
     const { page: pageParam } = await searchParams;
     const currentPage = Math.max(1, parseInt(pageParam || '1'));
 
-    // FIX SERVER SLOW: Fetch song song tất cả data không cần auth trước
-    // auth() và getStoryInteractions() chạy song song với các query khác
-    const [storyData, session] = await Promise.all([
+    // ✅ Tất cả query chạy song song, không có auth() chặn cache
+    const [storyData, chapterData, relatedStories, authorStories] = await Promise.all([
         getStoryBySlug(slug),
-        auth(),
+        // chapters cần storyId nên phải chờ storyData — xử lý sau
+        Promise.resolve(null),
+        Promise.resolve([]),
+        Promise.resolve([]),
     ]);
 
     if (!storyData) return notFound();
 
-    // FIX SERVER SLOW: Tất cả query còn lại chạy song song
-    const [interactionData, chapterData, relatedStories, authorStories] = await Promise.all([
-        getStoryInteractions(storyData.id),
+    // ✅ Round 2: các query cần storyId, chạy song song
+    const [chapterDataReal, relatedStoriesReal, authorStoriesReal] = await Promise.all([
         getChaptersByStoryId(storyData.id, currentPage),
         getRelatedStories(storyData.id, storyData.genres.map(g => g.name), 5),
         getStoriesByAuthor(storyData.author, storyData.id, 4),
@@ -69,7 +64,7 @@ const StoryDetail = async ({
         }))
     };
 
-    const totalPages = chapterData.totalPages;
+    const totalPages = chapterDataReal.totalPages;
     const pageUrl = (p: number) => `/truyen/${slug}?page=${p}`;
 
     return (
@@ -93,13 +88,9 @@ const StoryDetail = async ({
                         {/* HERO CARD */}
                         <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-md p-6 md:p-8 flex flex-col md:flex-row gap-7">
 
-                            {/* Cover — LCP element chính của trang */}
+                            {/* Cover */}
                             <div className="shrink-0 relative self-start mx-auto md:mx-0">
                                 {story.coverImage ? (
-                                    // FIX LCP QUAN TRỌNG NHẤT:
-                                    // 1. next/image → tự optimize WebP/AVIF + resize đúng kích thước
-                                    // 2. priority=true → fetchpriority="high" + preload, không lazy load
-                                    // 3. Khai báo width/height đúng → tránh layout shift (CLS)
                                     <div className="w-44 relative rounded-xl overflow-hidden shadow-xl" style={{ aspectRatio: '3/4' }}>
                                         <Image
                                             src={story.coverImage}
@@ -107,7 +98,7 @@ const StoryDetail = async ({
                                             fill
                                             sizes="176px"
                                             className="object-cover"
-                                            priority={true}  // FIX LCP: load ngay, không lazy
+                                            priority={true}
                                         />
                                     </div>
                                 ) : (
@@ -159,10 +150,11 @@ const StoryDetail = async ({
                                     </div>
                                     <span className="text-lg font-black text-warm-gold">{story.rating}</span>
                                     <span className="text-xs text-warm-ink-light">({story.ratingCount} đánh giá)</span>
+                                    {/* ✅ ReviewButton không cần currentUser — tự check auth khi click */}
                                     <ReviewButton
                                         storyId={storyData.id}
                                         text="Đánh giá"
-                                        currentUser={session?.user}
+                                        currentUser={undefined}
                                         className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-warm-primary-pale text-warm-primary border border-warm-primary/25 hover:bg-warm-primary hover:text-white transition-all"
                                     />
                                 </div>
@@ -188,6 +180,8 @@ const StoryDetail = async ({
                                     </div>
                                 </div>
 
+                                {/* ✅ StoryInteractions nhận userStatus mặc định (chưa đăng nhập)
+                                    Component tự check auth khi user bấm like/follow */}
                                 <StoryInteractions
                                     storyId={storyData.id}
                                     storySlug={slug}
@@ -199,8 +193,12 @@ const StoryDetail = async ({
                                         nominationCount: storyData.nominationCount || 0,
                                         viewCount: storyData.viewCount
                                     }}
-                                    userStatus={interactionData.userStatus}
-                                    currentUser={session?.user}
+                                    userStatus={{
+                                        isLiked: false,
+                                        isFollowed: false,
+                                        lastReadChapterId: null,
+                                    }}
+                                    currentUser={undefined}
                                 />
 
                                 {/* Nút Nghe Truyện */}
@@ -236,28 +234,6 @@ const StoryDetail = async ({
                                 </span>
                             </div>
 
-                            {/* Đang đọc dở */}
-                            {interactionData.userStatus.lastReadChapterId && (
-                                <div className="mb-5">
-                                    <p className="text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5 text-warm-ink-light">
-                                        <BookOpen className="h-3 w-3" aria-hidden="true" /> Đang đọc dở
-                                    </p>
-                                    <a href={`/truyen/${slug}/chuong-${interactionData.userStatus.lastReadChapterId}`}
-                                        className="flex items-center gap-3 p-3.5 rounded-xl bg-warm-primary-pale border border-warm-primary/20 hover:border-warm-primary/50 transition-all group">
-                                        <div className="w-9 h-9 rounded-lg bg-warm-primary flex items-center justify-center shrink-0 shadow-sm">
-                                            <PlayCircle className="h-4 w-4 text-white" aria-hidden="true" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-[10px] font-black uppercase tracking-wider mb-0.5 text-warm-primary">Tiếp tục đọc</p>
-                                            <p className="text-sm font-bold text-warm-ink truncate group-hover:text-warm-primary transition-colors">
-                                                Chương {interactionData.userStatus.lastReadChapterId}
-                                            </p>
-                                        </div>
-                                        <ChevronRight className="h-4 w-4 text-warm-primary shrink-0 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
-                                    </a>
-                                </div>
-                            )}
-
                             {/* Mới cập nhật */}
                             <div className="mb-5">
                                 <p className="text-[10px] font-black uppercase tracking-widest mb-2.5 flex items-center gap-1.5 text-warm-ink-light">
@@ -283,7 +259,7 @@ const StoryDetail = async ({
                                     <List className="h-3 w-3" aria-hidden="true" /> Tất cả chương
                                 </p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
-                                    {chapterData.chapters.map(ch => (
+                                    {chapterDataReal.chapters.map(ch => (
                                         <a href={`/truyen/${slug}/chuong-${ch.index}`} key={ch.id}
                                             className="text-sm text-warm-ink-soft flex justify-between items-center py-2 border-b border-warm-border-soft group hover:text-warm-primary transition-colors">
                                             <span className="truncate">{ch.title || `Chương ${ch.index}`}</span>
@@ -327,14 +303,10 @@ const StoryDetail = async ({
                             </div>
                         </div>
 
-                        {/* BÌNH LUẬN */}
+                        {/* BÌNH LUẬN — không cần currentUser, tự check auth khi submit */}
                         <CommentSection
                             storySlug={slug}
-                            currentUser={session?.user ? {
-                                id: session.user.id,
-                                name: session.user.name || 'User',
-                                image: session.user.image,
-                            } : null}
+                            currentUser={null}
                         />
                     </div>
 
@@ -361,25 +333,18 @@ const StoryDetail = async ({
                         </div>
 
                         {/* TRUYỆN CÙNG THỂ LOẠI */}
-                        {relatedStories.length > 0 && (
+                        {relatedStoriesReal.length > 0 && (
                             <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-5">
                                 <h2 className="font-bold text-sm mb-4 text-warm-ink flex items-center gap-2">
                                     <span className="w-1 h-4 rounded-sm bg-warm-primary shrink-0" aria-hidden="true"></span>
                                     CÙNG THỂ LOẠI
                                 </h2>
                                 <div className="space-y-3">
-                                    {relatedStories.map((s: any) => (
+                                    {relatedStoriesReal.map((s: any) => (
                                         <a key={s.id} href={`/truyen/${s.slug}`} className="flex gap-2.5 group" aria-label={`${s.title} - ${s.author}`}>
-                                            {/* FIX LCP: next/image thay <img> cho sidebar */}
                                             <div className="w-10 h-14 rounded-md overflow-hidden shrink-0 shadow-sm relative bg-warm-bg">
                                                 {s.coverImage ? (
-                                                    <Image
-                                                        src={s.coverImage}
-                                                        alt={`Ảnh bìa ${s.title}`}
-                                                        fill
-                                                        sizes="40px"
-                                                        className="object-cover"
-                                                    />
+                                                    <Image src={s.coverImage} alt={`Ảnh bìa ${s.title}`} fill sizes="40px" className="object-cover" />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center">
                                                         <BookOpen className="h-4 w-4 text-warm-ink-light" aria-hidden="true" />
@@ -403,7 +368,7 @@ const StoryDetail = async ({
                         )}
 
                         {/* TRUYỆN KHÁC CỦA TÁC GIẢ */}
-                        {authorStories.length > 0 && (
+                        {authorStoriesReal.length > 0 && (
                             <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-5">
                                 <h2 className="font-bold text-sm mb-4 text-warm-ink flex items-center gap-2">
                                     <span className="w-1 h-4 rounded-sm bg-warm-primary shrink-0" aria-hidden="true"></span>
@@ -411,18 +376,11 @@ const StoryDetail = async ({
                                 </h2>
                                 <p className="text-[10px] text-warm-ink-light mb-3 font-medium">✍️ {story.author}</p>
                                 <div className="space-y-3">
-                                    {authorStories.map((s: any) => (
+                                    {authorStoriesReal.map((s: any) => (
                                         <a key={s.id} href={`/truyen/${s.slug}`} className="flex gap-2.5 group" aria-label={`${s.title}`}>
-                                            {/* FIX LCP: next/image thay <img> */}
                                             <div className="w-10 h-14 rounded-md overflow-hidden shrink-0 shadow-sm relative bg-warm-bg">
                                                 {s.coverImage ? (
-                                                    <Image
-                                                        src={s.coverImage}
-                                                        alt={`Ảnh bìa ${s.title}`}
-                                                        fill
-                                                        sizes="40px"
-                                                        className="object-cover"
-                                                    />
+                                                    <Image src={s.coverImage} alt={`Ảnh bìa ${s.title}`} fill sizes="40px" className="object-cover" />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center">
                                                         <BookOpen className="h-4 w-4 text-warm-ink-light" aria-hidden="true" />
