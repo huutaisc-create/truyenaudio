@@ -1,16 +1,60 @@
-name: Keep Neon DB Alive
+name: 🏓 Keep Neon DB Alive
+
+# ┌───────────── minute (0-59)
+# │ ┌───────────── hour (0-23)
+# │ │ ┌───────────── day of month (1-31)
+# │ │ │ ┌───────────── month (1-12)
+# │ │ │ │ ┌───────────── day of week (0-6, Sunday=0)
+# │ │ │ │ │
+# */4 * * * *  →  mỗi 4 phút, mọi giờ, mọi ngày
+#
+# Tại sao 4 phút?
+# Neon free plan tự ngủ sau 5 phút không có activity.
+# Ping mỗi 4 phút đảm bảo DB luôn warm, tránh cold-start 2-3 giây.
 
 on:
   schedule:
-    - cron: '*/4 * * * *'  # mỗi 4 phút — tránh Neon idle timeout 5 phút
+    - cron: '*/4 * * * *'
+
+  # Cho phép chạy thủ công từ GitHub Actions tab
+  # Dùng để test hoặc wake DB ngay lập tức khi cần
   workflow_dispatch:
 
 jobs:
   ping:
+    name: Ping DB every 4 minutes
     runs-on: ubuntu-latest
+    timeout-minutes: 2  # Kill job nếu treo quá 2 phút
+
     steps:
-      - name: Ping keep-alive endpoint
+      - name: 🔔 Ping keep-alive endpoint
         run: |
-          curl -f -s "${{ secrets.APP_URL }}/api/keep-alive" \
-            -H "x-manual-check: true" \
-            || echo "Ping failed"
+          echo "⏰ $(date -u '+%Y-%m-%d %H:%M:%S UTC') — Pinging Neon DB..."
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            "${{ secrets.APP_URL }}/api/keep-alive" \
+            -H "x-manual-check: true")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n1)
+
+          echo "📡 Response: $BODY"
+          echo "📊 HTTP Status: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Ping failed with status $HTTP_CODE"
+            exit 1
+          fi
+
+          # Hiển thị dbStatus (warm/cold-start) để theo dõi
+          DB_STATUS=$(echo "$BODY" | grep -o '"dbStatus":"[^"]*"' | cut -d'"' -f4)
+          RESPONSE_TIME=$(echo "$BODY" | grep -o '"responseTime":"[^"]*"' | cut -d'"' -f4)
+
+          echo "🗄️  DB Status: $DB_STATUS"
+          echo "⚡ Response Time: $RESPONSE_TIME"
+
+          if [ "$DB_STATUS" = "cold-start" ]; then
+            echo "🥶 DB was sleeping — woke up successfully"
+          else
+            echo "✅ DB is warm and healthy"
+          fi
