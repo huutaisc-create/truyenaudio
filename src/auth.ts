@@ -25,15 +25,18 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         }),
     ],
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user, trigger, session }) {
+            // Chỉ set data khi login lần đầu
             if (user) {
                 token.role = user.role || "USER";
                 token.id = user.id || "";
                 token.chaptersRead = (user as any).chaptersRead ?? 0;
                 token.image = user.image || null;
             }
-            // Luôn refresh từ DB để cập nhật realtime (chaptersRead + image)
-            if (token.id) {
+
+            // ✅ Chỉ refresh DB khi user chủ động update (trigger = 'update')
+            // Bỏ refresh mỗi request → tiết kiệm 1 DB query mỗi lần auth() được gọi
+            if (trigger === 'update' && token.id) {
                 const freshUser = await db.user.findUnique({
                     where: { id: token.id as string },
                     select: { chaptersRead: true, image: true, name: true },
@@ -44,6 +47,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                     token.name = freshUser.name;
                 }
             }
+
             return token;
         },
         async session({ session, token }) {
