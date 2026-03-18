@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image'; // FIX LCP
 import { Search, BookOpen, Star } from 'lucide-react';
 
 interface SearchBoxProps {
@@ -24,12 +25,16 @@ const SearchBox: React.FC<SearchBoxProps> = ({
     className = ""
 }) => {
     return (
-        <div className={className}>
+        // FIX A11Y: role="search" cho vùng tìm kiếm
+        <div className={className} role="search">
             <div className="relative z-10">
                 <input
-                    type="text"
+                    type="search" // FIX A11Y: type="search" thay "text"
                     placeholder="Tìm kiếm truyện..."
                     value={searchQuery}
+                    aria-label="Tìm kiếm truyện" // FIX A11Y
+                    aria-autocomplete="list"
+                    aria-controls={showResults ? "search-results" : undefined}
                     onChange={(e) => {
                         setSearchQuery(e.target.value);
                         setShowResults(e.target.value.length > 0);
@@ -41,21 +46,28 @@ const SearchBox: React.FC<SearchBoxProps> = ({
                 />
                 <button
                     onClick={handleSearch}
+                    aria-label="Tìm kiếm" // FIX A11Y
                     className="absolute right-1 top-1 rounded-full bg-brand-primary p-1.5 text-white shadow-sm hover:bg-orange-600 transition-colors"
                 >
-                    <Search className="h-4 w-4" />
+                    <Search className="h-4 w-4" aria-hidden="true" />
                 </button>
             </div>
 
             {/* Instant Search Results Dropdown */}
             {showResults && searchQuery.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-zinc-100 shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+                <div
+                    id="search-results"
+                    role="listbox" // FIX A11Y
+                    aria-label="Kết quả tìm kiếm"
+                    className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-zinc-100 shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50"
+                >
                     <div className="p-2 border-b border-zinc-50 flex items-center justify-between">
                         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider pl-2">Kết quả tìm kiếm</span>
                         <Link
                             href={`/tim-kiem?tu-khoa=${encodeURIComponent(searchQuery.trim())}`}
                             onClick={() => setShowResults(false)}
                             className="text-[10px] font-bold text-brand-primary hover:underline pr-2"
+                            aria-label={`Xem tất cả kết quả cho "${searchQuery}"`}
                         >
                             Xem tất cả
                         </Link>
@@ -66,16 +78,24 @@ const SearchBox: React.FC<SearchBoxProps> = ({
                                 <Link
                                     key={result.id || idx}
                                     href={`/truyen/${result.slug}`}
+                                    role="option" // FIX A11Y
+                                    aria-label={`${result.title} - ${result.author}`}
                                     className="flex items-center gap-3 p-3 hover:bg-zinc-50 transition-colors border-b border-zinc-50 last:border-0"
                                     onClick={() => setShowResults(false)}
                                 >
+                                    {/* FIX LCP: next/image thay <img> */}
                                     <div className="w-10 h-14 bg-zinc-100 rounded shrink-0 flex items-center justify-center overflow-hidden border border-zinc-100 relative">
                                         {result.coverImage ? (
-                                            <img src={result.coverImage} className="w-full h-full object-cover" alt="" />
+                                            <Image
+                                                src={result.coverImage}
+                                                alt={`Ảnh bìa ${result.title}`}
+                                                fill
+                                                sizes="40px"
+                                                className="object-cover"
+                                            />
                                         ) : (
-                                            <BookOpen className="h-5 w-5 text-zinc-300" />
+                                            <BookOpen className="h-5 w-5 text-zinc-300" aria-hidden="true" />
                                         )}
-                                        {/* Status Badge */}
                                         {result.status === 'COMPLETED' && (
                                             <span className="absolute top-0 right-0 bg-red-600 text-white text-[7px] font-bold px-1 py-0.5 shadow-sm z-10 uppercase tracking-tighter leading-none">
                                                 Full
@@ -85,15 +105,16 @@ const SearchBox: React.FC<SearchBoxProps> = ({
                                     <div className="flex-1 min-w-0">
                                         <h4 className="text-sm font-bold text-zinc-800 truncate">{result.title}</h4>
                                         <p className="text-[11px] text-zinc-500 mt-0.5">{result.author}</p>
-                                        <div className="flex items-center gap-1 mt-1 text-orange-400">
-                                            <Star className="h-3 w-3 fill-current" />
+                                        <div className="flex items-center gap-1 mt-1 text-orange-400" aria-label={`Điểm đánh giá: ${result.ratingScore || 5.0}`}>
+                                            <Star className="h-3 w-3 fill-current" aria-hidden="true" />
                                             <span className="text-[10px] font-bold text-zinc-700">{result.ratingScore || 5.0}</span>
                                         </div>
                                     </div>
                                 </Link>
-                            ))) : (
-                            <div className="p-4 text-center text-sm text-zinc-400 italic">
-                                {results.length === 0 ? "Không tìm thấy..." : "Đang tìm..."}
+                            ))
+                        ) : (
+                            <div className="p-4 text-center text-sm text-zinc-400 italic" role="status">
+                                Không tìm thấy...
                             </div>
                         )}
                     </div>

@@ -1,4 +1,5 @@
-import { Flame, Clock, BookOpen, User, BookMarked, Star, Sparkles } from "lucide-react";
+import { BookOpen, BookMarked, Star, Sparkles } from "lucide-react";
+import Image from "next/image";
 import ReadingHistoryWidget from "@/components/common/ReadingHistoryWidget";
 import db from "@/lib/db";
 import { GENRES } from "@/lib/constants";
@@ -9,46 +10,89 @@ import RecentReads from "@/components/home/RecentReads";
 import RankingTabs from "@/components/home/RankingTabs";
 import SectionNav from "@/components/home/SectionNav";
 
-// ── StoryCard dùng chung cho tất cả grid ──
-const StoryCard = ({ title, status, slug, coverImage, hoverColor = "text-orange-300" }: {
-  title: string; status?: string; slug: string; coverImage?: string | null; hoverColor?: string;
+// ─────────────────────────────────────────────────────
+// SHARED PILL COMPONENTS — đồng bộ toàn trang
+// ─────────────────────────────────────────────────────
+
+// Pill title: nền cam, chữ trắng, font 14px
+const SectionTitle = ({ emoji, label }: { emoji: string; label: string }) => (
+  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#e8580a] text-white">
+    <span className="text-sm leading-none" aria-hidden="true">{emoji}</span>
+    <span className="text-sm font-black uppercase tracking-[.08em]">{label}</span>
+  </div>
+);
+
+// Pill "Tất cả": viền cam → hover nền cam chữ trắng
+const SeeAllLink = ({ href, label }: { href: string; label: string }) => (
+  <Link
+    href={href}
+    aria-label={label}
+    className="inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold border-[1.5px] border-[#e8580a] text-[#e8580a] bg-white hover:bg-[#e8580a] hover:text-white transition-all"
+  >
+    Tất cả →
+  </Link>
+);
+
+// ── StoryCard ──
+const StoryCard = ({
+  title, status, slug, coverImage,
+  hoverColor = "text-orange-300",
+  priority = false,
+}: {
+  title: string; status?: string; slug: string;
+  coverImage?: string | null; hoverColor?: string; priority?: boolean;
 }) => (
   <div className="group cursor-pointer relative">
     <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-zinc-100 shadow-sm transition-all group-hover:shadow-md">
-      <Link href={`/truyen/${slug}`} className="block absolute inset-0 z-0">
+
+      <Link href={`/truyen/${slug}`} className="block absolute inset-0 z-0" aria-label={`Xem truyện ${title}`}>
         {coverImage ? (
-          <img src={coverImage} alt={title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+          <Image
+            src={coverImage}
+            alt={`Ảnh bìa ${title}`}
+            fill
+            sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 22vw"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            priority={priority}
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-zinc-300 bg-zinc-200">
-            <BookOpen className="h-10 w-10 opacity-20" />
+            <BookOpen className="h-10 w-10 opacity-20" aria-hidden="true" />
           </div>
         )}
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2 pt-10 flex flex-col justify-end">
           <h3 className={`line-clamp-2 text-sm font-bold text-white group-hover:${hoverColor} transition-colors leading-tight`}>{title}</h3>
         </div>
       </Link>
+
       {status === "COMPLETED" && (
         <span className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 shadow-sm z-10 uppercase tracking-wider rounded-br-md">Full</span>
       )}
-      {/* Corner buttons — góc trên phải */}
+
+      {/* Nút NGHE/ĐỌC — đồng bộ pill cam, hover đậm hơn */}
       <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 z-10">
-        <Link href={`/truyen/${slug}/nghe`}
-          className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white border border-[#e8580a] shadow-md hover:bg-[#e8580a] hover:text-white transition-all peer/nghe"
-          style={{ color: '#e8580a' }}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e8580a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        <Link
+          href={`/truyen/${slug}/nghe`}
+          aria-label={`Nghe truyện ${title}`}
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#e8580a] text-white shadow-md hover:bg-[#c44a08] active:bg-[#a33d06] transition-all"
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
           </svg>
-          <span className="text-[8px] font-black uppercase tracking-[.07em]">Nghe</span>
+          <span className="text-[11px] font-black uppercase tracking-[.05em]">Nghe</span>
         </Link>
-        <Link href={`/truyen/${slug}`}
-          className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white border border-[#e8580a] shadow-md hover:bg-[#e8580a] hover:text-white transition-all"
-          style={{ color: '#e8580a' }}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e8580a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        <Link
+          href={`/truyen/${slug}`}
+          aria-label={`Đọc truyện ${title}`}
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#e8580a] text-white shadow-md hover:bg-[#c44a08] active:bg-[#a33d06] transition-all"
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
           </svg>
-          <span className="text-[8px] font-black uppercase tracking-[.07em]">Đọc</span>
+          <span className="text-[11px] font-black uppercase tracking-[.05em]">Đọc</span>
         </Link>
       </div>
+
     </div>
   </div>
 );
@@ -56,7 +100,12 @@ const StoryCard = ({ title, status, slug, coverImage, hoverColor = "text-orange-
 export const revalidate = 60;
 
 export default async function Home() {
-  const [hotStories, newStories, topNominations, topViews, topLikes, topFollows, createdStories, completedStories, totalStories, totalChapters] = await Promise.all([
+  const [
+    hotStories, newStories,
+    topNominations, topViews, topLikes, topFollows,
+    createdStories, completedStories,
+    totalStories, totalChapters,
+  ] = await Promise.all([
     db.story.findMany({ take: 8, orderBy: { viewCount: 'desc' }, include: { genres: { take: 1 }, chapters: { orderBy: { index: 'desc' }, take: 1, select: { index: true } } } }),
     db.story.findMany({ take: 15, orderBy: { updatedAt: 'desc' }, include: { genres: { take: 1 }, chapters: { orderBy: { index: 'desc' }, take: 1, select: { index: true, createdAt: true } } } }),
     db.story.findMany({ take: 8, orderBy: { nominationCount: 'desc' }, include: { genres: { take: 1 } } }),
@@ -72,7 +121,7 @@ export default async function Home() {
   const fmt = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(0)}K` : n.toString();
 
   return (
-    <div className=" pb-24">
+    <div className="pb-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
 
@@ -81,94 +130,77 @@ export default async function Home() {
 
             <RecentReads />
 
-            {/* Hot Stories */}
-            <section id="section-hot" className="scroll-mt-20">
+            {/* TRUYỆN HOT */}
+            <section id="section-hot" className="scroll-mt-20" aria-label="Truyện Hot">
               <div className="py-5 flex items-center justify-between">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border-[2.5px] border-[#e8580a] text-[#e8580a] bg-white">
-                  <span className="w-[22px] h-[22px] bg-white rounded-full flex items-center justify-center text-[11px] shrink-0">🔥</span>
-                  <span className="text-[12px] font-black uppercase tracking-[.1em]">Truyện Hot</span>
-                </div>
-                <Link href="/xep-hang?tab=hot"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-bold border-[1.5px] border-[#e8580a] text-[#e8580a] bg-white hover:bg-orange-50 transition-all">
-                  Tất cả →
-                </Link>
+                <SectionTitle emoji="🔥" label="Truyện Hot" />
+                <SeeAllLink href="/xep-hang?tab=hot" label="Xem tất cả truyện hot" />
               </div>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-                {hotStories.map(story => (
-                  <StoryCard key={story.id} title={story.title} status={story.status} slug={story.slug} coverImage={story.coverImage} hoverColor="text-orange-300" />
+                {hotStories.map((story, i) => (
+                  <StoryCard key={story.id} title={story.title} status={story.status} slug={story.slug} coverImage={story.coverImage} hoverColor="text-orange-300" priority={i < 4} />
                 ))}
               </div>
             </section>
 
-            <section id="section-ranking" className="scroll-mt-20">
+            {/* XẾP HẠNG */}
+            <section id="section-ranking" className="scroll-mt-20" aria-label="Xếp hạng">
               <div className="hidden lg:block">
-              <RankingTabs
-                topNominations={topNominations}
-                topViews={topViews}
-                topLikes={topLikes}
-                topFollows={topFollows}
-              />
+                <RankingTabs
+                  topNominations={topNominations}
+                  topViews={topViews}
+                  topLikes={topLikes}
+                  topFollows={topFollows}
+                />
               </div>
             </section>
 
-            <section id="section-new" className="scroll-mt-20">
+            {/* TRUYỆN MỚI */}
+            <section id="section-new" className="scroll-mt-20" aria-label="Truyện mới">
               <div className="hidden lg:block">
-              <div className="py-5 flex items-center justify-between">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border-[2.5px] border-[#e8580a] text-[#e8580a] bg-white">
-                  <span className="w-[22px] h-[22px] bg-white rounded-full flex items-center justify-center text-[11px] shrink-0">🕐</span>
-                  <span className="text-[12px] font-black uppercase tracking-[.1em]">Truyện Mới</span>
+                <div className="py-5 flex items-center justify-between">
+                  <SectionTitle emoji="🕐" label="Truyện Mới" />
+                  <SeeAllLink href="/xep-hang?tab=new" label="Xem tất cả truyện mới" />
                 </div>
-                <Link href="/xep-hang?tab=new"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-bold border-[1.5px] border-[#e8580a] text-[#e8580a] bg-white hover:bg-orange-50 transition-all">
-                  Xem tất cả →
-                </Link>
-              </div>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-                {createdStories.map(story => (
-                  <StoryCard key={story.id} title={story.title} status={story.status} slug={story.slug} coverImage={story.coverImage} hoverColor="text-green-300" />
-                ))}
-              </div>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+                  {createdStories.map(story => (
+                    <StoryCard key={story.id} title={story.title} status={story.status} slug={story.slug} coverImage={story.coverImage} hoverColor="text-green-300" />
+                  ))}
+                </div>
               </div>
             </section>
 
-            <section id="section-completed" className="scroll-mt-20">
+            {/* TRUYỆN HOÀN THÀNH */}
+            <section id="section-completed" className="scroll-mt-20" aria-label="Truyện hoàn thành">
               <div className="hidden lg:block">
-              <div className="py-5 flex items-center justify-between">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border-[2.5px] border-[#e8580a] text-[#e8580a] bg-white">
-                  <span className="w-[22px] h-[22px] bg-white rounded-full flex items-center justify-center text-[11px] shrink-0">📖</span>
-                  <span className="text-[12px] font-black uppercase tracking-[.1em]">Truyện Đã Hoàn Thành</span>
+                <div className="py-5 flex items-center justify-between">
+                  <SectionTitle emoji="📖" label="Truyện Đã Hoàn Thành" />
+                  <SeeAllLink href="/xep-hang?tab=completed" label="Xem tất cả truyện hoàn thành" />
                 </div>
-                <Link href="/xep-hang?tab=completed"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-bold border-[1.5px] border-[#e8580a] text-[#e8580a] bg-white hover:bg-orange-50 transition-all">
-                  Xem tất cả →
-                </Link>
-              </div>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-                {completedStories.map(story => (
-                  <StoryCard key={story.id} title={story.title} status={story.status} slug={story.slug} coverImage={story.coverImage} hoverColor="text-blue-300" />
-                ))}
-              </div>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+                  {completedStories.map(story => (
+                    <StoryCard key={story.id} title={story.title} status={story.status} slug={story.slug} coverImage={story.coverImage} hoverColor="text-blue-300" />
+                  ))}
+                </div>
               </div>
             </section>
 
           </div>
 
-          {/* ── RIGHT (3/12) ── */}
-          <aside className="lg:col-span-3 space-y-6 mt-5">
+          {/* ── RIGHT SIDEBAR (3/12) ── */}
+          <aside className="lg:col-span-3 space-y-6 mt-5" aria-label="Sidebar">
 
+            {/* THỐNG KÊ */}
             <div className="hidden lg:block bg-white rounded-xl border border-zinc-100 shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b border-orange-100">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border-[2.5px] border-[#e8580a] text-[#e8580a] bg-white">
-                  <span className="w-[22px] h-[22px] bg-white rounded-full flex items-center justify-center text-[11px] shrink-0">📊</span>
-                  <span className="text-[12px] font-black uppercase tracking-[.1em]">Thống Kê</span>
-                </div>
+                <SectionTitle emoji="📊" label="Thống Kê" />
               </div>
               <div className="grid grid-cols-2 divide-x divide-y divide-zinc-50">
                 {[
-                  { icon: <BookMarked className="h-4 w-4 text-brand-primary" />, bg: 'bg-orange-50', val: fmt(totalStories), label: 'Bộ truyện' },
-                  { icon: <BookOpen className="h-4 w-4 text-blue-500" />,        bg: 'bg-blue-50',   val: fmt(totalChapters), label: 'Chương' },
-                  { icon: <Star className="h-4 w-4 text-purple-500" />,          bg: 'bg-purple-50', val: String(GENRES.length), label: 'Thể loại' },
-                  { icon: <Sparkles className="h-4 w-4 text-green-500" />,       bg: 'bg-green-50',  val: `${newStories.length}+`, label: 'Cập nhật/ngày' },
+                  { icon: <BookMarked className="h-4 w-4 text-brand-primary" aria-hidden="true" />, bg: 'bg-orange-50', val: fmt(totalStories), label: 'Bộ truyện' },
+                  { icon: <BookOpen className="h-4 w-4 text-blue-500" aria-hidden="true" />,        bg: 'bg-blue-50',   val: fmt(totalChapters), label: 'Chương' },
+                  { icon: <Star className="h-4 w-4 text-purple-500" aria-hidden="true" />,          bg: 'bg-purple-50', val: String(GENRES.length), label: 'Thể loại' },
+                  { icon: <Sparkles className="h-4 w-4 text-green-500" aria-hidden="true" />,       bg: 'bg-green-50',  val: `${newStories.length}+`, label: 'Cập nhật/ngày' },
                 ].map(({ icon, bg, val, label }) => (
                   <div key={label} className="flex items-center gap-2.5 p-3">
                     <div className={`w-7 h-7 rounded-lg ${bg} flex items-center justify-center shrink-0`}>{icon}</div>
@@ -181,16 +213,15 @@ export default async function Home() {
               </div>
             </div>
 
+            {/* READING HISTORY */}
             <div className="hidden lg:block">
               <ReadingHistoryWidget />
             </div>
 
-            <section className="hidden lg:block bg-white rounded-xl border border-zinc-100 shadow-sm overflow-hidden">
+            {/* THỂ LOẠI */}
+            <section className="hidden lg:block bg-white rounded-xl border border-zinc-100 shadow-sm overflow-hidden" aria-label="Thể loại truyện">
               <div className="px-4 py-3 border-b border-orange-100">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border-[2.5px] border-[#e8580a] text-[#e8580a] bg-white">
-                  <span className="w-[22px] h-[22px] bg-white rounded-full flex items-center justify-center text-[11px] shrink-0">🏷️</span>
-                  <span className="text-[12px] font-black uppercase tracking-[.1em]">Thể Loại</span>
-                </div>
+                <SectionTitle emoji="🏷️" label="Thể Loại" />
               </div>
               <div className="p-4">
                 <div className="flex flex-wrap gap-1.5">
@@ -198,7 +229,7 @@ export default async function Home() {
                     <Link
                       key={genre}
                       href={`/tim-kiem?the-loai=${encodeURIComponent(genre)}`}
-                      className="rounded-md bg-zinc-50 border border-zinc-100 px-2.5 py-1 text-sm font-medium text-zinc-600 hover:bg-orange-50 hover:text-brand-primary hover:border-orange-200 transition-all"
+                      className="rounded-full bg-zinc-50 border border-zinc-200 px-3 py-1 text-sm font-medium text-zinc-600 hover:bg-[#e8580a] hover:text-white hover:border-[#e8580a] transition-all"
                     >
                       {genre}
                     </Link>
@@ -207,34 +238,39 @@ export default async function Home() {
               </div>
             </section>
 
-            <section className="hidden lg:block bg-white rounded-xl border border-zinc-100 shadow-sm overflow-hidden">
+            {/* MỚI CẬP NHẬT */}
+            <section className="hidden lg:block bg-white rounded-xl border border-zinc-100 shadow-sm overflow-hidden" aria-label="Truyện mới cập nhật">
               <div className="px-4 py-3 border-b border-orange-100 flex items-center justify-between">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border-[2.5px] border-[#e8580a] text-[#e8580a] bg-white">
-                  <span className="w-[22px] h-[22px] bg-white rounded-full flex items-center justify-center text-[11px] shrink-0">⚡</span>
-                  <span className="text-[12px] font-black uppercase tracking-[.1em]">Mới Cập Nhật</span>
-                </div>
-                <Link href="/xep-hang?tab=new"
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-white text-[#e8580a] border border-[#e8580a] hover:bg-orange-50 transition-all">
-                  Tất cả →
-                </Link>
+                <SectionTitle emoji="⚡" label="Mới Cập Nhật" />
+                <SeeAllLink href="/xep-hang?tab=new" label="Xem tất cả truyện mới cập nhật" />
               </div>
               <div className="divide-y divide-zinc-50">
                 {newStories.map((story) => {
                   const ch = story.chapters[0];
                   return (
-                    <Link href={`/truyen/${story.slug}`} key={story.id}
-                      className="group flex items-center gap-3 px-3 py-2.5 hover:bg-orange-50 transition-colors">
-                      <div className="shrink-0 w-9 h-12 rounded overflow-hidden bg-zinc-200">
-                        {story.coverImage
-                          ? <img src={story.coverImage} alt={story.title} className="w-full h-full object-cover" />
-                          : <div className="w-full h-full flex items-center justify-center text-zinc-300"><BookOpen size={13} /></div>
-                        }
+                    <Link
+                      href={`/truyen/${story.slug}`}
+                      key={story.id}
+                      aria-label={`${story.title}${ch ? `, chương ${ch.index}` : ''}`}
+                      className="group flex items-center gap-3 px-3 py-2.5 hover:bg-orange-50 transition-colors"
+                    >
+                      <div className="shrink-0 w-9 h-12 rounded overflow-hidden bg-zinc-200 relative">
+                        {story.coverImage ? (
+                          <Image src={story.coverImage} alt={`Ảnh bìa ${story.title}`} fill sizes="36px" className="object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-zinc-300">
+                            <BookOpen size={13} aria-hidden="true" />
+                          </div>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="truncate text-sm font-semibold text-zinc-800 group-hover:text-brand-primary transition-colors">{story.title}</h4>
                         <div className="flex items-center gap-1 mt-0.5">
                           <span className="text-xs text-zinc-400">{story.genres[0]?.name}</span>
-                          {story.author && <><span className="text-xs text-zinc-300">·</span><span className="text-xs text-zinc-400 truncate max-w-[55px]">{story.author}</span></>}
+                          {story.author && (
+                            <><span className="text-xs text-zinc-300" aria-hidden="true">·</span>
+                            <span className="text-xs text-zinc-400 truncate max-w-[55px]">{story.author}</span></>
+                          )}
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
