@@ -4,17 +4,10 @@ const nextConfig: NextConfig = {
   turbopack: {},
 
   experimental: {
+    workerThreads: false,
+    cpus: 1,
     optimizeCss: true,
   },
-
-  // ✅ Vercel Cron — ping DB mỗi 5 phút để Neon không bị idle/cold start
-  // Vercel tự gửi request đến /api/keep-alive với header Authorization: Bearer CRON_SECRET
-  crons: [
-    {
-      path: '/api/keep-alive',
-      schedule: '*/5 * * * *',
-    },
-  ],
 
   images: {
     remotePatterns: [
@@ -53,6 +46,13 @@ const nextConfig: NextConfig = {
         source: '/_next/static/(.*)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/_next/static/chunks/(.*)\\.js',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Content-Encoding', value: 'br' },
         ],
       },
       {
