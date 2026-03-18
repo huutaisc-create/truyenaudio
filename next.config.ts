@@ -4,14 +4,17 @@ const nextConfig: NextConfig = {
   turbopack: {},
 
   experimental: {
-    // ✅ Bỏ workerThreads: false và cpus: 1
-    // Các option này giới hạn hiệu năng build, không có lợi ích gì trên Vercel
-
-    // ✅ Giữ optimizeCss — inline critical CSS, giảm blocking render ~190ms
-    // Cần cài: npm install critters --save-dev
     optimizeCss: true,
-
   },
+
+  // ✅ Vercel Cron — ping DB mỗi 5 phút để Neon không bị idle/cold start
+  // Vercel tự gửi request đến /api/keep-alive với header Authorization: Bearer CRON_SECRET
+  crons: [
+    {
+      path: '/api/keep-alive',
+      schedule: '*/5 * * * *',
+    },
+  ],
 
   images: {
     remotePatterns: [
@@ -21,7 +24,7 @@ const nextConfig: NextConfig = {
     deviceSizes: [640, 828, 1080, 1200, 1920],
     imageSizes: [36, 48, 64, 96, 128, 160, 256],
     formats: ['image/avif', 'image/webp'],
-    minimumCacheTTL: 60 * 60 * 24 * 7, // 7 ngày
+    minimumCacheTTL: 60 * 60 * 24 * 7,
   },
 
   async headers() {
@@ -52,8 +55,6 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
-      // ✅ Bỏ block set Content-Encoding: br thủ công
-      // Vercel/server tự xử lý compression — set thủ công gây lỗi double-encoding
       {
         source: '/(.*)',
         headers: [
