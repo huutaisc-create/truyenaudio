@@ -48,13 +48,8 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
-      {
-        source: '/_next/static/chunks/(.*)\\.js',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-          { key: 'Content-Encoding', value: 'br' },
-        ],
-      },
+      // ✅ ĐÃ XÓA block Content-Encoding: br
+      // Vercel tự nén brotli — set thủ công gây double-encoding → ERR_CONTENT_DECODING_FAILED
       {
         source: '/(.*)',
         headers: [
