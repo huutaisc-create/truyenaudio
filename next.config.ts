@@ -11,9 +11,6 @@ const nextConfig: NextConfig = {
     // Cần cài: npm install critters --save-dev
     optimizeCss: true,
 
-    // ✅ Thêm browsersListForSwc — ngăn polyfill không cần thiết cho trình duyệt hiện đại
-    // Giảm ~14 KiB legacy JS (Array.at, Object.hasOwn, String.trimEnd, v.v.)
-    browsersListForSwc: true,
   },
 
   images: {
