@@ -1,5 +1,6 @@
 import { BookOpen, User, Clock, Eye, Star, List, ChevronRight, PlayCircle, Heart, Bookmark, Trophy } from 'lucide-react';
-import Image from 'next/image'; // FIX LCP
+import Image from 'next/image';
+import Link from 'next/link'; // đã có trong file gốc nhưng thiếu import
 
 import ReviewButton from '@/components/story/ReviewButton';
 import StoryInteractions from '@/components/story/StoryInteractions';
@@ -11,6 +12,13 @@ import { notFound } from 'next/navigation';
 
 import { auth } from '@/auth';
 import { formatNumber } from '@/lib/utils';
+
+// FIX SERVER SLOW (ảnh 2): Cache trang chi tiết 60 giây
+// Giảm số lần query Neon DB — trang sẽ được serve từ cache Vercel Edge
+export const revalidate = 60;
+
+// FIX: Dynamic params vẫn được hỗ trợ
+export const dynamicParams = true;
 
 const CHAPTERS_PER_PAGE = 20;
 
@@ -25,11 +33,16 @@ const StoryDetail = async ({
     const { page: pageParam } = await searchParams;
     const currentPage = Math.max(1, parseInt(pageParam || '1'));
 
-    const storyData = await getStoryBySlug(slug);
-    const session = await auth();
+    // FIX SERVER SLOW: Fetch song song tất cả data không cần auth trước
+    // auth() và getStoryInteractions() chạy song song với các query khác
+    const [storyData, session] = await Promise.all([
+        getStoryBySlug(slug),
+        auth(),
+    ]);
 
     if (!storyData) return notFound();
 
+    // FIX SERVER SLOW: Tất cả query còn lại chạy song song
     const [interactionData, chapterData, relatedStories, authorStories] = await Promise.all([
         getStoryInteractions(storyData.id),
         getChaptersByStoryId(storyData.id, currentPage),
@@ -117,7 +130,7 @@ const StoryDetail = async ({
                                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-warm-ink-soft">
                                     <span className="flex items-center gap-1.5">
                                         <User className="h-3.5 w-3.5 text-warm-primary" aria-hidden="true" />
-                                        <a href="#" className="text-warm-primary">{story.author}</a>
+                                        <Link href={`/tim-kiem?tac-gia=${encodeURIComponent(story.author)}`} className="text-warm-primary hover:underline">{story.author}</Link>
                                     </span>
                                     <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-green-50 text-green-700 border border-green-200">
                                         <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true"></span>
@@ -131,10 +144,10 @@ const StoryDetail = async ({
 
                                 <div className="flex flex-wrap gap-1.5">
                                     {story.genres.map(g => (
-                                        <a key={g} href="#"
+                                        <Link key={g} href={`/tim-kiem?the-loai=${encodeURIComponent(g)}`}
                                             className="px-3 py-0.5 rounded-full text-[12px] font-semibold bg-warm-primary-pale text-warm-primary border border-warm-primary/20 hover:bg-warm-primary hover:text-white transition-all">
                                             {g}
-                                        </a>
+                                        </Link>
                                     ))}
                                 </div>
 
