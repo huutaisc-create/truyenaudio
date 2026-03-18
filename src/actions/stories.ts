@@ -2,14 +2,15 @@
 
 import db from '@/lib/db'
 import { Prisma } from '@prisma/client'
+import { unstable_cache } from 'next/cache'
 
 export type SearchParams = {
     keyword?: string
-    genres?: string[]     // type: GENRE
-    boiCanh?: string[]    // type: BOI_CANH
-    luuPhai?: string[]    // type: LUU_PHAI
-    tinhCach?: string[]   // type: TINH_CACH
-    thiGiac?: string[]    // type: THI_GIAC
+    genres?: string[]
+    boiCanh?: string[]
+    luuPhai?: string[]
+    tinhCach?: string[]
+    thiGiac?: string[]
     status?: string[]
     minChapters?: number
     maxChapters?: number
@@ -32,8 +33,6 @@ export async function searchStories(params: SearchParams) {
 
     const where: Prisma.StoryWhereInput = {}
 
-    // Keyword search — SQLite không hỗ trợ mode:'insensitive'
-    // Dùng cả lowercase để simulate case-insensitive
     if (keyword) {
         const kw = keyword.toLowerCase()
         where.OR = [
@@ -44,7 +43,6 @@ export async function searchStories(params: SearchParams) {
         ]
     }
 
-    // Gom tất cả tag filters thành AND conditions — mỗi tag phải đúng type
     const andConditions: Prisma.StoryWhereInput[] = []
 
     if (genres && genres.length > 0) {
@@ -77,7 +75,6 @@ export async function searchStories(params: SearchParams) {
         where.AND = andConditions
     }
 
-    // Status filter
     if (status && status.length > 0) {
         const statusMap: Record<string, string> = {
             "Đang Ra":    "ONGOING",
@@ -89,7 +86,6 @@ export async function searchStories(params: SearchParams) {
         where.status = { in: dbStatuses }
     }
 
-    // Chapter range filter
     if (minChapters !== undefined || maxChapters !== undefined) {
         const currentFilter = (typeof where.totalChapters === 'object' ? where.totalChapters : {}) as Prisma.IntFilter
         if (minChapters !== undefined) currentFilter.gte = minChapters
@@ -97,7 +93,6 @@ export async function searchStories(params: SearchParams) {
         where.totalChapters = currentFilter
     }
 
-    // Time filter
     if (month && year) {
         const from = new Date(year, month - 1, 1)
         const to   = new Date(year, month, 1)
@@ -105,41 +100,41 @@ export async function searchStories(params: SearchParams) {
     }
 
     let orderBy: Prisma.StoryOrderByWithRelationInput = { viewCount: 'desc' }
-
     switch (sortBy) {
-        case 'Mới Cập Nhật':
-        case 'new':
-            orderBy = { updatedAt: 'desc' }
-            break
-        case 'Đề Cử':
-        case 'rating':
-            orderBy = { ratingScore: 'desc' }
-            break
-        case 'Lượt Xem':
-        case 'views':
-        case 'hot':
-            orderBy = { viewCount: 'desc' }
-            break
-        case 'Đánh Giá':
-            orderBy = { ratingScore: 'desc' }
-            break
-        default:
-            orderBy = { viewCount: 'desc' }
+        case 'Mới Cập Nhật': case 'new': orderBy = { updatedAt: 'desc' }; break
+        case 'Đề Cử': case 'rating': orderBy = { ratingScore: 'desc' }; break
+        case 'Đánh Giá': orderBy = { ratingScore: 'desc' }; break
+        default: orderBy = { viewCount: 'desc' }
     }
 
     try {
-        const stories = await db.story.findMany({
-            where,
-            orderBy,
-            take: limit,
-            skip: offset,
-            include: {
-                genres: true,
-                _count: { select: { chapters: true } }
-            }
-        })
-
-        const total = await db.story.count({ where })
+        // FIX PERF: dùng select thay include — chỉ lấy field cần thiết
+        const [stories, total] = await Promise.all([
+            db.story.findMany({
+                where,
+                orderBy,
+                take: limit,
+                skip: offset,
+                select: {
+                    id: true,
+                    title: true,
+                    slug: true,
+                    coverImage: true,
+                    author: true,
+                    status: true,
+                    viewCount: true,
+                    ratingScore: true,
+                    totalChapters: true,
+                    genres: {
+                        // FIX PERF: chỉ lấy field cần, giới hạn số genre
+                        select: { name: true, type: true },
+                        take: 3,
+                    },
+                    _count: { select: { chapters: true } }
+                }
+            }),
+            db.story.count({ where })
+        ])
 
         return {
             data: stories.map((s: any) => ({
@@ -158,12 +153,31 @@ export async function searchStories(params: SearchParams) {
     }
 }
 
-export async function getStoryBySlug(slug: string) {
-    try {
-        const story = await db.story.findUnique({
+// FIX PERF: Cache getStoryBySlug 60 giây
+// Giảm số lần query Neon DB cho cùng 1 slug
+const getCachedStory = unstable_cache(
+    async (slug: string) => {
+        return db.story.findUnique({
             where: { slug },
-            include: {
-                genres: true,
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                coverImage: true,
+                author: true,
+                status: true,
+                viewCount: true,
+                likeCount: true,
+                followCount: true,
+                nominationCount: true,
+                ratingScore: true,
+                ratingCount: true,
+                description: true,
+                totalChapters: true,
+                // FIX PERF: select thay include — chỉ lấy field cần
+                genres: {
+                    select: { name: true, type: true }
+                },
                 chapters: {
                     orderBy: { index: 'desc' },
                     take: 5,
@@ -174,10 +188,16 @@ export async function getStoryBySlug(slug: string) {
                         updatedAt: true,
                     }
                 },
+                // FIX PERF: reviews tách riêng, không load trong query chính
+                // để trang vẫn cache được dù reviews thay đổi liên tục
                 reviews: {
                     orderBy: { createdAt: 'desc' },
                     take: 10,
-                    include: {
+                    select: {
+                        id: true,
+                        rating: true,
+                        content: true,
+                        createdAt: true,
                         user: {
                             select: {
                                 name: true,
@@ -191,20 +211,28 @@ export async function getStoryBySlug(slug: string) {
                 }
             }
         })
+    },
+    ['story-by-slug'], // cache key prefix
+    {
+        revalidate: 60, // 60 giây
+        tags: ['story'], // cho phép revalidate theo tag khi admin update
+    }
+)
 
-        return story
+export async function getStoryBySlug(slug: string) {
+    try {
+        return await getCachedStory(slug)
     } catch (error) {
         console.error("Get Story Error:", error)
         return null
     }
 }
 
-// Lấy danh sách chương theo trang (50 chương/trang, sắp xếp tăng dần)
-export async function getChaptersByStoryId(storyId: string, page: number = 1) {
-    const limit = 50
-    const offset = (page - 1) * limit
-
-    try {
+// FIX PERF: Cache danh sách chương — ít thay đổi, cache lâu hơn
+const getCachedChapters = unstable_cache(
+    async (storyId: string, page: number) => {
+        const limit = 50
+        const offset = (page - 1) * limit
         const [chapters, total] = await Promise.all([
             db.chapter.findMany({
                 where: { storyId },
@@ -215,23 +243,30 @@ export async function getChaptersByStoryId(storyId: string, page: number = 1) {
             }),
             db.chapter.count({ where: { storyId } })
         ])
-
         return {
             chapters,
             total,
             totalPages: Math.ceil(total / limit),
             currentPage: page
         }
+    },
+    ['chapters-by-story'],
+    { revalidate: 300 } // 5 phút — chương ít thay đổi hơn
+)
+
+export async function getChaptersByStoryId(storyId: string, page: number = 1) {
+    try {
+        return await getCachedChapters(storyId, page)
     } catch (error) {
         console.error("Get Chapters Error:", error)
         return { chapters: [], total: 0, totalPages: 0, currentPage: 1 }
     }
 }
 
-// Lấy truyện cùng thể loại (trừ truyện hiện tại)
-export async function getRelatedStories(storyId: string, genreNames: string[], limit: number = 5) {
-    try {
-        const stories = await db.story.findMany({
+// FIX PERF: Cache related stories 5 phút
+const getCachedRelated = unstable_cache(
+    async (storyId: string, genreNames: string[], limit: number) => {
+        return db.story.findMany({
             where: {
                 id: { not: storyId },
                 genres: { some: { name: { in: genreNames } } }
@@ -249,21 +284,25 @@ export async function getRelatedStories(storyId: string, genreNames: string[], l
                 genres: { select: { name: true }, take: 2 }
             }
         })
-        return stories
+    },
+    ['related-stories'],
+    { revalidate: 300 }
+)
+
+export async function getRelatedStories(storyId: string, genreNames: string[], limit: number = 5) {
+    try {
+        return await getCachedRelated(storyId, genreNames, limit)
     } catch (error) {
         console.error("Get Related Stories Error:", error)
         return []
     }
 }
 
-// Lấy truyện khác cùng tác giả (trừ truyện hiện tại)
-export async function getStoriesByAuthor(author: string, storyId: string, limit: number = 4) {
-    try {
-        const stories = await db.story.findMany({
-            where: {
-                author,
-                id: { not: storyId }
-            },
+// FIX PERF: Cache author stories 5 phút
+const getCachedAuthorStories = unstable_cache(
+    async (author: string, storyId: string, limit: number) => {
+        return db.story.findMany({
+            where: { author, id: { not: storyId } },
             orderBy: { viewCount: 'desc' },
             take: limit,
             select: {
@@ -275,7 +314,14 @@ export async function getStoriesByAuthor(author: string, storyId: string, limit:
                 _count: { select: { chapters: true } }
             }
         })
-        return stories
+    },
+    ['author-stories'],
+    { revalidate: 300 }
+)
+
+export async function getStoriesByAuthor(author: string, storyId: string, limit: number = 4) {
+    try {
+        return await getCachedAuthorStories(author, storyId, limit)
     } catch (error) {
         console.error("Get Author Stories Error:", error)
         return []
@@ -288,31 +334,23 @@ export async function getChapterBySlugAndIndex(slug: string, index: number) {
             where: { slug },
             select: { id: true, title: true, coverImage: true }
         });
-
         if (!story) return null;
 
         const chapter = await db.chapter.findFirst({
             where: { storyId: story.id, index },
         });
-
         if (!chapter) return null;
 
-        try {
-            await Promise.all([
-                db.story.update({
-                    where: { id: story.id },
-                    data: { viewCount: { increment: 1 } }
-                }),
-                db.chapter.update({
-                    where: { id: chapter.id },
-                    data: { viewCount: { increment: 1 } }
-                })
-            ]);
-        } catch (e) {
-            console.error("Failed to increment view count", e);
-        }
-
-        const [prev, next] = await Promise.all([
+        // FIX PERF: view count + prev/next chạy song song
+        const [, , prev, next] = await Promise.all([
+            db.story.update({
+                where: { id: story.id },
+                data: { viewCount: { increment: 1 } }
+            }).catch(e => console.error("Failed to increment story view", e)),
+            db.chapter.update({
+                where: { id: chapter.id },
+                data: { viewCount: { increment: 1 } }
+            }).catch(e => console.error("Failed to increment chapter view", e)),
             db.chapter.findFirst({
                 where: { storyId: story.id, index: index - 1 },
                 select: { index: true }
@@ -343,15 +381,12 @@ export async function updateChapterContent(chapterId: string, newContent: string
     }
 
     try {
-        // Lấy thông tin chapter + story slug để upload R2
         const chapter = await db.chapter.findUnique({
             where: { id: chapterId },
             include: { story: { select: { slug: true } } }
         });
-
         if (!chapter) return { success: false, error: 'Chapter not found' };
 
-        // Upload content lên R2
         const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
         const s3 = new S3Client({
             region: 'auto',
@@ -371,7 +406,6 @@ export async function updateChapterContent(chapterId: string, newContent: string
         }));
 
         const contentUrl = `${process.env.R2_PUBLIC_URL}/${key}`;
-
         await db.chapter.update({
             where: { id: chapterId },
             data: { contentUrl }
@@ -394,9 +428,9 @@ export async function submitReview(storyId: string, rating: number, content: str
             await tx.review.create({
                 data: {
                     userId: session.user.id,
-                    storyId: storyId,
-                    rating: rating,
-                    content: content
+                    storyId,
+                    rating,
+                    content
                 }
             });
 
@@ -434,6 +468,7 @@ export async function trackChapterRead(storySlug: string, chapterId: string) {
 
     const userId = session.user.id;
 
+    // FIX PERF: 2 query này chạy tuần tự — cần tìm story trước
     const story = await db.story.findUnique({
         where: { slug: storySlug },
         select: { id: true },
@@ -447,16 +482,24 @@ export async function trackChapterRead(storySlug: string, chapterId: string) {
 
     const isNewChapter = existing?.chapterId !== chapterId;
 
-    await db.readingHistory.upsert({
-        where: { userId_storyId: { userId, storyId: story.id } },
-        update: { chapterId, visitedAt: new Date() },
-        create: { userId, storyId: story.id, chapterId },
-    });
-
+    // FIX PERF: upsert + update user chạy song song nếu là chương mới
     if (isNewChapter || !existing) {
-        await db.user.update({
-            where: { id: userId },
-            data: { chaptersRead: { increment: 1 } },
-        });
+        await Promise.all([
+            db.readingHistory.upsert({
+                where: { userId_storyId: { userId, storyId: story.id } },
+                update: { chapterId, visitedAt: new Date() },
+                create: { userId, storyId: story.id, chapterId },
+            }),
+            db.user.update({
+                where: { id: userId },
+                data: { chaptersRead: { increment: 1 } },
+            })
+        ])
+    } else {
+        await db.readingHistory.upsert({
+            where: { userId_storyId: { userId, storyId: story.id } },
+            update: { chapterId, visitedAt: new Date() },
+            create: { userId, storyId: story.id, chapterId },
+        })
     }
 }

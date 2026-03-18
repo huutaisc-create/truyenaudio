@@ -72,9 +72,8 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512.png" />
 
-        {/* FIX LCP: Preconnect R2 để browser kết nối sớm tới CDN ảnh */}
-        <link rel="preconnect" href="https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev" />
+        {/* next/image tự xử lý optimize ảnh R2 qua /_next/image
+            Không cần preconnect R2 ở đây vì browser không load R2 trực tiếp */}
 
         {/* ĐÃ XÓA: preconnect fonts.googleapis.com + fonts.gstatic.com
             Lý do: next/font/google tự xử lý, preconnect thủ công gây
@@ -105,7 +104,7 @@ export default function RootLayout({
             fontWeight: 500,
             zIndex: 9999,
             pointerEvents: 'none',
-          }}>v1.1</div>
+          }}>v 2.2</div>
         </SessionWrapper>
       </body>
     </html>

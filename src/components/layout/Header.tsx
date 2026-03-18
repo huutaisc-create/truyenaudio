@@ -185,8 +185,8 @@ const Header = () => {
                 )}
               </div>
             ) : (
-              <Link href="/login">
-                <button className="flex items-center gap-2 rounded-full px-3 py-1.5 border border-zinc-200 text-sm font-bold text-zinc-700 transition-all hover:text-brand-primary hover:border-brand-primary active:scale-95">
+              <Link href="/login" aria-label="Đăng nhập">
+                <button aria-label="Đăng nhập" className="flex items-center gap-2 rounded-full px-3 py-1.5 border border-zinc-200 text-sm font-bold text-zinc-700 transition-all hover:text-brand-primary hover:border-brand-primary active:scale-95">
                   <User className="h-4 w-4" aria-hidden="true" /><span className="hidden sm:inline">Đăng nhập</span>
                 </button>
               </Link>
@@ -265,11 +265,11 @@ const Header = () => {
                   </div>
                   <Link href="/tai-khoan" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-4 p-4 rounded-xl font-bold text-zinc-700 hover:bg-orange-50 hover:text-brand-primary transition-all"><User className="h-5 w-5" aria-hidden="true" /> Trang cá nhân</Link>
                   <Link href="/tai-khoan/cai-dat" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-4 p-4 rounded-xl font-bold text-zinc-700 hover:bg-orange-50 hover:text-brand-primary transition-all"><Settings className="h-5 w-5" aria-hidden="true" /> Đổi ảnh đại diện</Link>
-                  <button onClick={() => { setIsMenuOpen(false); signOut(); }} className="w-full flex items-center gap-4 p-4 rounded-xl font-bold text-zinc-700 hover:bg-red-50 hover:text-red-500 transition-all text-left"><LogOut className="h-5 w-5" aria-hidden="true" /> Đăng xuất</button>
+                  <button aria-label="Đăng xuất" onClick={() => { setIsMenuOpen(false); signOut(); }} className="w-full flex items-center gap-4 p-4 rounded-xl font-bold text-zinc-700 hover:bg-red-50 hover:text-red-500 transition-all text-left"><LogOut className="h-5 w-5" aria-hidden="true" /> Đăng xuất</button>
                 </>
               ) : (
-                <Link href="/login" onClick={() => setIsMenuOpen(false)}>
-                  <button className="w-full flex items-center gap-4 p-4 rounded-xl font-bold text-zinc-700 hover:bg-orange-50 hover:text-brand-primary transition-all text-left"><User className="h-5 w-5" aria-hidden="true" /> Đăng nhập</button>
+                <Link href="/login" onClick={() => setIsMenuOpen(false)} aria-label="Đăng nhập">
+                  <button aria-label="Đăng nhập" className="w-full flex items-center gap-4 p-4 rounded-xl font-bold text-zinc-700 hover:bg-orange-50 hover:text-brand-primary transition-all text-left"><User className="h-5 w-5" aria-hidden="true" /> Đăng nhập</button>
                 </Link>
               )}
             </nav>
