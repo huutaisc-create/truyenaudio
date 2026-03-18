@@ -11,21 +11,26 @@ import { SessionWrapper } from "@/components/providers/SessionWrapper";
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin", "vietnamese"],
-  display: "swap",
+  // FIX FONT BLOCKING (ảnh 5):
+  // "swap" → browser tải font sau, dùng fallback trước → gây layout shift khi font load xong
+  // "optional" → browser chỉ dùng font nếu đã cache, không block render, không layout shift
+  display: "optional",
+  preload: true,
 });
 
 const roboto = Roboto({
-  weight: ['300', '400', '500', '700'],
+  weight: ['400', '500', '700'], // Bỏ '300' — ít dùng, giảm 1 file woff2
   subsets: ["latin", "vietnamese"],
   variable: "--font-roboto",
-  display: "swap",
+  display: "optional", // FIX FONT BLOCKING
+  preload: true,
 });
 
 export const viewport: Viewport = {
   themeColor: '#e8580a',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  // FIX A11Y: Bỏ maximumScale=1 — người thị lực kém cần zoom trang
 };
 
 export const metadata: Metadata = {
@@ -67,13 +72,13 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512.png" />
 
-        {/* FIX LCP: Preconnect R2 — giảm 80ms DNS lookup cho ảnh cover */}
+        {/* FIX LCP: Preconnect R2 để browser kết nối sớm tới CDN ảnh */}
         <link rel="preconnect" href="https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev" />
 
-        {/* FIX LCP: Preconnect font — giảm 815ms font blocking (ảnh 5) */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* ĐÃ XÓA: preconnect fonts.googleapis.com + fonts.gstatic.com
+            Lý do: next/font/google tự xử lý, preconnect thủ công gây
+            cảnh báo "Kết nối trước chưa sử dụng" trên PageSpeed (ảnh 5) */}
       </head>
       <body
         suppressHydrationWarning
@@ -100,7 +105,7 @@ export default function RootLayout({
             fontWeight: 500,
             zIndex: 9999,
             pointerEvents: 'none',
-          }}>V 2.0</div>
+          }}>v1.1</div>
         </SessionWrapper>
       </body>
     </html>

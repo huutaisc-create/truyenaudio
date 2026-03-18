@@ -1,49 +1,37 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  turbopack: {}, // Bắt buộc giữ lại với Next.js 16
+  turbopack: {},
 
   experimental: {
     workerThreads: false,
     cpus: 1,
+    // FIX CSS BLOCKING (ảnh 2): inline critical CSS, defer non-critical
+    // Cần cài: npm install critters --save-dev
+    optimizeCss: true,
   },
 
-  // ─────────────────────────────────────────────
-  // FIX ẢNH: Cho phép next/image load ảnh từ R2
-  // ─────────────────────────────────────────────
   images: {
-    // Thêm domain R2 của bạn vào đây
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**.r2.dev',       // Cloudflare R2 public bucket
-      },
-      {
-        protocol: 'https',
-        hostname: '**.r2.cloudflarestorage.com', // R2 private endpoint
-      },
-      // Nếu bạn có custom domain trỏ vào R2, thêm ở đây:
-      // { protocol: 'https', hostname: 'cdn.yourdomain.com' },
+      { protocol: 'https', hostname: '**.r2.dev' },
+      { protocol: 'https', hostname: '**.r2.cloudflarestorage.com' },
     ],
-
-    // FIX ẢNH SAI KÍCH THƯỚC (416 KiB):
-    // next/image sẽ tự resize đúng theo sizes= trong component
-    // Thêm các kích thước nhỏ cho ảnh cover thumbnail
     deviceSizes: [640, 828, 1080, 1200, 1920],
     imageSizes: [36, 48, 64, 96, 128, 160, 256],
-
-    // Ưu tiên WebP/AVIF — giảm dung lượng thêm 30-50%
     formats: ['image/avif', 'image/webp'],
 
-    // FIX CACHE ẢNH (TTL = None → 1 năm):
-    // next/image tự thêm Cache-Control khi serve qua /_next/image
-    // minimumCacheTTL tính bằng giây
-    minimumCacheTTL: 31536000, // 1 năm
+    // FIX CACHE:
+    // KHÔNG dùng 1 năm cho ảnh bìa vì ảnh có thể được update.
+    // next/image cache tại /_next/image — khi R2 URL không đổi
+    // nhưng nội dung ảnh đổi → user vẫn thấy ảnh cũ nếu TTL quá dài.
+    //
+    // Giải pháp: TTL 7 ngày — đủ để cache hiệu quả,
+    // không quá dài khi ảnh bìa được cập nhật.
+    minimumCacheTTL: 60 * 60 * 24 * 7, // 7 ngày
   },
 
   async headers() {
     return [
-      // Header riêng cho ảnh uploads — cho phép cross-origin
       {
         source: '/uploads/(.*)',
         headers: [
@@ -57,39 +45,28 @@ const nextConfig: NextConfig = {
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ],
       },
-
-      // FIX CACHE ẢNH R2 (TTL = None):
-      // Khi next/image optimize ảnh R2, kết quả được cache tại /_next/image
-      // Header này đảm bảo browser cache lâu dài
+      // Cache ảnh optimize 7 ngày — khớp với minimumCacheTTL
       {
         source: '/_next/image(.*)',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400' },
           { key: 'Vary', value: 'Accept' },
         ],
       },
-
-      // FIX RENDER-BLOCKING CSS (60ms):
-      // Cache các static chunks CSS/JS của Next.js lâu dài
-      // Giúp lần tải thứ 2+ không bị blocking nữa
+      // Static assets (JS/CSS) — 1 năm vì Next.js tự đổi hash khi build mới
       {
         source: '/_next/static/(.*)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
-
-      // FIX UNUSED JS (25 KiB):
-      // Gợi browser dùng compression tốt nhất
       {
         source: '/_next/static/chunks/(.*)\\.js',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-          { key: 'Content-Encoding', value: 'br' }, // Brotli nếu Vercel hỗ trợ
+          { key: 'Content-Encoding', value: 'br' },
         ],
       },
-
-      // Các trang thường
       {
         source: '/(.*)',
         headers: [

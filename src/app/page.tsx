@@ -51,7 +51,7 @@ const StoryCard = ({
             src={coverImage}
             alt={`Ảnh bìa ${title}`}
             fill
-            sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 22vw"
+            sizes="(max-width: 640px) 45vw, (max-width: 768px) 30vw, (max-width: 1024px) 22vw, 18vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
             priority={priority}
           />
