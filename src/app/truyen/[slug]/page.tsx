@@ -7,6 +7,7 @@ import StoryInteractions from '@/components/story/StoryInteractions';
 import CommentSection from '@/components/story/CommentSection';
 
 import { getStoryBySlug, getChaptersByStoryId, getRelatedStories, getStoriesByAuthor } from '@/actions/stories';
+import db from '@/lib/db';
 import { notFound } from 'next/navigation';
 import { formatNumber } from '@/lib/utils';
 
@@ -15,6 +16,18 @@ import { formatNumber } from '@/lib/utils';
 // → Phần like/follow/lịch sử đọc: StoryInteractions tự xử lý client-side
 export const revalidate = 60;
 export const dynamicParams = true;
+
+// ✅ Pre-build top 100 truyện hot nhất lúc deploy
+// → Vercel build sẵn HTML tĩnh, user vào là có ngay không cần chờ
+// → Các truyện còn lại vẫn hoạt động bình thường (dynamicParams = true)
+export async function generateStaticParams() {
+    const stories = await db.story.findMany({
+        orderBy: { viewCount: 'desc' },
+        take: 100,
+        select: { slug: true },
+    });
+    return stories.map(s => ({ slug: s.slug }));
+}
 
 const StoryDetail = async ({
     params,
