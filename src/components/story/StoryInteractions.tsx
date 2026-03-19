@@ -121,7 +121,7 @@ export default function StoryInteractions({ storyId, storySlug, firstChapterId, 
 
                 <button
                     onClick={handleNominate}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-bold bg-warm-bg text-warm-ink-mid border border-warm-border hover:bg-amber-50 hover:text-amber-500 hover:border-amber-200 transition-all active:scale-95"
+                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-base font-bold bg-warm-bg text-warm-ink-mid border border-warm-border hover:bg-amber-50 hover:text-amber-500 hover:border-amber-200 transition-all active:scale-95"
                 >
                     <Trophy className="h-3.5 w-3.5" />
                     Đề cử
@@ -138,11 +138,11 @@ export default function StoryInteractions({ storyId, storySlug, firstChapterId, 
                         value={jumpChapter}
                         onChange={(e) => setJumpChapter(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleJumpToChapter()}
-                        className="w-[88px] px-3 text-sm bg-warm-bg text-warm-ink outline-none placeholder:text-warm-ink-soft border-r border-warm-border"
+                        className="w-[88px] px-3 text-base bg-warm-bg text-warm-ink outline-none placeholder:text-warm-ink-soft border-r border-warm-border"
                     />
                     <button
                         onClick={handleJumpToChapter}
-                        className="px-3 text-sm font-bold bg-warm-border-soft text-[#8c3a08] hover:bg-warm-primary-pale transition-colors"
+                        className="px-3 text-base font-bold bg-warm-border-soft text-[#8c3a08] hover:bg-warm-primary-pale transition-colors"
                     >
                         Tìm
                     </button>
@@ -151,7 +151,7 @@ export default function StoryInteractions({ storyId, storySlug, firstChapterId, 
                 {/* Chương 1 */}
                 <a
                     href={`/truyen/${storySlug}/chuong-${firstChapterId || 1}`}
-                    className="shrink-0 px-4 h-9 flex items-center rounded-xl font-bold text-sm text-white bg-warm-primary hover:opacity-90 whitespace-nowrap transition-all active:scale-95 border-2 border-warm-primary"
+                    className="shrink-0 px-4 h-9 flex items-center rounded-xl font-bold text-base text-white bg-warm-primary hover:opacity-90 whitespace-nowrap transition-all active:scale-95 border-2 border-warm-primary"
                 >
                     ▶ Chương 1
                 </a>
@@ -159,7 +159,7 @@ export default function StoryInteractions({ storyId, storySlug, firstChapterId, 
                 {/* Chương cuối */}
                 <a
                     href={`/truyen/${storySlug}/chuong-${latestChapterId || 1}`}
-                    className="shrink-0 px-4 h-9 flex items-center rounded-xl font-bold text-sm text-[#8c3a08] bg-warm-primary-pale border-2 border-warm-primary/50 hover:bg-warm-primary hover:text-white whitespace-nowrap transition-all active:scale-95"
+                    className="shrink-0 px-4 h-9 flex items-center rounded-xl font-bold text-base text-[#8c3a08] bg-warm-primary-pale border-2 border-warm-primary/50 hover:bg-warm-primary hover:text-white whitespace-nowrap transition-all active:scale-95"
                 >
                     ⏭ Chương cuối
                 </a>

@@ -131,7 +131,7 @@ const StoryDetail = async ({
                             <div className="flex-1 min-w-0 flex flex-col gap-3">
                                 <h1 className="text-xl md:text-2xl font-bold leading-snug text-warm-ink">{story.title}</h1>
 
-                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-warm-ink-soft">
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-base font-semibold text-warm-ink-soft">
                                     <span className="flex items-center gap-1.5">
                                         <User className="h-3.5 w-3.5 text-warm-primary" aria-hidden="true" />
                                         <Link href={`/tim-kiem?tac-gia=${encodeURIComponent(story.author)}`} className="text-warm-primary hover:underline">{story.author}</Link>
@@ -149,7 +149,7 @@ const StoryDetail = async ({
                                 <div className="flex flex-wrap gap-1.5">
                                     {story.genres.map(g => (
                                         <Link key={g} href={`/tim-kiem?the-loai=${encodeURIComponent(g)}`}
-                                            className="px-3 py-0.5 rounded-full text-[12px] font-semibold bg-warm-primary-pale text-warm-primary border border-warm-primary/20 hover:bg-warm-primary hover:text-white transition-all">
+                                            className="px-3 py-0.5 rounded-full text-base font-semibold bg-warm-primary-pale text-warm-primary border border-warm-primary/20 hover:bg-warm-primary hover:text-white transition-all">
                                             {g}
                                         </Link>
                                     ))}
@@ -162,33 +162,33 @@ const StoryDetail = async ({
                                         ))}
                                     </span>
                                     <span className="text-lg font-black text-warm-gold">{story.rating}</span>
-                                    <span className="text-xs text-warm-ink-soft">({story.ratingCount} đánh giá)</span>
+                                    <span className="text-sm text-warm-ink-soft">({story.ratingCount} đánh giá)</span>
                                     {/* ✅ ReviewButton không cần currentUser — tự check auth khi click */}
                                     <ReviewButton
                                         storyId={storyData.id}
                                         text="Đánh giá"
                                         currentUser={undefined}
-                                        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-warm-primary-pale text-[#8c3a08] border border-warm-primary/50 hover:bg-warm-primary hover:text-white transition-all"
+                                        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-warm-primary-pale text-[#8c3a08] border border-warm-primary/50 hover:bg-warm-primary hover:text-white transition-all"
                                     />
                                 </div>
 
                                 {/* Stats bar */}
                                 <div className="flex rounded-xl overflow-hidden border border-warm-border-soft bg-warm-bg">
-                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-warm-ink-mid">
+                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-base font-semibold text-warm-ink-mid">
                                         <Heart className="h-3.5 w-3.5 fill-current text-red-500" aria-hidden="true" />
-                                        <b className="text-base font-bold text-warm-ink">{formatNumber(storyData.likeCount || 0)}</b>
+                                        <b className="text-lg font-bold text-warm-ink">{formatNumber(storyData.likeCount || 0)}</b>
                                         <span className="hidden sm:inline">Yêu thích</span>
                                     </div>
                                     <div className="w-px bg-warm-border" aria-hidden="true"></div>
-                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-warm-ink-mid">
+                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-base font-semibold text-warm-ink-mid">
                                         <Bookmark className="h-3.5 w-3.5 fill-current text-blue-500" aria-hidden="true" />
-                                        <b className="text-base font-bold text-warm-ink">{formatNumber(storyData.followCount || 0)}</b>
+                                        <b className="text-lg font-bold text-warm-ink">{formatNumber(storyData.followCount || 0)}</b>
                                         <span className="hidden sm:inline">Theo dõi</span>
                                     </div>
                                     <div className="w-px bg-warm-border" aria-hidden="true"></div>
-                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-warm-ink-mid">
+                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-base font-semibold text-warm-ink-mid">
                                         <Trophy className="h-3.5 w-3.5 fill-current text-amber-400" aria-hidden="true" />
-                                        <b className="text-base font-bold text-warm-ink">{formatNumber(storyData.nominationCount || 0)}</b>
+                                        <b className="text-lg font-bold text-warm-ink">{formatNumber(storyData.nominationCount || 0)}</b>
                                         <span className="hidden sm:inline">Đề cử</span>
                                     </div>
                                 </div>
@@ -242,14 +242,14 @@ const StoryDetail = async ({
                                     <span className="w-1 h-5 rounded-sm bg-warm-primary shrink-0" aria-hidden="true"></span>
                                     DANH SÁCH CHƯƠNG
                                 </h2>
-                                <span className="text-xs text-warm-ink-light font-medium">
+                                <span className="text-sm text-warm-ink-soft font-medium">
                                     Tổng: <b className="text-warm-ink-mid">{story.chapters}</b> chương
                                 </span>
                             </div>
 
                             {/* Mới cập nhật */}
                             <div className="mb-5">
-                                <p className="text-[10px] font-black uppercase tracking-widest mb-2.5 flex items-center gap-1.5 text-warm-ink-light">
+                                <p className="text-sm font-black uppercase tracking-widest mb-2.5 flex items-center gap-1.5 text-warm-ink-soft">
                                     <Clock className="h-3 w-3" aria-hidden="true" /> Mới cập nhật
                                 </p>
                                 <div className="border-t border-warm-border-soft">
@@ -260,7 +260,7 @@ const StoryDetail = async ({
                                                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" aria-hidden="true"></span>
                                                 <span className="text-sm font-medium text-warm-ink-mid group-hover:text-warm-primary transition-colors truncate">{ch.title}</span>
                                             </div>
-                                            <span className="text-xs text-warm-ink-light shrink-0 ml-3">{ch.time}</span>
+                                            <span className="text-sm text-warm-ink-soft shrink-0 ml-3">{ch.time}</span>
                                         </a>
                                     ))}
                                 </div>
@@ -268,7 +268,7 @@ const StoryDetail = async ({
 
                             {/* Tất cả chương */}
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-1.5 text-warm-ink-light">
+                                <p className="text-sm font-black uppercase tracking-widest mb-3 flex items-center gap-1.5 text-warm-ink-soft">
                                     <List className="h-3 w-3" aria-hidden="true" /> Tất cả chương
                                 </p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
@@ -286,7 +286,7 @@ const StoryDetail = async ({
                                     <nav className="mt-6 flex justify-center items-center gap-1.5 flex-wrap" aria-label="Phân trang danh sách chương">
                                         {currentPage > 1 && (
                                             <a href={pageUrl(currentPage - 1)} aria-label="Trang trước"
-                                                className="px-3 py-2 rounded-lg text-xs font-bold bg-warm-border-soft text-warm-ink-soft hover:bg-warm-primary-pale hover:text-warm-primary transition-colors">
+                                                className="px-3 py-2 rounded-lg text-sm font-bold bg-warm-border-soft text-warm-ink-soft hover:bg-warm-primary-pale hover:text-warm-primary transition-colors">
                                                 ‹
                                             </a>
                                         )}
@@ -299,15 +299,15 @@ const StoryDetail = async ({
                                             }, [])
                                             .map((p, idx) =>
                                                 p === '...'
-                                                    ? <span key={`ellipsis-${idx}`} className="px-2 py-2 text-xs text-warm-ink-light">...</span>
+                                                    ? <span key={`ellipsis-${idx}`} className="px-2 py-2 text-sm text-warm-ink-soft">...</span>
                                                     : <a key={p} href={pageUrl(p as number)} aria-label={`Trang ${p}`} aria-current={currentPage === p ? 'page' : undefined}
-                                                        className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors ${currentPage === p ? 'bg-warm-primary text-white' : 'bg-warm-border-soft text-warm-ink-soft hover:bg-warm-primary-pale hover:text-warm-primary'}`}>
+                                                        className={`px-3.5 py-2 rounded-lg text-sm font-bold transition-colors ${currentPage === p ? 'bg-warm-primary text-white' : 'bg-warm-border-soft text-warm-ink-soft hover:bg-warm-primary-pale hover:text-warm-primary'}`}>
                                                         {p}
                                                     </a>
                                             )}
                                         {currentPage < totalPages && (
                                             <a href={pageUrl(currentPage + 1)} aria-label="Trang sau"
-                                                className="px-3 py-2 rounded-lg text-xs font-bold bg-warm-border-soft text-warm-ink-soft hover:bg-warm-primary-pale hover:text-warm-primary transition-colors">
+                                                className="px-3 py-2 rounded-lg text-sm font-bold bg-warm-border-soft text-warm-ink-soft hover:bg-warm-primary-pale hover:text-warm-primary transition-colors">
                                                 ›
                                             </a>
                                         )}
@@ -335,10 +335,10 @@ const StoryDetail = async ({
                             <div className="space-y-3">
                                 {[1, 2, 3, 4, 5].map(i => (
                                     <div key={i} className="flex items-center gap-2.5 group cursor-pointer">
-                                        <span className={`h-6 w-6 rounded-md text-[10px] flex items-center justify-center font-black shrink-0 ${i === 1 ? 'bg-red-500 text-white' : i === 2 ? 'bg-orange-500 text-white' : i === 3 ? 'bg-amber-400 text-white' : 'bg-warm-border-soft text-warm-ink-light'}`} aria-label={`Hạng ${i}`}>{i}</span>
+                                        <span className={`h-6 w-6 rounded-md text-sm flex items-center justify-center font-black shrink-0 ${i === 1 ? 'bg-red-500 text-white' : i === 2 ? 'bg-orange-500 text-white' : i === 3 ? 'bg-amber-400 text-white' : 'bg-warm-border-soft text-warm-ink-light'}`} aria-label={`Hạng ${i}`}>{i}</span>
                                         <div className="flex-1 min-w-0">
                                             <h3 className="text-sm font-bold text-warm-ink-mid truncate group-hover:text-warm-primary transition-colors">Truyện hay đề cử số {i}</h3>
-                                            <p className="text-[11px] text-warm-ink-soft mt-0.5">{1000 - i * 50} đề cử</p>
+                                            <p className="text-sm text-warm-ink-soft mt-0.5">{1000 - i * 50} đề cử</p>
                                         </div>
                                     </div>
                                 ))}
@@ -365,13 +365,13 @@ const StoryDetail = async ({
                                                 )}
                                             </div>
                                             <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                                                <h3 className="text-sm font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">{s.title}</h3>
-                                                <p className="text-[11px] text-warm-ink-soft">{s.author}</p>
+                                                <h3 className="text-base font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">{s.title}</h3>
+                                                <p className="text-sm text-warm-ink-soft">{s.author}</p>
                                                 <div className="flex items-center gap-1.5 mt-0.5">
                                                     {s.genres.slice(0, 1).map((g: any) => (
-                                                        <span key={g.name} className="text-[11px] px-1.5 py-0.5 bg-warm-primary-pale text-[#8c3a08] rounded-full font-semibold border border-warm-primary/20">{g.name}</span>
+                                                        <span key={g.name} className="text-sm px-1.5 py-0.5 bg-warm-primary-pale text-[#8c3a08] rounded-full font-semibold border border-warm-primary/20">{g.name}</span>
                                                     ))}
-                                                    <span className="text-[11px] text-warm-ink-soft">{s._count.chapters} chương</span>
+                                                    <span className="text-sm text-warm-ink-soft">{s._count.chapters} chương</span>
                                                 </div>
                                             </div>
                                         </a>
@@ -387,7 +387,7 @@ const StoryDetail = async ({
                                     <span className="w-1 h-4 rounded-sm bg-warm-primary shrink-0" aria-hidden="true"></span>
                                     CÙNG TÁC GIẢ
                                 </h2>
-                                <p className="text-[11px] text-warm-ink-soft mb-3 font-medium">✍️ {story.author}</p>
+                                <p className="text-sm text-warm-ink-soft mb-3 font-medium">✍️ {story.author}</p>
                                 <div className="space-y-3">
                                     {authorStoriesReal.map((s: any) => (
                                         <a key={s.id} href={`/truyen/${s.slug}`} className="flex gap-2.5 group" aria-label={`${s.title}`}>
@@ -401,9 +401,9 @@ const StoryDetail = async ({
                                                 )}
                                             </div>
                                             <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                                                <h3 className="text-sm font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">{s.title}</h3>
-                                                <p className="text-[11px] text-warm-ink-soft">{s._count.chapters} chương</p>
-                                                <span className={`text-[9px] w-fit px-1.5 py-0.5 rounded-full font-semibold mt-0.5 ${s.status === 'COMPLETED' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-500'}`}>
+                                                <h3 className="text-base font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">{s.title}</h3>
+                                                <p className="text-sm text-warm-ink-soft">{s._count.chapters} chương</p>
+                                                <span className={`text-sm w-fit px-1.5 py-0.5 rounded-full font-semibold mt-0.5 ${s.status === 'COMPLETED' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-500'}`}>
                                                     {s.status === 'COMPLETED' ? 'Hoàn thành' : 'Đang ra'}
                                                 </span>
                                             </div>
