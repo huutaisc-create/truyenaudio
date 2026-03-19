@@ -8,36 +8,23 @@ import BackToTop from "@/components/common/BackToTop";
 import { Suspense } from 'react';
 import { SessionWrapper } from "@/components/providers/SessionWrapper";
 
-// ── Font fix ────────────────────────────────────────────────────────────────
+// ── Font Fix ─────────────────────────────────────────────────────────────────
 //
-// Vấn đề: next/font chỉ tự preload weight đầu tiên trong array (400).
-// Weight 500 và 700 bị load muộn từ CSS (initiator: 4910520f8b48663f.css)
-// → Lighthouse thấy 3 file woff2 chậm: f7d6..., ccee..., fad5...
+// FIX: Tất cả 3 weight dùng chung 1 variable "--font-roboto"
+// → body chỉ cần dùng var(--font-roboto) là có cả 400/500/700
+// → Next.js emit <link rel="preload"> cho cả 3 weight song song ngay trong <head>
 //
-// Fix: Tách thành 3 instance riêng biệt, mỗi instance preload: true
-// → Next.js emit <link rel="preload"> cho cả 3 weight ngay trong <head>
-// → Browser tải cả 3 song song ngay từ đầu, không chờ CSS parse xong.
+// LỖI CŨ: roboto500 và roboto700 không có `variable` → không được inject vào CSS
+// → browser phải tải thêm từ stylesheet → chậm 300-600ms theo Lighthouse
 //
-const roboto400 = Roboto({
-  weight: '400',
+const roboto = Roboto({
+  weight: ['400', '500', '700'],
   subsets: ['latin', 'vietnamese'],
-  variable: '--font-roboto',  // chỉ 400 cần giữ CSS variable
+  variable: '--font-roboto',
   display: 'swap',
   preload: true,
-});
-
-const roboto500 = Roboto({
-  weight: '500',
-  subsets: ['latin', 'vietnamese'],
-  display: 'swap',
-  preload: true,
-});
-
-const roboto700 = Roboto({
-  weight: '700',
-  subsets: ['latin', 'vietnamese'],
-  display: 'swap',
-  preload: true,
+  // FIX: adjustFontFallback giúp tránh layout shift khi font swap
+  adjustFontFallback: true,
 });
 
 export const viewport: Viewport = {
@@ -84,10 +71,31 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="WebTruyen" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512.png" />
+
+        {/*
+          FIX CSS BLOCKING (tiết kiệm ~750ms theo Lighthouse):
+          Các chunk CSS lớn đang block render vì browser phải parse xong mới render.
+          Dùng preload + onload trick để load CSS async, không block.
+
+          Lưu ý: hash của chunk CSS thay đổi mỗi lần build → không hardcode được.
+          Thay vào đó dùng fetchpriority hint cho ảnh LCP (quan trọng hơn).
+
+          FIX THỰC TẾ CHO CSS BLOCKING: tắt optimizeCss trong next.config.ts
+          vì critters của Next.js đôi khi tạo ra blocking CSS thay vì giải quyết nó.
+        */}
+
+        {/*
+          FIX LCP IMAGE: Hint browser biết sắp cần load ảnh lớn từ R2
+          → browser kết nối sớm với R2 CDN, giảm latency đáng kể
+        */}
+        <link rel="preconnect" href="https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev" />
+        <link rel="dns-prefetch" href="https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev" />
       </head>
       <body
         suppressHydrationWarning
-        className={`${roboto400.variable} ${roboto500.className} ${roboto700.className} min-h-screen antialiased`}
+        // FIX: dùng roboto.variable + roboto.className thay vì 3 className riêng
+        // → đảm bảo cả 400/500/700 đều được inject qua CSS variable
+        className={`${roboto.variable} ${roboto.className} min-h-screen antialiased`}
         style={{ fontFamily: 'var(--font-roboto), sans-serif' }}
       >
         <SessionWrapper>
@@ -111,7 +119,7 @@ export default function RootLayout({
             fontWeight: 500,
             zIndex: 9999,
             pointerEvents: 'none',
-          }}>v 2.8</div>
+          }}>v 3.0</div>
         </SessionWrapper>
       </body>
     </html>
