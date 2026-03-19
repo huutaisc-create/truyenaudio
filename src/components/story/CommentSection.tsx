@@ -174,12 +174,12 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                         className="w-full px-4 py-3 text-sm rounded-xl resize-none outline-none transition-all bg-warm-bg border border-warm-border text-warm-ink placeholder:text-warm-ink-soft focus:border-warm-primary disabled:opacity-60"
                     />
                     <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-warm-ink-soft" aria-hidden="true">Ctrl+Enter để gửi</span>
+                        <span className="text-sm text-warm-ink-soft" aria-hidden="true">Ctrl+Enter để gửi</span>
                         <button
                             onClick={handleSend}
                             disabled={isSending || !content.trim()}
                             aria-label={isSending ? "Đang gửi bình luận..." : "Gửi bình luận"} // FIX A11Y
-                            className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold text-white bg-warm-primary hover:bg-warm-primary-soft transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center gap-2 px-5 py-2 rounded-xl text-base font-bold text-white bg-warm-primary hover:bg-warm-primary-soft transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isSending
                                 ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -197,7 +197,7 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                     <Loader2 className="h-5 w-5 animate-spin text-warm-ink-light" aria-hidden="true" />
                 </div>
             ) : comments.length === 0 ? (
-                <p className="text-sm italic text-warm-ink-soft text-center py-6">
+                <p className="text-base italic text-warm-ink-soft text-center py-6">
                     Chưa có bình luận nào. Hãy là người đầu tiên! 💬
                 </p>
             ) : (
@@ -209,13 +209,13 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                             <Avatar name={comment.user.name} image={comment.user.image} size={36} />
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                    <span className="text-sm font-bold text-warm-ink">{comment.user.name}</span>
+                                    <span className="text-base font-bold text-warm-ink">{comment.user.name}</span>
                                     {comment.user.role === 'ADMIN' && (
                                         <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-warm-primary text-white uppercase tracking-wider">Admin</span>
                                     )}
                                 </div>
-                                <p className="text-sm text-warm-ink leading-relaxed mb-2">{comment.content}</p>
-                                <div className="flex items-center gap-4 text-xs text-warm-ink-soft">
+                                <p className="text-base text-warm-ink leading-relaxed mb-2">{comment.content}</p>
+                                <div className="flex items-center gap-4 text-sm text-warm-ink-soft">
                                     <time dateTime={comment.createdAt}>{timeAgo(comment.createdAt)}</time> {/* FIX A11Y: <time> */}
                                     <button
                                         onClick={() => handleLike(comment.id)}
