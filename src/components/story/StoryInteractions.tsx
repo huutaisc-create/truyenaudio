@@ -97,25 +97,25 @@ export default function StoryInteractions({ storyId, storySlug, firstChapterId, 
             <div className="grid grid-cols-3 gap-2">
                 <button
                     onClick={handleLike}
-                    className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 border ${
+                    className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-base font-bold transition-all active:scale-95 border ${
                         status.isLiked
                             ? 'bg-red-50 text-red-500 border-red-200'
                             : 'bg-warm-bg text-warm-ink-mid border-warm-border hover:bg-red-50 hover:text-red-500 hover:border-red-200'
                     }`}
                 >
-                    <Heart className={`h-3.5 w-3.5 ${status.isLiked ? 'fill-current' : ''}`} />
+                    <Heart className={`h-4 w-4 ${status.isLiked ? 'fill-current' : ''}`} />
                     Yêu thích
                 </button>
 
                 <button
                     onClick={handleFollow}
-                    className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 border ${
+                    className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-base font-bold transition-all active:scale-95 border ${
                         status.isFollowed
                             ? 'bg-blue-50 text-blue-600 border-blue-200'
                             : 'bg-warm-bg text-warm-ink-mid border-warm-border hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
                     }`}
                 >
-                    <Bookmark className={`h-3.5 w-3.5 ${status.isFollowed ? 'fill-current' : ''}`} />
+                    <Bookmark className={`h-4 w-4 ${status.isFollowed ? 'fill-current' : ''}`} />
                     Theo dõi
                 </button>
 
@@ -123,7 +123,7 @@ export default function StoryInteractions({ storyId, storySlug, firstChapterId, 
                     onClick={handleNominate}
                     className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-base font-bold bg-warm-bg text-warm-ink-mid border border-warm-border hover:bg-amber-50 hover:text-amber-500 hover:border-amber-200 transition-all active:scale-95"
                 >
-                    <Trophy className="h-3.5 w-3.5" />
+                    <Trophy className="h-4 w-4" />
                     Đề cử
                 </button>
             </div>

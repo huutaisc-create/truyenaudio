@@ -503,3 +503,27 @@ export async function trackChapterRead(storySlug: string, chapterId: string) {
         })
     }
 }
+
+// ── Top Đề Cử sidebar ─────────────────────────────────────────────────────
+// Query đồng bộ với trang chủ (nominationCount desc, include genres take 1)
+// → Prisma/Next.js cache dedup: cùng query shape → không hit DB 2 lần
+const getCachedTopNominations = unstable_cache(
+    async (limit: number) => {
+        return db.story.findMany({
+            take: limit,
+            orderBy: { nominationCount: 'desc' },
+            include: { genres: { take: 1 } },
+        })
+    },
+    ['top-nominations'],
+    { revalidate: 300 }
+)
+
+export async function getTopNominations(limit: number = 5) {
+    try {
+        return await getCachedTopNominations(limit)
+    } catch (error) {
+        console.error("Get Top Nominations Error:", error)
+        return []
+    }
+}

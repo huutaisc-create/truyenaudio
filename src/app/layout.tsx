@@ -66,9 +66,10 @@ export default function RootLayout({
         suppressHydrationWarning
         className="min-h-screen antialiased"
         style={{
-          // Android có sẵn Roboto, iOS có SF Pro, Windows có Segoe UI
+          // system-ui: iOS/macOS=SF Pro, Android=Roboto, Windows=Segoe UI
+          // Tất cả đều hỗ trợ tiếng Việt đầy đủ — không fallback sang serif
           // → trông y hệt nhưng không cần load gì cả
-          fontFamily: 'Roboto, "Segoe UI", system-ui, -apple-system, sans-serif',
+          fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif',
         }}
       >
         <SessionWrapper>
@@ -92,7 +93,7 @@ export default function RootLayout({
             fontWeight: 500,
             zIndex: 9999,
             pointerEvents: 'none',
-          }}>v 3.2</div>
+          }}>v 3.5</div>
         </SessionWrapper>
       </body>
     </html>
