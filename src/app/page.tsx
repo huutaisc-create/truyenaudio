@@ -61,12 +61,12 @@ const StoryCard = ({
           </div>
         )}
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2 pt-10 flex flex-col justify-end">
-          <h3 className={`line-clamp-2 text-sm font-bold text-white group-hover:${hoverColor} transition-colors leading-tight`}>{title}</h3>
+          <h3 className={`line-clamp-2 text-base font-bold text-white group-hover:${hoverColor} transition-colors leading-tight`}>{title}</h3>
         </div>
       </Link>
 
       {status === "COMPLETED" && (
-        <span className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 shadow-sm z-10 uppercase tracking-wider rounded-br-md">Full</span>
+        <span className="absolute top-0 left-0 bg-red-600 text-white text-sm font-bold px-2 py-0.5 shadow-sm z-10 uppercase tracking-wider rounded-br-md">Full</span>
       )}
 
       {/* Nút NGHE/ĐỌC — đồng bộ pill cam, hover đậm hơn */}
@@ -79,7 +79,7 @@ const StoryCard = ({
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
           </svg>
-          <span className="text-[11px] font-black uppercase tracking-[.05em]">Nghe</span>
+          <span className="text-sm font-black uppercase tracking-[.05em]">Nghe</span>
         </Link>
         <Link
           href={`/truyen/${slug}`}
@@ -89,7 +89,7 @@ const StoryCard = ({
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
           </svg>
-          <span className="text-[11px] font-black uppercase tracking-[.05em]">Đọc</span>
+          <span className="text-sm font-black uppercase tracking-[.05em]">Đọc</span>
         </Link>
       </div>
 

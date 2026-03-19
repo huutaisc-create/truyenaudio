@@ -17,8 +17,8 @@
   --color-warm-primary-pale: #FFF3EE;
   --color-warm-gold: #F5A623;
 
-  /* ✅ Bỏ --font-sans: var(--font-inter) vì Inter đã bị xóa khỏi layout.tsx */
-  --font-sans: var(--font-roboto);
+  /* ✅ Đồng bộ với layout.tsx — dùng system font, không load woff2 */
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 :root {
@@ -33,7 +33,7 @@
 
 body {
   @apply text-warm-ink selection:bg-orange-500/20 selection:text-orange-900;
-  background-color: #faf7f2;
+  background-color: #ffffff;
 
   /*
    * ✅ Bỏ background-attachment: fixed
@@ -43,11 +43,7 @@ body {
    * ✅ Chuyển 3 radial-gradient sang CSS custom property tĩnh
    * Render 1 lần lúc paint, không recompute khi scroll.
    */
-  background-image:
-    radial-gradient(at 0% 0%, rgba(245,166,35,.10) 0, transparent 60%),
-    radial-gradient(at 100% 0%, rgba(232,88,10,.07) 0, transparent 60%),
-    radial-gradient(at 50% 100%, rgba(245,166,35,.06) 0, transparent 60%);
-  /* background-attachment: fixed; ← ĐÃ XÓA */
+  /* background-image: removed — dùng trắng thuần */
 }
 
 ::-webkit-scrollbar { width: 10px; }
