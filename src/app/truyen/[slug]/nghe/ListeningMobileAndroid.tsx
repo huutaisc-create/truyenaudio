@@ -10,6 +10,10 @@ import {
 } from 'lucide-react';
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── R2 CDN base URL ──────────────────────────────────────────────────────
+// Đổi URL này khi có custom domain, không cần sửa chỗ nào khác
+const R2_BASE = 'https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev';
+
 interface Chapter {
   id: string;
   index: number;
@@ -221,7 +225,7 @@ export default function ListeningMobileAndroid({
 
   // â”€â”€ Load voice manifest â”€â”€
   useEffect(() => {
-    fetch('/models/custom/manifest.json')
+    fetch(`${R2_BASE}/models/custom/manifest.json`)
       .then(r => r.json())
       .then((data: { id: string; name: string; path?: string }[]) => {
         setVoices(data);
@@ -592,14 +596,14 @@ export default function ListeningMobileAndroid({
     if (!pool.length) { console.log(`[W:Prefetch] ABORT: worker pool empty`); return; }
 
     const voiceMeta = voices.find((v: any) => v.id === selectedVoice);
-    const modelBase = `/models/custom/${voiceMeta?.path ?? selectedVoice}`;
+    const modelBase = `${R2_BASE}/models/custom/${voiceMeta?.path ?? selectedVoice}`;
     const workerBase = {
       modelUrl:              `${modelBase}.onnx`,
       modelConfigUrl:        `${modelBase}.onnx.json`,
-      onnxruntimeUrl:        '/piper-wasm',
-      piperPhonemizeJsUrl:   '/piper-wasm/piper_phonemize.js',
-      piperPhonemizeWasmUrl: '/piper-wasm/piper_phonemize.wasm',
-      piperPhonemizeDataUrl: '/piper-wasm/piper_phonemize.data',
+      onnxruntimeUrl:        `${R2_BASE}/piper-wasm`,
+      piperPhonemizeJsUrl:   `${R2_BASE}/piper-wasm/piper_phonemize.js`,
+      piperPhonemizeWasmUrl: `${R2_BASE}/piper-wasm/piper_phonemize.wasm`,
+      piperPhonemizeDataUrl: `${R2_BASE}/piper-wasm/piper_phonemize.data`,
       blobs: {},
     };
 
@@ -729,14 +733,14 @@ export default function ListeningMobileAndroid({
     console.log(`[TTS] Chapter: ${chapter.title} â€” chunks will be split from text`);
 
     const voiceMeta = voices.find(v => v.id === selectedVoice);
-    const modelBase = `/models/custom/${voiceMeta?.path ?? selectedVoice}`;
+    const modelBase = `${R2_BASE}/models/custom/${voiceMeta?.path ?? selectedVoice}`;
     const workerBase = {
       modelUrl:              `${modelBase}.onnx`,
       modelConfigUrl:        `${modelBase}.onnx.json`,
-      onnxruntimeUrl:        '/piper-wasm',
-      piperPhonemizeJsUrl:   '/piper-wasm/piper_phonemize.js',
-      piperPhonemizeWasmUrl: '/piper-wasm/piper_phonemize.wasm',
-      piperPhonemizeDataUrl: '/piper-wasm/piper_phonemize.data',
+      onnxruntimeUrl:        `${R2_BASE}/piper-wasm`,
+      piperPhonemizeJsUrl:   `${R2_BASE}/piper-wasm/piper_phonemize.js`,
+      piperPhonemizeWasmUrl: `${R2_BASE}/piper-wasm/piper_phonemize.wasm`,
+      piperPhonemizeDataUrl: `${R2_BASE}/piper-wasm/piper_phonemize.data`,
       blobs: {},
     };
 
