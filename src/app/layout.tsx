@@ -1,10 +1,5 @@
 import type { Metadata, Viewport } from "next";
-// ── FIX FONT: Bỏ next/font/google, dùng @fontsource/roboto ──────────────────
-// Lý do: next/font/google tạo hash thay đổi mỗi build → không preload được
-// @fontsource bundle font vào /_next/static/ với path cố định → preload ổn định
-import '@fontsource/roboto/400.css';
-import '@fontsource/roboto/500.css';
-import '@fontsource/roboto/700.css';
+import { Roboto } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "@/components/layout/ClientLayout";
 import RegisterSW from "@/components/common/RegisterSW";
@@ -12,6 +7,20 @@ import LoadingProgressBar from "@/components/common/LoadingProgressBar";
 import BackToTop from "@/components/common/BackToTop";
 import { Suspense } from 'react';
 import { SessionWrapper } from "@/components/providers/SessionWrapper";
+
+// ── Font: Roboto chỉ load vietnamese + latin, 3 weight gộp 1 instance ────────
+// - preload: true → Next.js emit <link rel="preload"> ngay trong <head>
+// - display: swap → không block render
+// - adjustFontFallback → tránh layout shift
+// - KHÔNG dùng latin-ext → giảm số file woff2 từ 11 xuống còn 4
+const roboto = Roboto({
+  weight: ['400', '500', '700'],
+  subsets: ['vietnamese'],   // chỉ cần vietnamese là đủ cho web tiếng Việt
+  variable: '--font-roboto',
+  display: 'swap',
+  preload: true,
+  adjustFontFallback: true,
+});
 
 export const viewport: Viewport = {
   themeColor: '#e8580a',
@@ -58,14 +67,14 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512.png" />
 
-        {/* FIX R2 CDN: preconnect sớm để giảm latency load ảnh bìa */}
+        {/* Preconnect R2 CDN để giảm latency load ảnh bìa */}
         <link rel="preconnect" href="https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev" />
         <link rel="dns-prefetch" href="https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev" />
       </head>
       <body
         suppressHydrationWarning
-        className="min-h-screen antialiased"
-        style={{ fontFamily: '"Roboto", sans-serif' }}
+        className={`${roboto.variable} ${roboto.className} min-h-screen antialiased`}
+        style={{ fontFamily: 'var(--font-roboto), sans-serif' }}
       >
         <SessionWrapper>
           <RegisterSW />
