@@ -89,7 +89,7 @@ const RankingPage = async ({ searchParams: searchParamsPromise }: { searchParams
                 <div className="py-2 md:py-6 border-b border-zinc-100 mb-4 md:mb-6">
                     {/* Mobile: Compact Header */}
                     <h1 className="text-lg md:text-xl font-bold text-zinc-900 mb-1 md:mb-2 tracking-tight uppercase italic border-l-4 md:border-l-8 border-brand-primary pl-2 md:pl-4">Bảng Xếp Hạng</h1>
-                    <p className="text-zinc-500 text-[10px] md:text-sm">{currentCategory.description}</p>
+                    <p className="text-zinc-600 text-sm md:text-base">{currentCategory.description}</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-12">
@@ -100,7 +100,7 @@ const RankingPage = async ({ searchParams: searchParamsPromise }: { searchParams
                             <Link
                                 key={cat.id}
                                 href={`/xep-hang?tab=${cat.id}`}
-                                className={`w-full flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-1 md:gap-3 px-1 py-1.5 md:px-6 md:py-4 rounded-lg lg:rounded-xl text-[10px] sm:text-xs md:text-sm font-bold transition-all whitespace-nowrap ${tab === cat.id
+                                className={`w-full flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-1 md:gap-3 px-1 py-1.5 md:px-6 md:py-4 rounded-lg lg:rounded-xl text-sm sm:text-base md:text-base font-bold transition-all whitespace-nowrap ${tab === cat.id
                                     ? 'bg-brand-primary text-white shadow-md lg:shadow-lg shadow-orange-500/20'
                                     : 'bg-zinc-100 lg:bg-transparent text-zinc-600 hover:bg-zinc-200 lg:hover:bg-zinc-100 hover:text-brand-primary'
                                     }`}
@@ -142,7 +142,7 @@ const RankingPage = async ({ searchParams: searchParamsPromise }: { searchParams
 
                                                 {/* Status Badge */}
                                                 {story.status === 'COMPLETED' && (
-                                                    <span className="absolute top-0 right-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 shadow-sm z-10 uppercase tracking-wider">
+                                                    <span className="absolute top-0 right-0 bg-red-600 text-white text-sm font-bold px-1.5 py-0.5 shadow-sm z-10 uppercase tracking-wider">
                                                         Full
                                                     </span>
                                                 )}
@@ -151,13 +151,13 @@ const RankingPage = async ({ searchParams: searchParamsPromise }: { searchParams
                                             {/* Meta */}
                                             <div className="flex-1 min-w-0 space-y-2 py-1">
                                                 <h3 className="text-lg font-bold text-zinc-800 truncate group-hover:text-brand-primary transition-colors">{story.title}</h3>
-                                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
+                                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-base text-zinc-500">
                                                     <span className="flex items-center gap-1"><User className="h-3 w-3" /> {story.author}</span>
                                                     {story.genres.map(g => (
                                                         <span key={g.id} className="flex items-center gap-1 uppercase font-bold text-brand-primary/70 border border-brand-primary/10 px-1 rounded">{g.name}</span>
                                                     ))}
                                                 </div>
-                                                <div className="flex gap-6 pt-2 text-[12px] font-medium text-zinc-400">
+                                                <div className="flex gap-6 pt-2 text-base font-medium text-zinc-500">
                                                     <span>Số chương: <span className="text-zinc-700 font-bold">{formatNumber(story._count.chapters)}</span></span>
                                                     <span className="text-brand-primary font-bold">{getMetricLabel(story)}</span>
                                                 </div>
@@ -195,7 +195,7 @@ const RankingPage = async ({ searchParams: searchParamsPromise }: { searchParams
                                                     <BookOpen className="h-12 w-12 text-zinc-300 opacity-20" />
                                                 )}
                                                 {story.status === 'COMPLETED' && (
-                                                    <span className="absolute top-0 right-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 shadow-sm z-10 uppercase tracking-wider">
+                                                    <span className="absolute top-0 right-0 bg-red-600 text-white text-sm font-bold px-1.5 py-0.5 shadow-sm z-10 uppercase tracking-wider">
                                                         Full
                                                     </span>
                                                 )}
@@ -203,18 +203,18 @@ const RankingPage = async ({ searchParams: searchParamsPromise }: { searchParams
 
                                             <div className="p-4 flex flex-col flex-1 gap-2">
                                                 <h3 className="font-bold text-base text-zinc-900 group-hover:text-brand-primary transition-colors line-clamp-2 leading-tight min-h-[2.5rem]">{story.title}</h3>
-                                                <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                                                <div className="flex items-center gap-1.5 text-sm text-zinc-600">
                                                     <span className="flex items-center gap-1 truncate max-w-full"><User className="h-3 w-3 shrink-0" /> {story.author}</span>
                                                 </div>
                                                 <div className="flex flex-wrap gap-1 mt-1">
                                                     {story.genres[0] && (
-                                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold text-zinc-600 bg-zinc-100 border border-zinc-200 uppercase">{story.genres[0].name}</span>
+                                                        <span className="px-2 py-0.5 rounded text-sm font-bold text-zinc-600 bg-zinc-100 border border-zinc-200 uppercase">{story.genres[0].name}</span>
                                                     )}
-                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${story.status === 'COMPLETED' ? 'text-green-600 bg-green-50 border-green-200' : 'text-blue-600 bg-blue-50 border-blue-200'}`}>
+                                                    <span className={`px-2 py-0.5 rounded text-sm font-bold border ${story.status === 'COMPLETED' ? 'text-green-600 bg-green-50 border-green-200' : 'text-blue-600 bg-blue-50 border-blue-200'}`}>
                                                         {story.status === 'COMPLETED' ? 'FULL' : 'Đang ra'}
                                                     </span>
                                                 </div>
-                                                <div className="mt-auto pt-3 border-t border-zinc-50 flex items-center justify-between text-xs font-medium text-zinc-500">
+                                                <div className="mt-auto pt-3 border-t border-zinc-50 flex items-center justify-between text-sm font-medium text-zinc-600">
                                                     <span>{formatNumber(story._count.chapters)} chương</span>
                                                     <span className="text-brand-primary font-bold">{getMetricLabel(story).split(': ')[1]}</span>
                                                 </div>
@@ -228,17 +228,17 @@ const RankingPage = async ({ searchParams: searchParamsPromise }: { searchParams
                         {/* Pagination */}
                         <div className="mt-12 flex justify-center gap-2">
                             {page > 1 && (
-                                <Link href={`/xep-hang?tab=${tab}&page=${page - 1}`} className="px-4 py-2 bg-white border border-zinc-200 text-zinc-600 rounded-lg text-sm hover:bg-zinc-50 font-bold">
+                                <Link href={`/xep-hang?tab=${tab}&page=${page - 1}`} className="px-4 py-2 bg-white border border-zinc-200 text-zinc-600 rounded-lg text-base hover:bg-zinc-50 font-bold">
                                     Trước
                                 </Link>
                             )}
 
-                            <span className="px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-bold">
+                            <span className="px-4 py-2 bg-brand-primary text-white rounded-lg text-base font-bold">
                                 Trang {page}
                             </span>
 
                             {page < totalPages && (
-                                <Link href={`/xep-hang?tab=${tab}&page=${page + 1}`} className="px-4 py-2 bg-white border border-zinc-200 text-zinc-600 rounded-lg text-sm hover:bg-zinc-50 font-bold">
+                                <Link href={`/xep-hang?tab=${tab}&page=${page + 1}`} className="px-4 py-2 bg-white border border-zinc-200 text-zinc-600 rounded-lg text-base hover:bg-zinc-50 font-bold">
                                     Sau
                                 </Link>
                             )}
