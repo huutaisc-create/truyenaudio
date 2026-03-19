@@ -156,39 +156,39 @@ const StoryDetail = async ({
                                 </div>
 
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    <div className="flex" aria-label={`Điểm đánh giá: ${story.rating}/5`}>
+                                    <span role="img" aria-label={`Điểm đánh giá: ${story.rating} trên 5 sao`} className="flex">
                                         {[1, 2, 3, 4, 5].map(i => (
                                             <Star key={i} className={`h-4 w-4 fill-current ${i <= Math.round(story.rating) ? 'text-amber-400' : 'text-zinc-200'}`} aria-hidden="true" />
                                         ))}
-                                    </div>
+                                    </span>
                                     <span className="text-lg font-black text-warm-gold">{story.rating}</span>
-                                    <span className="text-xs text-warm-ink-light">({story.ratingCount} đánh giá)</span>
+                                    <span className="text-xs text-warm-ink-soft">({story.ratingCount} đánh giá)</span>
                                     {/* ✅ ReviewButton không cần currentUser — tự check auth khi click */}
                                     <ReviewButton
                                         storyId={storyData.id}
                                         text="Đánh giá"
                                         currentUser={undefined}
-                                        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-warm-primary-pale text-warm-primary border border-warm-primary/25 hover:bg-warm-primary hover:text-white transition-all"
+                                        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-warm-primary-pale text-[#8c3a08] border border-warm-primary/50 hover:bg-warm-primary hover:text-white transition-all"
                                     />
                                 </div>
 
                                 {/* Stats bar */}
                                 <div className="flex rounded-xl overflow-hidden border border-warm-border-soft bg-warm-bg">
-                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-warm-ink-soft">
+                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-warm-ink-mid">
                                         <Heart className="h-3.5 w-3.5 fill-current text-red-500" aria-hidden="true" />
-                                        <b className="text-warm-ink">{formatNumber(storyData.likeCount || 0)}</b>
+                                        <b className="text-base font-bold text-warm-ink">{formatNumber(storyData.likeCount || 0)}</b>
                                         <span className="hidden sm:inline">Yêu thích</span>
                                     </div>
                                     <div className="w-px bg-warm-border" aria-hidden="true"></div>
-                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-warm-ink-soft">
+                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-warm-ink-mid">
                                         <Bookmark className="h-3.5 w-3.5 fill-current text-blue-500" aria-hidden="true" />
-                                        <b className="text-warm-ink">{formatNumber(storyData.followCount || 0)}</b>
+                                        <b className="text-base font-bold text-warm-ink">{formatNumber(storyData.followCount || 0)}</b>
                                         <span className="hidden sm:inline">Theo dõi</span>
                                     </div>
                                     <div className="w-px bg-warm-border" aria-hidden="true"></div>
-                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-warm-ink-soft">
+                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-warm-ink-mid">
                                         <Trophy className="h-3.5 w-3.5 fill-current text-amber-400" aria-hidden="true" />
-                                        <b className="text-warm-ink">{formatNumber(storyData.nominationCount || 0)}</b>
+                                        <b className="text-base font-bold text-warm-ink">{formatNumber(storyData.nominationCount || 0)}</b>
                                         <span className="hidden sm:inline">Đề cử</span>
                                     </div>
                                 </div>
@@ -337,8 +337,8 @@ const StoryDetail = async ({
                                     <div key={i} className="flex items-center gap-2.5 group cursor-pointer">
                                         <span className={`h-6 w-6 rounded-md text-[10px] flex items-center justify-center font-black shrink-0 ${i === 1 ? 'bg-red-500 text-white' : i === 2 ? 'bg-orange-500 text-white' : i === 3 ? 'bg-amber-400 text-white' : 'bg-warm-border-soft text-warm-ink-light'}`} aria-label={`Hạng ${i}`}>{i}</span>
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="text-xs font-bold text-warm-ink-mid truncate group-hover:text-warm-primary transition-colors">Truyện hay đề cử số {i}</h3>
-                                            <p className="text-[10px] text-warm-ink-light mt-0.5">{1000 - i * 50} đề cử</p>
+                                            <h3 className="text-sm font-bold text-warm-ink-mid truncate group-hover:text-warm-primary transition-colors">Truyện hay đề cử số {i}</h3>
+                                            <p className="text-[11px] text-warm-ink-soft mt-0.5">{1000 - i * 50} đề cử</p>
                                         </div>
                                     </div>
                                 ))}
@@ -365,13 +365,13 @@ const StoryDetail = async ({
                                                 )}
                                             </div>
                                             <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                                                <h3 className="text-xs font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">{s.title}</h3>
-                                                <p className="text-[10px] text-warm-ink-light">{s.author}</p>
+                                                <h3 className="text-sm font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">{s.title}</h3>
+                                                <p className="text-[11px] text-warm-ink-soft">{s.author}</p>
                                                 <div className="flex items-center gap-1.5 mt-0.5">
                                                     {s.genres.slice(0, 1).map((g: any) => (
-                                                        <span key={g.name} className="text-[9px] px-1.5 py-0.5 bg-warm-primary-pale text-warm-primary rounded-full font-semibold">{g.name}</span>
+                                                        <span key={g.name} className="text-[11px] px-1.5 py-0.5 bg-warm-primary-pale text-[#8c3a08] rounded-full font-semibold border border-warm-primary/20">{g.name}</span>
                                                     ))}
-                                                    <span className="text-[10px] text-warm-ink-light">{s._count.chapters} chương</span>
+                                                    <span className="text-[11px] text-warm-ink-soft">{s._count.chapters} chương</span>
                                                 </div>
                                             </div>
                                         </a>
@@ -387,7 +387,7 @@ const StoryDetail = async ({
                                     <span className="w-1 h-4 rounded-sm bg-warm-primary shrink-0" aria-hidden="true"></span>
                                     CÙNG TÁC GIẢ
                                 </h2>
-                                <p className="text-[10px] text-warm-ink-light mb-3 font-medium">✍️ {story.author}</p>
+                                <p className="text-[11px] text-warm-ink-soft mb-3 font-medium">✍️ {story.author}</p>
                                 <div className="space-y-3">
                                     {authorStoriesReal.map((s: any) => (
                                         <a key={s.id} href={`/truyen/${s.slug}`} className="flex gap-2.5 group" aria-label={`${s.title}`}>
@@ -401,8 +401,8 @@ const StoryDetail = async ({
                                                 )}
                                             </div>
                                             <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                                                <h3 className="text-xs font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">{s.title}</h3>
-                                                <p className="text-[10px] text-warm-ink-light">{s._count.chapters} chương</p>
+                                                <h3 className="text-sm font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">{s.title}</h3>
+                                                <p className="text-[11px] text-warm-ink-soft">{s._count.chapters} chương</p>
                                                 <span className={`text-[9px] w-fit px-1.5 py-0.5 rounded-full font-semibold mt-0.5 ${s.status === 'COMPLETED' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-500'}`}>
                                                     {s.status === 'COMPLETED' ? 'Hoàn thành' : 'Đang ra'}
                                                 </span>

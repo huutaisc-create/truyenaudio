@@ -92,7 +92,7 @@ export default function RootLayout({
             fontWeight: 500,
             zIndex: 9999,
             pointerEvents: 'none',
-          }}>v 2.8</div>
+          }}>v 3.1</div>
         </SessionWrapper>
       </body>
     </html>

@@ -154,7 +154,7 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                 <span className="w-1 h-5 rounded-sm bg-warm-primary shrink-0" aria-hidden="true"></span>
                 Bình luận
                 {comments.length > 0 && (
-                    <span className="text-xs font-semibold text-warm-ink-light ml-1">({comments.length})</span>
+                    <span className="text-xs font-semibold text-warm-ink-soft ml-1">({comments.length})</span>
                 )}
             </h2>
 
@@ -171,10 +171,10 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                         rows={3}
                         aria-label="Nội dung bình luận" // FIX A11Y
                         disabled={!currentUser}
-                        className="w-full px-4 py-3 text-sm rounded-xl resize-none outline-none transition-all bg-warm-bg border border-warm-border text-warm-ink-mid placeholder:text-warm-ink-light focus:border-warm-primary disabled:opacity-60"
+                        className="w-full px-4 py-3 text-sm rounded-xl resize-none outline-none transition-all bg-warm-bg border border-warm-border text-warm-ink placeholder:text-warm-ink-soft focus:border-warm-primary disabled:opacity-60"
                     />
                     <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-warm-ink-light" aria-hidden="true">Ctrl+Enter để gửi</span>
+                        <span className="text-[11px] text-warm-ink-soft" aria-hidden="true">Ctrl+Enter để gửi</span>
                         <button
                             onClick={handleSend}
                             disabled={isSending || !content.trim()}
@@ -197,14 +197,14 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                     <Loader2 className="h-5 w-5 animate-spin text-warm-ink-light" aria-hidden="true" />
                 </div>
             ) : comments.length === 0 ? (
-                <p className="text-sm italic text-warm-ink-light text-center py-6">
+                <p className="text-sm italic text-warm-ink-soft text-center py-6">
                     Chưa có bình luận nào. Hãy là người đầu tiên! 💬
                 </p>
             ) : (
                 <ol className="space-y-3" aria-label="Danh sách bình luận"> {/* FIX A11Y: ol thay div */}
                     {comments.map(comment => (
                         <li key={comment.id}
-                            className="flex gap-3 p-4 rounded-xl bg-warm-bg border border-warm-border-soft"
+                            className="flex gap-3 p-4 rounded-xl bg-warm-card border border-warm-border"
                         >
                             <Avatar name={comment.user.name} image={comment.user.image} size={36} />
                             <div className="flex-1 min-w-0">
@@ -214,8 +214,8 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                                         <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-warm-primary text-white uppercase tracking-wider">Admin</span>
                                     )}
                                 </div>
-                                <p className="text-sm text-warm-ink-mid leading-relaxed mb-2">{comment.content}</p>
-                                <div className="flex items-center gap-4 text-xs text-warm-ink-light">
+                                <p className="text-sm text-warm-ink leading-relaxed mb-2">{comment.content}</p>
+                                <div className="flex items-center gap-4 text-xs text-warm-ink-soft">
                                     <time dateTime={comment.createdAt}>{timeAgo(comment.createdAt)}</time> {/* FIX A11Y: <time> */}
                                     <button
                                         onClick={() => handleLike(comment.id)}
