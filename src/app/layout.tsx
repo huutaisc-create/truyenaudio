@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Roboto } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "@/components/layout/ClientLayout";
 import RegisterSW from "@/components/common/RegisterSW";
@@ -8,19 +7,11 @@ import BackToTop from "@/components/common/BackToTop";
 import { Suspense } from 'react';
 import { SessionWrapper } from "@/components/providers/SessionWrapper";
 
-// ── Font: Roboto chỉ load vietnamese + latin, 3 weight gộp 1 instance ────────
-// - preload: true → Next.js emit <link rel="preload"> ngay trong <head>
-// - display: swap → không block render
-// - adjustFontFallback → tránh layout shift
-// - KHÔNG dùng latin-ext → giảm số file woff2 từ 11 xuống còn 4
-const roboto = Roboto({
-  weight: ['400', '500', '700'],
-  subsets: ['vietnamese'],   // chỉ cần vietnamese là đủ cho web tiếng Việt
-  variable: '--font-roboto',
-  display: 'swap',
-  preload: true,
-  adjustFontFallback: true,
-});
+// ── FONT: Bỏ hoàn toàn Google Font / @fontsource ─────────────────────────────
+// Dùng system font stack → không load file woff2 nào → LCP giảm ~700ms
+// Android: Roboto (có sẵn), iOS: SF Pro, Windows: Segoe UI
+// Người dùng Việt Nam chủ yếu dùng Android/iOS → font system trông rất tốt
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const viewport: Viewport = {
   themeColor: '#e8580a',
@@ -73,8 +64,12 @@ export default function RootLayout({
       </head>
       <body
         suppressHydrationWarning
-        className={`${roboto.variable} ${roboto.className} min-h-screen antialiased`}
-        style={{ fontFamily: 'var(--font-roboto), sans-serif' }}
+        className="min-h-screen antialiased"
+        style={{
+          // Android có sẵn Roboto, iOS có SF Pro, Windows có Segoe UI
+          // → trông y hệt nhưng không cần load gì cả
+          fontFamily: 'Roboto, "Segoe UI", system-ui, -apple-system, sans-serif',
+        }}
       >
         <SessionWrapper>
           <RegisterSW />
