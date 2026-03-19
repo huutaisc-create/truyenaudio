@@ -69,29 +69,17 @@ const StoryCard = ({
         <span className="absolute top-0 left-0 bg-red-600 text-white text-sm font-bold px-2 py-0.5 shadow-sm z-10 uppercase tracking-wider rounded-br-md">Full</span>
       )}
 
-      {/* Nút NGHE/ĐỌC — đồng bộ pill cam, hover đậm hơn */}
-      <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 z-10">
-        <Link
-          href={`/truyen/${slug}/nghe`}
-          aria-label={`Nghe truyện ${title}`}
-          className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#e8580a] text-white shadow-md hover:bg-[#c44a08] active:bg-[#a33d06] transition-all"
-        >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
-          </svg>
-          <span className="text-sm font-black uppercase tracking-[.05em]">Nghe</span>
-        </Link>
-        <Link
-          href={`/truyen/${slug}`}
-          aria-label={`Đọc truyện ${title}`}
-          className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#e8580a] text-white shadow-md hover:bg-[#c44a08] active:bg-[#a33d06] transition-all"
-        >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-          </svg>
-          <span className="text-sm font-black uppercase tracking-[.05em]">Đọc</span>
-        </Link>
-      </div>
+      {/* Nút NGHE — outline style, click ảnh = đọc */}
+      <Link
+        href={`/truyen/${slug}/nghe`}
+        aria-label={`Nghe truyện ${title}`}
+        className="absolute top-2 right-2 z-10 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border-2 border-white/80 bg-black/30 text-white text-sm font-bold backdrop-blur-sm hover:bg-[#e8580a] hover:border-[#e8580a] transition-all shadow-sm"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+        </svg>
+        Nghe
+      </Link>
 
     </div>
   </div>
