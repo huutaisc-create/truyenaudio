@@ -175,22 +175,22 @@ const StoryDetail = async ({
 
                                 {/* Stats bar */}
                                 <div className="flex rounded-xl overflow-hidden border border-warm-border-soft bg-warm-bg">
-                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-base font-semibold text-warm-ink-mid">
+                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-base font-bold text-warm-ink">
                                         <Heart className="h-3.5 w-3.5 fill-current text-red-500" aria-hidden="true" />
                                         <b className="text-lg font-bold text-warm-ink">{formatNumber(storyData.likeCount || 0)}</b>
-                                        <span className="hidden sm:inline">Yêu thích</span>
+                                        <span className="text-base font-bold">Yêu thích</span>
                                     </div>
                                     <div className="w-px bg-warm-border" aria-hidden="true"></div>
-                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-base font-semibold text-warm-ink-mid">
+                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-base font-bold text-warm-ink">
                                         <Bookmark className="h-3.5 w-3.5 fill-current text-blue-500" aria-hidden="true" />
                                         <b className="text-lg font-bold text-warm-ink">{formatNumber(storyData.followCount || 0)}</b>
-                                        <span className="hidden sm:inline">Theo dõi</span>
+                                        <span className="text-base font-bold">Theo dõi</span>
                                     </div>
                                     <div className="w-px bg-warm-border" aria-hidden="true"></div>
-                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-base font-semibold text-warm-ink-mid">
+                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-base font-bold text-warm-ink">
                                         <Trophy className="h-3.5 w-3.5 fill-current text-amber-400" aria-hidden="true" />
                                         <b className="text-lg font-bold text-warm-ink">{formatNumber(storyData.nominationCount || 0)}</b>
-                                        <span className="hidden sm:inline">Đề cử</span>
+                                        <span className="text-base font-bold">Đề cử</span>
                                     </div>
                                 </div>
 
