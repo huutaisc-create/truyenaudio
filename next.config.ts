@@ -6,7 +6,18 @@ const nextConfig: NextConfig = {
   experimental: {
     workerThreads: false,
     cpus: 1,
-    optimizeCss: true,
+    // optimizeCss: true, // ← ĐÃ TẮT: critters gây CSS blocking trên Vercel
+    //                         thay bằng cách tối ưu thủ công qua preload ở layout.tsx
+  },
+
+  // ── FIX: JS polyfill cũ (Array.at, Object.fromEntries, ...) ──────────────
+  // Nói với SWC chỉ transpile cho browser hiện đại → bỏ các polyfill không cần
+  // Tiết kiệm ~13.7KB theo Lighthouse report
+  compiler: {
+    // Loại bỏ console.log ở production — nhỏ nhưng giúp bundle sạch hơn
+    removeConsole: process.env.NODE_ENV === 'production'
+      ? { exclude: ['error', 'warn'] }
+      : false,
   },
 
   images: {
@@ -48,8 +59,6 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
-      // ✅ ĐÃ XÓA block Content-Encoding: br
-      // Vercel tự nén brotli — set thủ công gây double-encoding → ERR_CONTENT_DECODING_FAILED
       {
         source: '/(.*)',
         headers: [
