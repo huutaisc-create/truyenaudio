@@ -8,15 +8,35 @@ import BackToTop from "@/components/common/BackToTop";
 import { Suspense } from 'react';
 import { SessionWrapper } from "@/components/providers/SessionWrapper";
 
-// ✅ Bỏ Inter — không dùng trong CSS (--font-sans dùng --font-inter nhưng body dùng --font-roboto)
-// Giảm từ 2 font request xuống còn 1
-const roboto = Roboto({
-  weight: ['400', '500', '700'],
-  subsets: ["latin", "vietnamese"],
-  variable: "--font-roboto",
-  display: "swap",   // ✅ Đổi từ "optional" → "swap"
-                     // "optional" = browser bỏ qua font nếu chưa cache → chữ dùng fallback mãi
-                     // "swap" = hiển thị fallback trước, swap khi font load xong → đúng hơn cho UX
+// ── Font fix ────────────────────────────────────────────────────────────────
+//
+// Vấn đề: next/font chỉ tự preload weight đầu tiên trong array (400).
+// Weight 500 và 700 bị load muộn từ CSS (initiator: 4910520f8b48663f.css)
+// → Lighthouse thấy 3 file woff2 chậm: f7d6..., ccee..., fad5...
+//
+// Fix: Tách thành 3 instance riêng biệt, mỗi instance preload: true
+// → Next.js emit <link rel="preload"> cho cả 3 weight ngay trong <head>
+// → Browser tải cả 3 song song ngay từ đầu, không chờ CSS parse xong.
+//
+const roboto400 = Roboto({
+  weight: '400',
+  subsets: ['latin', 'vietnamese'],
+  variable: '--font-roboto',  // chỉ 400 cần giữ CSS variable
+  display: 'swap',
+  preload: true,
+});
+
+const roboto500 = Roboto({
+  weight: '500',
+  subsets: ['latin', 'vietnamese'],
+  display: 'swap',
+  preload: true,
+});
+
+const roboto700 = Roboto({
+  weight: '700',
+  subsets: ['latin', 'vietnamese'],
+  display: 'swap',
   preload: true,
 });
 
@@ -67,7 +87,7 @@ export default function RootLayout({
       </head>
       <body
         suppressHydrationWarning
-        className={`${roboto.variable} min-h-screen antialiased`}
+        className={`${roboto400.variable} ${roboto500.className} ${roboto700.className} min-h-screen antialiased`}
         style={{ fontFamily: 'var(--font-roboto), sans-serif' }}
       >
         <SessionWrapper>
