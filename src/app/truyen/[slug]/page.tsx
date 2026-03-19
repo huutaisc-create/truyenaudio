@@ -6,7 +6,7 @@ import ReviewButton from '@/components/story/ReviewButton';
 import StoryInteractions from '@/components/story/StoryInteractions';
 import CommentSection from '@/components/story/CommentSection';
 
-import { getStoryBySlug, getChaptersByStoryId, getRelatedStories, getStoriesByAuthor } from '@/actions/stories';
+import { getStoryBySlug, getChaptersByStoryId, getRelatedStories, getStoriesByAuthor, getTopNominations } from '@/actions/stories';
 import db from '@/lib/db';
 import { notFound } from 'next/navigation';
 import { formatNumber } from '@/lib/utils';
@@ -52,10 +52,11 @@ const StoryDetail = async ({
     if (!storyData) return notFound();
 
     // ✅ Round 2: các query cần storyId, chạy song song
-    const [chapterDataReal, relatedStoriesReal, authorStoriesReal] = await Promise.all([
+    const [chapterDataReal, relatedStoriesReal, authorStoriesReal, topNominations] = await Promise.all([
         getChaptersByStoryId(storyData.id, currentPage),
         getRelatedStories(storyData.id, storyData.genres.map(g => g.name), 5),
         getStoriesByAuthor(storyData.author, storyData.id, 4),
+        getTopNominations(5),
     ]);
 
     const story = {
@@ -326,21 +327,35 @@ const StoryDetail = async ({
                     {/* ── SIDEBAR ── */}
                     <aside className="lg:col-span-3 space-y-5" aria-label="Sidebar">
 
-                        {/* TOP ĐỀ CỬ */}
+                        {/* TOP ĐỀ CỬ — data thật từ DB */}
                         <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-5">
                             <h2 className="font-bold text-sm mb-4 text-warm-ink flex items-center gap-2">
                                 <span className="w-1 h-4 rounded-sm bg-warm-primary shrink-0" aria-hidden="true"></span>
                                 TOP ĐỀ CỬ
                             </h2>
                             <div className="space-y-3">
-                                {[1, 2, 3, 4, 5].map(i => (
-                                    <div key={i} className="flex items-center gap-2.5 group cursor-pointer">
-                                        <span className={`h-6 w-6 rounded-md text-sm flex items-center justify-center font-black shrink-0 ${i === 1 ? 'bg-red-500 text-white' : i === 2 ? 'bg-orange-500 text-white' : i === 3 ? 'bg-amber-400 text-white' : 'bg-warm-border-soft text-warm-ink-light'}`} aria-label={`Hạng ${i}`}>{i}</span>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="text-sm font-bold text-warm-ink-mid truncate group-hover:text-warm-primary transition-colors">Truyện hay đề cử số {i}</h3>
-                                            <p className="text-sm text-warm-ink-soft mt-0.5">{1000 - i * 50} đề cử</p>
+                                {topNominations.map((s: any, i: number) => (
+                                    <a key={s.id} href={`/truyen/${s.slug}`} className="flex gap-2.5 group" aria-label={`${s.title} - ${s.author}`}>
+                                        {/* Số thứ hạng thay ảnh bìa */}
+                                        <div className={`w-10 h-14 rounded-md shrink-0 flex items-center justify-center font-black text-lg ${
+                                            i === 0 ? 'bg-red-500 text-white' :
+                                            i === 1 ? 'bg-orange-500 text-white' :
+                                            i === 2 ? 'bg-amber-400 text-white' :
+                                            'bg-warm-border-soft text-warm-ink-mid'
+                                        }`} aria-label={`Hạng ${i + 1}`}>
+                                            {i + 1}
                                         </div>
-                                    </div>
+                                        <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+                                            <h3 className="text-base font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">{s.title}</h3>
+                                            <p className="text-sm text-warm-ink-soft">{s.author}</p>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                {s.genres[0] && (
+                                                    <span className="text-sm px-1.5 py-0.5 bg-warm-primary-pale text-[#8c3a08] rounded-full font-semibold border border-warm-primary/20">{s.genres[0].name}</span>
+                                                )}
+                                                <span className="text-sm text-warm-ink-soft">{s.nominationCount || 0} đề cử</span>
+                                            </div>
+                                        </div>
+                                    </a>
                                 ))}
                             </div>
                         </div>
