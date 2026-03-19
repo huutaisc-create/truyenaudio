@@ -244,15 +244,10 @@ export default function ReadingClient({
     allChapters = [], storyId = '', totalChapters = 0, userId,
 }: ReadingClientProps) {
 
-    // Đọc settings từ localStorage ĐỒNG BỘ ngay lúc khởi tạo — tránh flash do 2 lần render
-    const [settings, setSettings] = useState<ReadingSettings>(() => {
-        if (typeof window === 'undefined') return DEFAULT_SETTINGS;
-        try {
-            const saved = localStorage.getItem('mtc_reading_settings');
-            if (saved) return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
-        } catch {}
-        return DEFAULT_SETTINGS;
-    });
+    // Server và client đều dùng DEFAULT_SETTINGS lúc render đầu tiên
+    // → tránh hydration mismatch #418
+    // Settings thật từ localStorage được load trong useEffect sau mount
+    const [settings, setSettings] = useState<ReadingSettings>(DEFAULT_SETTINGS);
     const router = useRouter();
     const [mounted, setMounted] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -297,8 +292,19 @@ export default function ReadingClient({
         return () => clearTimeout(timer);
     }, [nextChapter, pagesReady, settings.fontSize, settings.fontFamily, settings.lineHeight]);
 
-    // ── setMounted để tránh hydration mismatch ──
-    useEffect(() => { setMounted(true); }, []);
+    // ── Mount: đọc localStorage và set settings thật ──
+    // Chạy sau hydration xong → không gây mismatch
+    // suppressHydrationWarning trên root div xử lý flash màu nền
+    useEffect(() => {
+        setMounted(true);
+        try {
+            const saved = localStorage.getItem('mtc_reading_settings');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                setSettings(prev => ({ ...prev, ...parsed }));
+            }
+        } catch {}
+    }, []);
 
     // ── Save settings khi thay đổi ──
     useEffect(() => {
@@ -369,6 +375,14 @@ export default function ReadingClient({
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [settings.readMode, currentPage, totalPages, next, prev, slug, router]);
+
+    // ── Prefetch route chương tiếp và chương trước ──
+    // Chạy sau khi mount, không ảnh hưởng logic hiện tại
+    // Next.js sẽ cache page.tsx của chương tiếp → user bấm là serve ngay, không loading
+    useEffect(() => {
+        if (next) router.prefetch(`/truyen/${slug}/chuong-${next}`);
+        if (prev) router.prefetch(`/truyen/${slug}/chuong-${prev}`);
+    }, [slug, next, prev, router]);
 
     // ── Close panels on outside click ──
     useEffect(() => {
