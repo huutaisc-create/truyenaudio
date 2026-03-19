@@ -121,7 +121,7 @@ const StoryDetail = async ({
                                     </div>
                                 )}
                                 {story.status === 'Hoàn thành' && (
-                                    <span className="absolute top-2 left-2 bg-warm-primary text-white text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-widest shadow">
+                                    <span className="absolute top-2 left-2 bg-warm-primary text-white text-sm font-black px-2.5 py-1 rounded-md uppercase tracking-widest shadow">
                                         FULL
                                     </span>
                                 )}
@@ -136,7 +136,7 @@ const StoryDetail = async ({
                                         <User className="h-3.5 w-3.5 text-warm-primary" aria-hidden="true" />
                                         <Link href={`/tim-kiem?tac-gia=${encodeURIComponent(story.author)}`} className="text-warm-primary hover:underline">{story.author}</Link>
                                     </span>
-                                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-green-50 text-green-700 border border-green-200">
+                                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-base font-bold bg-green-50 text-green-700 border border-green-200">
                                         <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true"></span>
                                         {story.status}
                                     </span>
@@ -232,7 +232,7 @@ const StoryDetail = async ({
                                 <span className="w-1 h-5 rounded-sm bg-warm-primary shrink-0" aria-hidden="true"></span>
                                 GIỚI THIỆU
                             </h2>
-                            <p className="text-sm text-warm-ink-mid whitespace-pre-line leading-relaxed">{story.description}</p>
+                            <p className="text-base text-warm-ink whitespace-pre-line leading-relaxed">{story.description}</p>
                         </div>
 
                         {/* DANH SÁCH CHƯƠNG */}
@@ -258,7 +258,7 @@ const StoryDetail = async ({
                                             className="flex justify-between items-center py-2.5 border-b border-warm-border-soft group">
                                             <div className="flex items-center gap-2.5 min-w-0">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" aria-hidden="true"></span>
-                                                <span className="text-sm font-medium text-warm-ink-mid group-hover:text-warm-primary transition-colors truncate">{ch.title}</span>
+                                                <span className="text-base font-medium text-warm-ink group-hover:text-warm-primary transition-colors truncate">{ch.title}</span>
                                             </div>
                                             <span className="text-sm text-warm-ink-soft shrink-0 ml-3">{ch.time}</span>
                                         </a>
@@ -274,7 +274,7 @@ const StoryDetail = async ({
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
                                     {chapterDataReal.chapters.map(ch => (
                                         <a href={`/truyen/${slug}/chuong-${ch.index}`} key={ch.id}
-                                            className="text-sm text-warm-ink-soft flex justify-between items-center py-2 border-b border-warm-border-soft group hover:text-warm-primary transition-colors">
+                                            className="text-base text-warm-ink flex justify-between items-center py-2 border-b border-warm-border-soft group hover:text-warm-primary transition-colors">
                                             <span className="truncate">{ch.title || `Chương ${ch.index}`}</span>
                                             <ChevronRight className="h-3 w-3 shrink-0 opacity-0 group-hover:opacity-100 text-warm-primary transition-all" aria-hidden="true" />
                                         </a>
