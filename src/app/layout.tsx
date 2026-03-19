@@ -1,5 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Roboto } from "next/font/google";
+// ── FIX FONT: Bỏ next/font/google, dùng @fontsource/roboto ──────────────────
+// Lý do: next/font/google tạo hash thay đổi mỗi build → không preload được
+// @fontsource bundle font vào /_next/static/ với path cố định → preload ổn định
+import '@fontsource/roboto/400.css';
+import '@fontsource/roboto/500.css';
+import '@fontsource/roboto/700.css';
 import "./globals.css";
 import ClientLayout from "@/components/layout/ClientLayout";
 import RegisterSW from "@/components/common/RegisterSW";
@@ -7,25 +12,6 @@ import LoadingProgressBar from "@/components/common/LoadingProgressBar";
 import BackToTop from "@/components/common/BackToTop";
 import { Suspense } from 'react';
 import { SessionWrapper } from "@/components/providers/SessionWrapper";
-
-// ── Font Fix ─────────────────────────────────────────────────────────────────
-//
-// FIX: Tất cả 3 weight dùng chung 1 variable "--font-roboto"
-// → body chỉ cần dùng var(--font-roboto) là có cả 400/500/700
-// → Next.js emit <link rel="preload"> cho cả 3 weight song song ngay trong <head>
-//
-// LỖI CŨ: roboto500 và roboto700 không có `variable` → không được inject vào CSS
-// → browser phải tải thêm từ stylesheet → chậm 300-600ms theo Lighthouse
-//
-const roboto = Roboto({
-  weight: ['400', '500', '700'],
-  subsets: ['latin', 'vietnamese'],
-  variable: '--font-roboto',
-  display: 'swap',
-  preload: true,
-  // FIX: adjustFontFallback giúp tránh layout shift khi font swap
-  adjustFontFallback: true,
-});
 
 export const viewport: Viewport = {
   themeColor: '#e8580a',
@@ -72,31 +58,14 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512.png" />
 
-        {/*
-          FIX CSS BLOCKING (tiết kiệm ~750ms theo Lighthouse):
-          Các chunk CSS lớn đang block render vì browser phải parse xong mới render.
-          Dùng preload + onload trick để load CSS async, không block.
-
-          Lưu ý: hash của chunk CSS thay đổi mỗi lần build → không hardcode được.
-          Thay vào đó dùng fetchpriority hint cho ảnh LCP (quan trọng hơn).
-
-          FIX THỰC TẾ CHO CSS BLOCKING: tắt optimizeCss trong next.config.ts
-          vì critters của Next.js đôi khi tạo ra blocking CSS thay vì giải quyết nó.
-        */}
-
-        {/*
-          FIX LCP IMAGE: Hint browser biết sắp cần load ảnh lớn từ R2
-          → browser kết nối sớm với R2 CDN, giảm latency đáng kể
-        */}
+        {/* FIX R2 CDN: preconnect sớm để giảm latency load ảnh bìa */}
         <link rel="preconnect" href="https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev" />
         <link rel="dns-prefetch" href="https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev" />
       </head>
       <body
         suppressHydrationWarning
-        // FIX: dùng roboto.variable + roboto.className thay vì 3 className riêng
-        // → đảm bảo cả 400/500/700 đều được inject qua CSS variable
-        className={`${roboto.variable} ${roboto.className} min-h-screen antialiased`}
-        style={{ fontFamily: 'var(--font-roboto), sans-serif' }}
+        className="min-h-screen antialiased"
+        style={{ fontFamily: '"Roboto", sans-serif' }}
       >
         <SessionWrapper>
           <RegisterSW />
@@ -119,7 +88,7 @@ export default function RootLayout({
             fontWeight: 500,
             zIndex: 9999,
             pointerEvents: 'none',
-          }}>v 3.0</div>
+          }}>v 2.8</div>
         </SessionWrapper>
       </body>
     </html>
