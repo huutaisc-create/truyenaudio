@@ -12,6 +12,8 @@ type Theme = 'sepia' | 'white' | 'green' | 'night';
 type FontFamily = 'vietnam' | 'roboto' | 'lora' | 'garamond' | 'times';
 type LineHeight = 'compact' | 'normal' | 'relaxed';
 type ReadMode = 'scroll' | 'page';
+type ContentWidth = 'small' | 'medium' | 'large';
+type Width = 'small' | 'medium' | 'large';
 
 type ReadingSettings = {
     fontSize: number;
@@ -19,7 +21,9 @@ type ReadingSettings = {
     fontFamily: FontFamily;
     lineHeight: LineHeight;
     readMode: ReadMode;
+    width: Width;
     modeChosen: boolean;
+    contentWidth: ContentWidth;
 };
 
 type ChapterMeta = { index: number; title: string };
@@ -48,7 +52,9 @@ const DEFAULT_SETTINGS: ReadingSettings = {
     fontFamily: 'roboto',
     lineHeight: 'compact',
     readMode: 'scroll',
+    width: 'medium',
     modeChosen: false,
+    contentWidth: 'medium', // sẽ override bởi auto-detect khi mount
 };
 
 const THEME_STYLES: Record<Theme, { bg: string; text: string }> = {
@@ -78,6 +84,37 @@ const LINE_HEIGHT_MAP: Record<LineHeight, string> = {
     normal:  '1.9',
     relaxed: '2.1',
 };
+
+// Tính 3 mức width theo màn hình thực tế
+function getWidthMap(): Record<ContentWidth, string> {
+    if (typeof window === 'undefined') return { small: '520px', medium: '680px', large: '860px' };
+    const sw = window.screen.width;
+    if (sw <= 768) {
+        // Mobile — full width hết
+        return { small: '100%', medium: '100%', large: '100%' };
+    } else if (sw <= 1280) {
+        // Laptop nhỏ 1024-1280
+        return { small: '480px', medium: '620px', large: '780px' };
+    } else if (sw <= 1440) {
+        // Laptop thường 1366-1440
+        return { small: '560px', medium: '720px', large: '900px' };
+    } else if (sw <= 1920) {
+        // Full HD 1920
+        return { small: '640px', medium: '860px', large: '1080px' };
+    } else {
+        // 2K/4K
+        return { small: '720px', medium: '980px', large: '1280px' };
+    }
+}
+
+// Auto-detect default width hợp lý
+function getAutoWidth(): ContentWidth {
+    if (typeof window === 'undefined') return 'medium';
+    const sw = window.screen.width;
+    if (sw <= 768) return 'medium';
+    if (sw <= 1440) return 'small';  // laptop → default nhỏ để dễ đọc
+    return 'medium';                  // màn lớn → default vừa
+}
 
 const SWATCHES: { key: Theme; bg: string; border: string }[] = [
     { key: 'sepia', bg: '#FDFAF7', border: '#EDE0D4' },
@@ -116,17 +153,23 @@ const globalPagesCache = {
 const HEADER_H = 52;
 const FOOTER_H = 67;
 const CONTENT_PAD = 40;
-const SAFETY = 16;
-const TITLE_H = 70; // h1 + divider + margins trang đầu
+// SAFETY tính động trong measurePages — đúng khi xoay màn hình
+
+
 
 function measurePages(paragraphs: string[], settings: ReadingSettings): string[][] {
     const fontFamily = (FONT_STYLES[settings.fontFamily].fontFamily as string) || 'sans-serif';
-    const marginBottomPx = settings.fontSize * 0.8; // 0.8em theo px
+    const marginBottomPx = settings.fontSize * 0.8;
+    const lineHeightPx = settings.fontSize * parseFloat(LINE_HEIGHT_MAP[settings.lineHeight]);
+    const isMobile = window.innerWidth <= 768;
+    const contentWidth = `min(${getWidthMap()[settings.contentWidth]}, 100vw)`;
+    // isMobile dùng bên dưới để tính SAFETY
 
+    // Đo tất cả paragraphs + title trong 1 container duy nhất
     const container = document.createElement('div');
     container.style.cssText = `
         position: fixed; top: -9999px; left: 0;
-        width: min(680px, 100vw);
+        width: ${contentWidth};
         padding: 0 28px;
         font-size: ${settings.fontSize}px;
         line-height: ${LINE_HEIGHT_MAP[settings.lineHeight]};
@@ -137,24 +180,55 @@ function measurePages(paragraphs: string[], settings: ReadingSettings): string[]
     `;
     document.body.appendChild(container);
 
+    // ✅ Đo title thực tế thay vì hardcode TITLE_H = 70
+    const titleEl = document.createElement('div');
+    titleEl.style.cssText = `
+        text-align: center;
+        margin-bottom: 24px;
+        font-size: clamp(16px, 3vw, 22px);
+        font-weight: 700;
+        line-height: 1.4;
+        font-family: var(--font-roboto), sans-serif;
+    `;
+    titleEl.textContent = 'Đây là tên chương dài để đo chiều cao thực tế';
+    container.appendChild(titleEl);
+    const actualTitleH = titleEl.getBoundingClientRect().height + 24 + 1 + 10; // title + marginBottom + divider + gap
+    container.removeChild(titleEl);
+
     const els = paragraphs.map(para => {
         const el = document.createElement('p');
-        el.style.cssText = 'margin: 0; text-indent: 2em; padding: 0;';
+        el.style.cssText = 'margin: 0; padding: 0;';
         el.textContent = para;
         container.appendChild(el);
         return el;
     });
 
-    // Đọc tất cả heights trong 1 batch — tránh forced reflow lặp lại
-    // getBoundingClientRect() sau khi tất cả elements đã append xong
-    // browser chỉ cần tính layout 1 lần cho toàn bộ container
     const rawHeights = els.map(el => el.getBoundingClientRect().height);
+    const containerWidth = container.getBoundingClientRect().width;
     document.body.removeChild(container);
+
     const heights = rawHeights.map(h => h + marginBottomPx);
 
-    const viewportH = window.innerHeight;
-    const PAGE_HEIGHT = viewportH - HEADER_H - FOOTER_H - CONTENT_PAD - SAFETY;
-    const FIRST_PAGE_HEIGHT = PAGE_HEIGHT - TITLE_H;
+    // ✅ SAFETY tính động mỗi lần — đúng khi xoay màn hình
+    // Dùng visualViewport để lấy chiều cao thực tế (loại trừ thanh địa chỉ mobile)
+    const viewportH = window.visualViewport?.height ?? window.innerHeight;
+    // CONTENT_PAD = padding top(28) + bottom(12) = 40
+    // marginBottomPx đã tính trong heights[] rồi
+    // Buffer thêm để tránh tràn — đo thực tế trên mobile cần ~60px buffer
+    const SAFETY = isMobile ? 60 : 24;
+    const PAGE_HEIGHT = isMobile
+        ? viewportH - HEADER_H - CONTENT_PAD - SAFETY
+        : viewportH - HEADER_H - FOOTER_H - CONTENT_PAD - SAFETY;
+    const FIRST_PAGE_HEIGHT = PAGE_HEIGHT - actualTitleH;
+
+    // ✅ Tính số ký tự trung bình/dòng dựa trên containerWidth và fontSize thực tế
+    // fontSize * 0.52 = width trung bình 1 ký tự tiếng Việt (thực nghiệm)
+    // text-indent: 2em = 2 * fontSize ký tự bị indent dòng đầu
+    // Tiếng Việt có dấu thanh → ký tự rộng hơn Latin
+    // 0.62 thực nghiệm cho Roboto/system font tiếng Việt
+    // Nhỏ hơn thực tế một chút → cắt sớm hơn → tránh tràn
+    const avgCharWidth = settings.fontSize * 0.62;
+    const charsPerLine = Math.max(1, Math.floor((containerWidth - 56) / avgCharWidth)); // 56 = padding 28*2
 
     const result: string[][] = [];
     let currentPage: string[] = [];
@@ -163,15 +237,64 @@ function measurePages(paragraphs: string[], settings: ReadingSettings): string[]
 
     for (let i = 0; i < paragraphs.length; i++) {
         const maxH = isFirst ? FIRST_PAGE_HEIGHT : PAGE_HEIGHT;
-        if (usedH + heights[i] > maxH && currentPage.length > 0) {
+        const paraH = heights[i];
+
+        if (usedH + paraH <= maxH) {
+            // Paragraph vừa khít → thêm bình thường
+            currentPage.push(paragraphs[i]);
+            usedH += paraH;
+        } else if (currentPage.length === 0) {
+            // Paragraph quá dài, trang trống → buộc thêm tránh trang rỗng
+            currentPage.push(paragraphs[i]);
             result.push(currentPage);
             currentPage = [];
             usedH = 0;
             isFirst = false;
+        } else {
+            const spaceLeft = maxH - usedH;
+
+            // ✅ Split nếu còn trống >= 1 dòng
+            if (spaceLeft >= lineHeightPx && paragraphs[i].length > 20) {
+                const linesFit = Math.floor(spaceLeft / lineHeightPx);
+
+                // ✅ Tính số ký tự fit dựa trên charsPerLine thực tế
+                // Dòng đầu bị indent → ít ký tự hơn
+                // Dòng 1: (charsPerLine - indentChars) ký tự
+                // Dòng 2+: charsPerLine ký tự mỗi dòng
+                const approxChars = linesFit * charsPerLine;
+
+                // Tìm word boundary gần nhất — không cắt giữa từ
+                // Thử approxChars, nếu không có space thì lùi dần
+                const searchFrom = Math.min(approxChars, paragraphs[i].length - 1);
+                const breakPt = paragraphs[i].lastIndexOf(' ', searchFrom);
+
+                if (breakPt > 10) {
+                    const firstPart = paragraphs[i].substring(0, breakPt);
+                    const remainder = paragraphs[i].substring(breakPt + 1);
+
+                    currentPage.push(firstPart);
+                    result.push(currentPage);
+                    currentPage = [remainder];
+
+                    // ✅ usedH của remainder = tổng height paragraph - phần đã fill trang trước
+                    // paraH đã được DOM đo chính xác → dùng luôn, không ước lượng
+                    // spaceLeft = phần trang trước đã dùng cho firstPart
+                    // → remainder chiếm: paraH - spaceLeft
+                    usedH = Math.max(0, paraH - spaceLeft);
+
+                    isFirst = false;
+                    continue;
+                }
+            }
+
+            // Không split → sang trang mới
+            result.push(currentPage);
+            currentPage = [paragraphs[i]];
+            usedH = paraH;
+            isFirst = false;
         }
-        currentPage.push(paragraphs[i]);
-        usedH += heights[i];
     }
+
     if (currentPage.length > 0) result.push(currentPage);
     return result.length > 0 ? result : [paragraphs];
 }
@@ -181,43 +304,57 @@ function usePagination(
     settings: ReadingSettings,
     contentKey: string,
 ) {
-    const cacheKey = `${contentKey}__${settings.fontSize}__${settings.fontFamily}__${settings.lineHeight}`;
+    const isPageMode = settings.readMode === 'page';
+    // ✅ Mobile: width luôn 100% cho cả 3 option → bỏ contentWidth khỏi cacheKey
+    // tránh đo lại DOM vô ích khi user đổi option width trên mobile
+    const isMobileDevice = typeof window !== 'undefined' && window.innerWidth <= 768;
+    const cacheKey = isMobileDevice
+        ? `${contentKey}__${settings.fontSize}__${settings.fontFamily}__${settings.lineHeight}`
+        : `${contentKey}__${settings.fontSize}__${settings.fontFamily}__${settings.lineHeight}__${settings.contentWidth}`;
 
-    // useState init fn chỉ chạy 1 lần lúc mount — đọc window cache ngay
-    const [state, setState] = React.useState<{ pages: string[][], ready: boolean }>(() => {
-        const cached = globalPagesCache.get(cacheKey);
-        return cached ? { pages: cached, ready: true } : { pages: [], ready: false };
+    // ✅ Không dùng useState init fn vì component không remount khi navigate
+    // Dùng useRef để track cacheKey đã xử lý
+    const measuredKey = React.useRef<string>('');
+    const [state, setState] = React.useState<{ pages: string[][], ready: boolean }>({
+        pages: [], ready: false
     });
 
-    // Dùng ref để track cacheKey đã đo xong, tránh đo lại không cần thiết
-    const measuredKey = React.useRef<string>(state.ready ? cacheKey : '');
-
     React.useEffect(() => {
-        if (measuredKey.current === cacheKey) return;
+        // Scroll mode: không đo DOM, ready ngay
+        if (!isPageMode) {
+            setState({ pages: [], ready: true });
+            return;
+        }
 
-        // Luôn kiểm tra cache trước (preload có thể đã chạy xong)
+        // Đã đo cacheKey này rồi → không làm gì
+        if (measuredKey.current === cacheKey) return;
+        measuredKey.current = cacheKey;
+
+        // Kiểm tra cache trước — nếu preload đã chạy thì instant
         const cached = globalPagesCache.get(cacheKey);
         if (cached) {
-            measuredKey.current = cacheKey;
             setState({ pages: cached, ready: true });
             return;
         }
 
-        // Chưa có cache → đo DOM
-        measuredKey.current = cacheKey;
+        // Chưa có cache → hiện spinner rồi đo DOM
+        setState({ pages: [], ready: false });
         const raf = requestAnimationFrame(() => {
             const result = measurePages(paragraphs, settings);
             globalPagesCache.set(cacheKey, result);
             setState({ pages: result, ready: true });
         });
         return () => cancelAnimationFrame(raf);
-    }, [cacheKey, paragraphs]);
+    }, [cacheKey, isPageMode]);
 
-    return { pages: state.pages, ready: state.ready };
+    return {
+        pages: state.pages,
+        ready: state.ready,
+    };
 }
 
 // ── Render paragraphs ──────────────────────────────────────────────────────
-function RenderParagraphs({ content, text, borderColor, style }: { content: string | string[]; text: string; borderColor: string; style?: React.CSSProperties }) {
+function RenderParagraphs({ content, text, borderColor, style, marginBottom }: { content: string | string[]; text: string; borderColor: string; style?: React.CSSProperties; marginBottom?: number }) {
     const lines = Array.isArray(content) ? content : content.split('\n').filter(p => p.trim());
     return (
         <>
@@ -231,9 +368,32 @@ function RenderParagraphs({ content, text, borderColor, style }: { content: stri
                         </div>
                     );
                 }
-                return <p key={i} style={{ marginBottom: '0.8em', textIndent: '2em', ...style }}>{para}</p>;
+                return <p key={i} style={{ marginBottom: marginBottom ? `${marginBottom}px` : '0.8em', ...style }}>{para}</p>;
             })}
         </>
+    );
+}
+
+// ── Debug Overlay ─────────────────────────────────────────────────────────
+const READING_VERSION = 'v2.5';
+
+function DebugOverlay() {
+    const [info, setInfo] = React.useState('');
+    React.useEffect(() => {
+        const vpH = Math.round(window.visualViewport?.height ?? window.innerHeight);
+        const innerH = window.innerHeight;
+        const innerW = window.innerWidth;
+        const safety = innerW <= 768 ? 60 : 24;
+        const pageH = innerW <= 768
+            ? vpH - 52 - 40 - safety
+            : vpH - 52 - 67 - 40 - safety;
+        setInfo(`innerH:${innerH} vpH:${vpH} W:${innerW} pageH:${pageH}`);
+    }, []);
+    return (
+        <div style={{ position: 'fixed', bottom: 100, left: 8, zIndex: 9999, background: 'rgba(0,0,0,0.85)', color: '#0f0', fontSize: 11, padding: '6px 10px', borderRadius: 8, fontFamily: 'monospace', pointerEvents: 'none', lineHeight: 1.8 }}>
+            <div style={{ color: '#ff0', fontWeight: 'bold' }}>{READING_VERSION}</div>
+            <div>{info}</div>
+        </div>
     );
 }
 
@@ -250,9 +410,15 @@ export default function ReadingClient({
         if (typeof window === 'undefined') return DEFAULT_SETTINGS;
         try {
             const saved = localStorage.getItem('mtc_reading_settings');
-            if (saved) return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Nếu chưa có contentWidth → auto-detect
+                if (!parsed.contentWidth) parsed.contentWidth = getAutoWidth();
+                return { ...DEFAULT_SETTINGS, ...parsed };
+            }
         } catch {}
-        return DEFAULT_SETTINGS;
+        // Lần đầu dùng → auto-detect
+        return { ...DEFAULT_SETTINGS, contentWidth: getAutoWidth() };
     });
     const router = useRouter();
     const [mounted, setMounted] = useState(false);
@@ -263,6 +429,7 @@ export default function ReadingClient({
     const [editedContent, setEditedContent] = useState(chapter.content);
     const [currentPage, setCurrentPage] = useState(0);
 
+    const [showNav, setShowNav] = useState(false);
     const lastScrollY = useRef(0);
     const tocRef = useRef<HTMLDivElement>(null);
     const configRef = useRef<HTMLDivElement>(null);
@@ -304,7 +471,32 @@ export default function ReadingClient({
     }, [nextChapter, pagesReady, settings.fontSize, settings.fontFamily, settings.lineHeight]);
 
     // ── Mount ──
-    useEffect(() => { setMounted(true); }, []);
+    useEffect(() => {
+        setMounted(true);
+
+        // ✅ Ẩn thanh địa chỉ browser trên mobile
+        // page mode dùng overflow:hidden nên không scroll được
+        // Fix: tạm thời bỏ overflow:hidden, scroll 1px, rồi restore
+        if (window.innerWidth <= 768) {
+            setTimeout(() => {
+                const html = document.documentElement;
+                const body = document.body;
+                const prevHtmlOverflow = html.style.overflow;
+                const prevBodyOverflow = body.style.overflow;
+                // Cho phép scroll tạm thời
+                html.style.overflow = 'visible';
+                body.style.overflow = 'visible';
+                body.style.minHeight = '101vh';
+                window.scrollTo({ top: 1, behavior: 'instant' });
+                // Restore sau 300ms
+                setTimeout(() => {
+                    html.style.overflow = prevHtmlOverflow;
+                    body.style.overflow = prevBodyOverflow;
+                    body.style.minHeight = '';
+                }, 300);
+            }, 200);
+        }
+    }, []);
 
     // Save settings lần đầu mount nếu có userId (để sync sau này)
     // useEffect chỉ giữ lại cho future server sync
@@ -318,6 +510,20 @@ export default function ReadingClient({
         setProgress(docH > 0 ? (y / docH) * 100 : 0);
         lastScrollY.current = y;
     }, [settings.readMode]);
+
+    // ── Giữ ẩn thanh địa chỉ trên mobile ──
+    // visualViewport resize = browser chrome ẩn/hiện → re-measure pages
+    useEffect(() => {
+        if (window.innerWidth > 768) return;
+        const onResize = () => {
+            // Xóa cache để đo lại với viewport mới
+            if (typeof window !== 'undefined') {
+                (window as any).__readingPagesCache = new Map();
+            }
+        };
+        window.visualViewport?.addEventListener('resize', onResize);
+        return () => window.visualViewport?.removeEventListener('resize', onResize);
+    }, []);
 
     useEffect(() => {
         window.addEventListener('scroll', handleScroll, { passive: true });
@@ -431,12 +637,20 @@ export default function ReadingClient({
     };
 
     const chooseMode = (mode: ReadMode) => {
-        setSettings(prev => ({ ...prev, readMode: mode, modeChosen: true }));
+        setSettings(prev => {
+            const next = { ...prev, readMode: mode, modeChosen: true };
+            try { localStorage.setItem('mtc_reading_settings', JSON.stringify(next)); } catch {}
+            return next;
+        });
         setCurrentPage(0);
     };
 
     const toggleToc = (e: React.MouseEvent) => { e.stopPropagation(); setShowToc(v => !v); setShowConfig(false); };
     const toggleConfig = (e: React.MouseEvent) => { e.stopPropagation(); setShowConfig(v => !v); setShowToc(false); };
+    const toggleNav = () => {
+        if (settings.readMode !== 'page') return;
+        setShowNav(v => !v);
+    };
 
     // ── Shared nav button styles ──
     const navBase: React.CSSProperties = {
@@ -448,6 +662,7 @@ export default function ReadingClient({
         fontSize: 12, fontWeight: 700,
         cursor: 'pointer', textDecoration: 'none',
         opacity: 0.8, transition: 'all 0.2s',
+        userSelect: 'none', WebkitUserSelect: 'none',
     };
     const navPrimary: React.CSSProperties = {
         ...navBase, background: accent, borderColor: accent,
@@ -477,7 +692,7 @@ export default function ReadingClient({
             <HistoryTracker slug={slug} title={storyTitle} chapterIndex={chapter.index} coverImage={storyCover || null} chapterId={chapter.id} />
 
             {/* ── Mode selector overlay ── */}
-            {mounted && !settings.modeChosen && (
+            {!settings.modeChosen && (
                 <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.78)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
                     <div style={{ background: bg, borderRadius: 24, padding: '36px 32px', maxWidth: 420, width: '100%', border: `1.5px solid ${borderColor}`, boxShadow: '0 24px 60px rgba(0,0,0,0.4)', textAlign: 'center' }}>
                         <span style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 11, fontWeight: 800, color: accent, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 10 }}>
@@ -509,6 +724,9 @@ export default function ReadingClient({
                     </div>
                 </div>
             )}
+
+            {/* ── DEBUG overlay — xóa sau khi đo xong ── */}
+            <DebugOverlay />
 
             {/* ── Progress bar ── */}
             <div suppressHydrationWarning style={{ position: 'fixed', top: 0, left: 0, height: 3, width: `${progress}%`, zIndex: 1000, background: `linear-gradient(90deg, ${accent}, ${accent}cc)`, boxShadow: `0 0 8px ${accent}80`, transition: 'width 0.15s linear' }} />
@@ -544,7 +762,7 @@ export default function ReadingClient({
 
             {/* ══════════════ SCROLL MODE ══════════════ */}
             {settings.readMode === 'scroll' && (
-                <div suppressHydrationWarning style={{ maxWidth: 680, margin: '0 auto', padding: '90px 24px 60px' }}>
+                <div suppressHydrationWarning style={{ maxWidth: getWidthMap()[settings.contentWidth], margin: '0 auto', padding: '90px 24px 60px' }}>
                     {/* Chapter heading */}
                     <div style={{ textAlign: 'center', marginBottom: 52 }}>
                         <h1 style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 'clamp(20px,4vw,28px)', fontWeight: 700, color: text, lineHeight: 1.4, marginBottom: 24 }}>{chapter.title}</h1>
@@ -577,7 +795,7 @@ export default function ReadingClient({
                                     <Edit size={13} /> Sửa nội dung
                                 </button>
                             )}
-                            <RenderParagraphs content={editedContent} text={text} borderColor={borderColor} />
+                            <RenderParagraphs content={editedContent} text={text} borderColor={borderColor} marginBottom={settings.fontSize * 0.8} />
                         </div>
                     )}
 
@@ -600,18 +818,18 @@ export default function ReadingClient({
                     suppressHydrationWarning
                     style={{
                         position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', paddingTop: 52,
-                        opacity: pagesReady ? 1 : 0,
+                        // ✅ Không dùng opacity:0 — spinner có background che, không thấy trắng
                         transition: 'opacity 0.18s ease',
                     }}
                 >
                     {/* Spinner overlay — hiện đè lên khi chưa ready, không unmount layout */}
                     {!pagesReady && (
-                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, background: bg }}>
                             <div style={{ width: 32, height: 32, border: `3px solid ${borderColor}`, borderTopColor: accent, borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
                             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                         </div>
                     )}
-                    <div style={{ flex: 1, overflow: 'hidden', maxWidth: 680, width: '100%', margin: '0 auto', padding: '28px 28px 12px', display: 'flex', flexDirection: 'column' }}>
+                    <div onClick={toggleNav} style={{ flex: 1, overflow: 'hidden', maxWidth: getWidthMap()[settings.contentWidth], width: '100%', margin: '0 auto', padding: '28px 28px 12px', display: 'flex', flexDirection: 'column', cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none' }}>
                         {currentPage === 0 && (
                             <div style={{ textAlign: 'center', marginBottom: 24 }}>
                                 <h1 style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 'clamp(16px,3vw,22px)', fontWeight: 700, color: text, lineHeight: 1.4, marginBottom: 14 }}>{chapter.title}</h1>
@@ -622,13 +840,26 @@ export default function ReadingClient({
                                 </div>
                             </div>
                         )}
-                        <div style={{ flex: 1, overflow: 'hidden', ...FONT_STYLES[settings.fontFamily], fontSize: settings.fontSize, lineHeight: LINE_HEIGHT_MAP[settings.lineHeight], color: text, letterSpacing: '0.01em' }}>
-                            <RenderParagraphs content={pages[currentPage] || []} text={text} borderColor={borderColor} />
+                        <div style={{ flex: 1, overflow: 'hidden', ...FONT_STYLES[settings.fontFamily], fontSize: settings.fontSize, lineHeight: LINE_HEIGHT_MAP[settings.lineHeight], color: text, letterSpacing: '0.01em', maxWidth: getWidthMap()[settings.contentWidth], margin: '0 auto', width: '100%' }}>
+                            <RenderParagraphs content={pages[currentPage] || []} text={text} borderColor={borderColor} marginBottom={settings.fontSize * 0.8} />
                         </div>
                     </div>
 
-                    {/* Page footer nav */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: 680, width: '100%', margin: '0 auto', padding: '10px 28px 20px', borderTop: `1px solid ${borderColor}`, gap: 8 }}>
+                    {/* Page footer nav — overlay, ẩn/hiện khi tap */}
+                    <div style={{
+                        position: 'fixed', bottom: 0, left: 0, right: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        maxWidth: getWidthMap()[settings.contentWidth], width: '100%', margin: '0 auto',
+                        padding: '10px 28px 20px',
+                        background: `${bg}ee`,
+                        backdropFilter: 'blur(12px)',
+                        WebkitBackdropFilter: 'blur(12px)',
+                        borderTop: `1px solid ${borderColor}`,
+                        gap: 8,
+                        transform: showNav ? 'translateY(0)' : 'translateY(100%)',
+                        transition: 'transform 0.25s ease',
+                        zIndex: 40,
+                    }}>
                         {/* Prev — flex-shrink: 0 để không bị nén */}
                         <div style={{ flexShrink: 0 }}>
                             {currentPage > 0
@@ -748,6 +979,10 @@ TocPanel.displayName = 'TocPanel';
 // ── Config Panel ───────────────────────────────────────────────────────────
 const ConfigPanel = React.forwardRef<HTMLDivElement, { open: boolean; settings: ReadingSettings; onUpdate: <K extends keyof ReadingSettings>(key: K, val: ReadingSettings[K]) => void; bg: string; text: string; borderColor: string; accent: string }>(
     ({ open, settings, onUpdate, bg, text, borderColor, accent }, ref) => {
+        const [isMobileScreen, setIsMobileScreen] = React.useState(false);
+        React.useEffect(() => {
+            setIsMobileScreen(window.innerWidth <= 768);
+        }, []);
         const lbl: React.CSSProperties = { fontFamily: 'var(--font-roboto), sans-serif', fontSize: 12, fontWeight: 700, color: text, opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 };
         const row: React.CSSProperties = { marginBottom: 16 };
         const segBtn = (active: boolean): React.CSSProperties => ({
@@ -804,6 +1039,20 @@ const ConfigPanel = React.forwardRef<HTMLDivElement, { open: boolean; settings: 
                         <option value="lora">Georgia (Serif)</option>
                     </select>
                 </div>
+
+                {/* Độ rộng khung nhìn — ẩn trên mobile vì luôn là 100% */}
+                {!isMobileScreen && (
+                <div style={row}>
+                    <span style={lbl}>Độ rộng khung nhìn</span>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        {([['small','Nhỏ','▣'], ['medium','Vừa','▣▣'], ['large','Lớn','▣▣▣']] as [ContentWidth,string,string][]).map(([w, label]) => (
+                            <button key={w} onClick={() => onUpdate('contentWidth', w)} style={segBtn(settings.contentWidth === w)}>
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                )}
 
                 {/* Giãn dòng */}
                 <div style={{ ...row, marginBottom: 0 }}>
