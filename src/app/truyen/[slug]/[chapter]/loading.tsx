@@ -1,20 +1,21 @@
 export default function Loading() {
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: '#faf7f2' }}>
+        <div style={{
+            position: 'fixed',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+        }}>
             <div style={{
-                width: 40,
-                height: 40,
-                border: '3px solid rgba(249,115,22,0.2)',
-                borderTopColor: '#f97316',
+                width: 36,
+                height: 36,
+                border: '3px solid transparent',
+                borderTopColor: '#E8580A',
                 borderRadius: '50%',
-                animation: 'spin 0.8s linear infinite',
+                animation: 'spin 0.7s linear infinite',
             }} />
-            <p style={{ fontSize: 14, color: '#a08470' }}>Đang tải...</p>
-            <style>{`
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
-            `}</style>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
     );
 }

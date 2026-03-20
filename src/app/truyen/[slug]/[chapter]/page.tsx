@@ -2,16 +2,23 @@ import React from 'react';
 import { getChapterBySlugAndIndex, getChaptersByStoryId, getStoryBySlug } from '@/actions/stories';
 import ReadingClient from './ReadingClient';
 
-// Helper: fetch content từ R2
+// Helper: fetch content từ R2 — retry 1 lần nếu lỗi
 async function fetchContentFromR2(contentUrl: string | null): Promise<string> {
     if (!contentUrl) return '';
-    try {
-        const res = await fetch(contentUrl, { next: { revalidate: 3600 } });
-        if (!res.ok) return '';
-        return await res.text();
-    } catch {
-        return '';
+    for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+            const res = await fetch(contentUrl, {
+                next: { revalidate: 3600 },
+                signal: AbortSignal.timeout(8000), // 8s timeout
+            });
+            if (!res.ok) continue;
+            const text = await res.text();
+            if (text.trim()) return text; // chỉ return nếu có content thật
+        } catch {}
+        // Thử lại sau 500ms
+        if (attempt === 0) await new Promise(r => setTimeout(r, 500));
     }
+    return '';
 }
 
 const ReadingPage = async ({ params: paramsPromise }: { params: Promise<{ slug: string; chapter: string }> }) => {

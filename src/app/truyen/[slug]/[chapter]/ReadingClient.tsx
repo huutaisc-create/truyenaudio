@@ -43,7 +43,7 @@ type ReadingClientProps = {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const DEFAULT_SETTINGS: ReadingSettings = {
-    fontSize: 17,
+    fontSize: 28,
     theme: 'night',
     fontFamily: 'roboto',
     lineHeight: 'compact',
@@ -68,8 +68,8 @@ const THEME_BORDER: Record<Theme, string> = {
 const FONT_STYLES: Record<FontFamily, React.CSSProperties> = {
     vietnam:  { fontFamily: 'var(--font-roboto), sans-serif' },
     roboto:   { fontFamily: 'var(--font-roboto), sans-serif' },
-    lora:     { fontFamily: 'Lora, Georgia, serif' },
-    garamond: { fontFamily: '"EB Garamond", Georgia, serif' },
+    lora:     { fontFamily: 'Georgia, serif' },
+    garamond: { fontFamily: 'Georgia, serif' },
     times:    { fontFamily: '"Times New Roman", Times, serif' },
 };
 
@@ -244,10 +244,16 @@ export default function ReadingClient({
     allChapters = [], storyId = '', totalChapters = 0, userId,
 }: ReadingClientProps) {
 
-    // Server và client đều dùng DEFAULT_SETTINGS lúc render đầu tiên
-    // → tránh hydration mismatch #418
-    // Settings thật từ localStorage được load trong useEffect sau mount
-    const [settings, setSettings] = useState<ReadingSettings>(DEFAULT_SETTINGS);
+    // Đọc settings từ localStorage ngay trong useState init fn
+    // → tránh flash modeChosen=false khi navigate client-side
+    const [settings, setSettings] = useState<ReadingSettings>(() => {
+        if (typeof window === 'undefined') return DEFAULT_SETTINGS;
+        try {
+            const saved = localStorage.getItem('mtc_reading_settings');
+            if (saved) return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+        } catch {}
+        return DEFAULT_SETTINGS;
+    });
     const router = useRouter();
     const [mounted, setMounted] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -269,14 +275,19 @@ export default function ReadingClient({
     const borderColor = THEME_BORDER[settings.theme];
     const accent = getAccent(settings.theme);
 
-    // ── Reset page về 0 khi nhảy sang chương mới ──
+    // ── Reset page + sync content + sync --chapter-bg khi nhảy sang chương mới ──
     const prevChapterId = useRef(chapter.id);
     useEffect(() => {
         if (prevChapterId.current !== chapter.id) {
             prevChapterId.current = chapter.id;
             setCurrentPage(0);
+            setEditedContent(chapter.content);
         }
-    }, [chapter.id]);
+        // Luôn sync --chapter-bg với theme hiện tại khi mount hoặc chuyển chương
+        // Đảm bảo loading.tsx của chương tiếp dùng đúng màu
+        const currentBg = THEME_STYLES[settings.theme]?.bg;
+        if (currentBg) document.documentElement.style.setProperty('--chapter-bg', currentBg);
+    }, [chapter.id, chapter.content, settings.theme]);
 
     // ── Preload next chapter pages ──
     useEffect(() => {
@@ -292,26 +303,12 @@ export default function ReadingClient({
         return () => clearTimeout(timer);
     }, [nextChapter, pagesReady, settings.fontSize, settings.fontFamily, settings.lineHeight]);
 
-    // ── Mount: đọc localStorage và set settings thật ──
-    // Chạy sau hydration xong → không gây mismatch
-    // suppressHydrationWarning trên root div xử lý flash màu nền
-    useEffect(() => {
-        setMounted(true);
-        try {
-            const saved = localStorage.getItem('mtc_reading_settings');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                setSettings(prev => ({ ...prev, ...parsed }));
-            }
-        } catch {}
-    }, []);
+    // ── Mount ──
+    useEffect(() => { setMounted(true); }, []);
 
-    // ── Save settings khi thay đổi ──
-    useEffect(() => {
-        if (!mounted) return;
-        try { localStorage.setItem('mtc_reading_settings', JSON.stringify(settings)); } catch {}
-        // TODO: if userId → POST /api/user/reading-settings
-    }, [settings, mounted, userId]);
+    // Save settings lần đầu mount nếu có userId (để sync sau này)
+    // useEffect chỉ giữ lại cho future server sync
+    // localStorage đã được save sync trong hàm update()
 
     // ── Scroll handler (chỉ track progress) ──
     const handleScroll = useCallback(() => {
@@ -343,8 +340,20 @@ export default function ReadingClient({
         if (Math.abs(diff) > 50) diff > 0 ? goNext() : goPrev();
         touchStartX.current = null;
     };
-    const goPrev = () => setCurrentPage(p => Math.max(0, p - 1));
-    const goNext = () => setCurrentPage(p => Math.min(totalPages - 1, p + 1));
+    const goPrev = () => {
+        if (currentPage > 0) {
+            setCurrentPage(p => p - 1);
+        } else if (prev) {
+            navigateChapter(prev!);
+        }
+    };
+    const goNext = () => {
+        if (currentPage < totalPages - 1) {
+            setCurrentPage(p => p + 1);
+        } else if (next) {
+            navigateChapter(next!);
+        }
+    };
 
     // ── Keyboard navigation (cả 2 chế độ) ──
     useEffect(() => {
@@ -361,15 +370,15 @@ export default function ReadingClient({
                 // Chế độ lật trang: chỉ di chuyển trong trang, nhảy chương khi đến biên
                 if (isNext) {
                     if (currentPage < totalPages - 1) goNext();
-                    else if (next) router.push(`/truyen/${slug}/chuong-${next}`);
+                    else if (next) navigateChapter(next!);
                 } else {
                     if (currentPage > 0) goPrev();
-                    else if (prev) router.push(`/truyen/${slug}/chuong-${prev}`);
+                    else if (prev) navigateChapter(prev!);
                 }
             } else {
                 // Chế độ cuộn dọc: nhảy thẳng chương
-                if (isNext && next) router.push(`/truyen/${slug}/chuong-${next}`);
-                if (isPrev && prev) router.push(`/truyen/${slug}/chuong-${prev}`);
+                if (isNext && next) navigateChapter(next!);
+                if (isPrev && prev) navigateChapter(prev!);
             }
         };
         window.addEventListener('keydown', handleKeyDown);
@@ -400,8 +409,26 @@ export default function ReadingClient({
         else alert('Lỗi lưu nội dung!');
     };
 
-    const update = <K extends keyof ReadingSettings>(key: K, val: ReadingSettings[K]) =>
-        setSettings(prev => ({ ...prev, [key]: val }));
+    const update = <K extends keyof ReadingSettings>(key: K, val: ReadingSettings[K]) => {
+        setSettings(prev => {
+            const next = { ...prev, [key]: val };
+            // Save ngay lập tức — không chờ useEffect — để loading.tsx đọc được đúng theme
+            try { localStorage.setItem('mtc_reading_settings', JSON.stringify(next)); } catch {}
+            return next;
+        });
+        // Update --chapter-bg ngay khi đổi theme
+        if (key === 'theme') {
+            const newBg = THEME_STYLES[val as Theme]?.bg;
+            if (newBg) document.documentElement.style.setProperty('--chapter-bg', newBg);
+        }
+    };
+
+    // Set --chapter-bg TRƯỚC khi navigate → loading.tsx thấy đúng màu
+    const navigateChapter = (chapterIndex: number) => {
+        const currentBg = THEME_STYLES[settings.theme]?.bg;
+        if (currentBg) document.documentElement.style.setProperty('--chapter-bg', currentBg);
+        router.push(`/truyen/${slug}/chuong-${chapterIndex}`);
+    };
 
     const chooseMode = (mode: ReadMode) => {
         setSettings(prev => ({ ...prev, readMode: mode, modeChosen: true }));
@@ -459,7 +486,7 @@ export default function ReadingClient({
                         <h2 style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 20, fontWeight: 700, color: text, marginBottom: 8, lineHeight: 1.3 }}>
                             Bạn muốn đọc theo kiểu nào?
                         </h2>
-                        <p style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 13, color: text, opacity: 0.4, marginBottom: 28 }}>
+                        <p style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 13, color: text, opacity: 0.7, marginBottom: 28 }}>
                             Có thể đổi lại bất cứ lúc nào trong Cấu hình đọc
                         </p>
                         <div style={{ display: 'flex', gap: 14 }}>
@@ -474,7 +501,7 @@ export default function ReadingClient({
                                     <span style={{ fontSize: 28, opacity: 0.6, color: text }}>{icon}</span>
                                     <div>
                                         <p style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 14, fontWeight: 700, color: text, marginBottom: 4 }}>{label}</p>
-                                        <p style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 11, color: text, opacity: 0.4 }}>{desc}</p>
+                                        <p style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 12, color: text, opacity: 0.7 }}>{desc}</p>
                                     </div>
                                 </button>
                             ))}
@@ -502,13 +529,13 @@ export default function ReadingClient({
                     {/* DS Chương + Cấu hình đọc */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative', flexShrink: 0 }}>
                         <button onClick={toggleToc} style={hdrBtn}>DS Chương</button>
-                        <button onClick={toggleConfig} style={hdrBtn}>Cấu hình đọc</button>
                         <a href={`/truyen/${slug}/nghe?chuong=${chapter.index}`} style={{ ...hdrBtn, display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
                           </svg>
                           Nghe
                         </a>
+                        <button onClick={toggleConfig} style={hdrBtn}>Cấu hình đọc</button>
                         <TocPanel ref={tocRef} open={showToc} chapters={allChapters} currentIndex={chapter.index} slug={slug} storyId={storyId} totalChapters={totalChapters} bg={bg} text={text} borderColor={borderColor} accent={accent} />
                         <ConfigPanel ref={configRef} open={showConfig} settings={settings} onUpdate={update} bg={bg} text={text} borderColor={borderColor} accent={accent} />
                     </div>
@@ -527,9 +554,9 @@ export default function ReadingClient({
                             <div style={{ flex: 1, maxWidth: 80, height: 1, background: `linear-gradient(90deg, ${borderColor}, transparent)` }} />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 28 }}>
-                            {prev ? <Link href={`/truyen/${slug}/chuong-${prev}`} style={navBase}><ChevronLeft size={14} />Chương trước</Link>
+                            {prev ? <a onClick={() => navigateChapter(prev!)} style={{...navBase, cursor:'pointer'}}><ChevronLeft size={14} />Chương trước</a>
                                   : <span style={{ ...navBase, opacity: 0.22, cursor: 'not-allowed' }}><ChevronLeft size={14} />Chương trước</span>}
-                            {next ? <Link href={`/truyen/${slug}/chuong-${next}`} style={navPrimary}>Chương tiếp<ChevronRight size={14} /></Link>
+                            {next ? <a onClick={() => navigateChapter(next!)} style={{...navPrimary, cursor:'pointer'}}>Chương tiếp<ChevronRight size={14} /></a>
                                   : <span style={{ ...navPrimary, opacity: 0.28, cursor: 'not-allowed' }}>Chương tiếp<ChevronRight size={14} /></span>}
                         </div>
                     </div>
@@ -557,9 +584,9 @@ export default function ReadingClient({
                     {/* Bottom nav */}
                     <div style={{ marginTop: 64, paddingTop: 40, borderTop: `1px solid ${borderColor}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
                         <div style={{ display: 'flex', gap: 12 }}>
-                            {prev ? <Link href={`/truyen/${slug}/chuong-${prev}`} style={{ ...navBase, padding: '10px 28px' }}><ChevronLeft size={14} />Chương trước</Link>
+                            {prev ? <a onClick={() => navigateChapter(prev!)} style={{ ...navBase, padding: '10px 28px', cursor:'pointer' }}><ChevronLeft size={14} />Chương trước</a>
                                   : <span style={{ ...navBase, padding: '10px 28px', opacity: 0.22, cursor: 'not-allowed' }}><ChevronLeft size={14} />Chương trước</span>}
-                            {next ? <Link href={`/truyen/${slug}/chuong-${next}`} style={{ ...navPrimary, padding: '10px 28px' }}>Chương tiếp<ChevronRight size={14} /></Link>
+                            {next ? <a onClick={() => navigateChapter(next!)} style={{ ...navPrimary, padding: '10px 28px', cursor:'pointer' }}>Chương tiếp<ChevronRight size={14} /></a>
                                   : <span style={{ ...navPrimary, padding: '10px 28px', opacity: 0.28, cursor: 'not-allowed' }}>Chương tiếp<ChevronRight size={14} /></span>}
                         </div>
                         <Link href={`/truyen/${slug}`} style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 12, fontWeight: 700, color: text, opacity: 0.3, textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.05em' }}>↑ Quay lại mục lục</Link>
@@ -607,16 +634,16 @@ export default function ReadingClient({
                             {currentPage > 0
                                 ? <button onClick={goPrev} style={{ ...navBase, padding: '8px 18px' }}><ChevronLeft size={14} />Trang trước</button>
                                 : prev
-                                    ? <Link href={`/truyen/${slug}/chuong-${prev}`} style={{ ...navBase, padding: '8px 18px' }}><ChevronLeft size={14} />Chương trước</Link>
+                                    ? <a onClick={() => navigateChapter(prev!)} style={{ ...navBase, padding: '8px 18px', cursor:'pointer' }}><ChevronLeft size={14} />Chương trước</a>
                                     : <span style={{ ...navBase, padding: '8px 18px', opacity: 0.2, cursor: 'not-allowed' }}><ChevronLeft size={14} />Chương trước</span>
                             }
                         </div>
                         {/* Giữa: tên chương + số trang, truncate khi hẹp */}
                         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                            <span style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 11, fontWeight: 600, color: text, opacity: 0.55, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
+                            <span style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 13, fontWeight: 600, color: text, opacity: 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
                                 {chapter.title}
                             </span>
-                            <span style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 10, fontWeight: 700, color: text, opacity: 0.28, flexShrink: 0 }}>
+                            <span style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 12, fontWeight: 700, color: text, opacity: 0.75, flexShrink: 0 }}>
                                 {currentPage + 1} / {totalPages}
                             </span>
                         </div>
@@ -625,7 +652,7 @@ export default function ReadingClient({
                             {currentPage < totalPages - 1
                                 ? <button onClick={goNext} style={{ ...navPrimary, padding: '8px 18px' }}>Trang tiếp<ChevronRight size={14} /></button>
                                 : next
-                                    ? <Link href={`/truyen/${slug}/chuong-${next}`} style={{ ...navPrimary, padding: '8px 18px' }}>Chương tiếp<ChevronRight size={14} /></Link>
+                                    ? <a onClick={() => navigateChapter(next!)} style={{ ...navPrimary, padding: '8px 18px', cursor:'pointer' }}>Chương tiếp<ChevronRight size={14} /></a>
                                     : <span style={{ ...navPrimary, padding: '8px 18px', opacity: 0.28, cursor: 'not-allowed' }}>Chương tiếp<ChevronRight size={14} /></span>
                             }
                         </div>
@@ -694,14 +721,14 @@ const TocPanel = React.forwardRef<HTMLDivElement, {
         <div ref={ref} style={{ position: 'absolute', top: 44, right: 0, width: 320, maxHeight: '70vh', overflowY: 'auto', background: bg, border: `1.5px solid ${borderColor}`, borderRadius: 16, padding: 16, boxShadow: '0 12px 40px rgba(0,0,0,0.28)', zIndex: 200, transform: open ? 'translateY(0) scale(1)' : 'translateY(-8px) scale(0.96)', opacity: open ? 1 : 0, pointerEvents: open ? 'all' : 'none', transition: 'all 0.2s cubic-bezier(0.34,1.56,0.64,1)' }}
             onScroll={handleScroll}
         >
-            <p style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 10, fontWeight: 800, color: text, opacity: 0.38, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>
+            <p style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 13, fontWeight: 800, color: text, opacity: 0.8, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>
                 ≡ Danh sách chương
                 <span style={{ fontWeight: 400, marginLeft: 6, opacity: 0.5 }}>({totalChapters})</span>
             </p>
             {chapters.length === 0 && <p style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 13, opacity: 0.38, color: text }}>Không có dữ liệu</p>}
             {chapters.map(ch => (
-                <Link key={ch.index} href={`/truyen/${slug}/chuong-${ch.index}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 8, textDecoration: 'none', borderBottom: `1px solid ${borderColor}`, background: ch.index === currentIndex ? `${accent}14` : 'transparent', color: ch.index === currentIndex ? accent : text, fontFamily: 'var(--font-roboto), sans-serif', fontSize: 13, fontWeight: ch.index === currentIndex ? 700 : 400 }}>
-                    <span style={{ fontSize: 10, fontWeight: 800, opacity: 0.35, minWidth: 28 }}>{ch.index}</span>
+                <Link key={ch.index} href={`/truyen/${slug}/chuong-${ch.index}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 8, textDecoration: 'none', borderBottom: `1px solid ${borderColor}`, background: ch.index === currentIndex ? `${accent}14` : 'transparent', color: ch.index === currentIndex ? accent : text, fontFamily: 'var(--font-roboto), sans-serif', fontSize: 15, fontWeight: ch.index === currentIndex ? 700 : 500 }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, opacity: 0.6, minWidth: 28 }}>{ch.index}</span>
                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.title}</span>
                 </Link>
             ))}
@@ -721,7 +748,7 @@ TocPanel.displayName = 'TocPanel';
 // ── Config Panel ───────────────────────────────────────────────────────────
 const ConfigPanel = React.forwardRef<HTMLDivElement, { open: boolean; settings: ReadingSettings; onUpdate: <K extends keyof ReadingSettings>(key: K, val: ReadingSettings[K]) => void; bg: string; text: string; borderColor: string; accent: string }>(
     ({ open, settings, onUpdate, bg, text, borderColor, accent }, ref) => {
-        const lbl: React.CSSProperties = { fontFamily: 'var(--font-roboto), sans-serif', fontSize: 11, fontWeight: 700, color: text, opacity: 0.42, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 };
+        const lbl: React.CSSProperties = { fontFamily: 'var(--font-roboto), sans-serif', fontSize: 12, fontWeight: 700, color: text, opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 };
         const row: React.CSSProperties = { marginBottom: 16 };
         const segBtn = (active: boolean): React.CSSProperties => ({
             flex: 1, padding: '7px 0', cursor: 'pointer',
@@ -734,7 +761,7 @@ const ConfigPanel = React.forwardRef<HTMLDivElement, { open: boolean; settings: 
 
         return (
             <div ref={ref} style={{ position: 'absolute', top: 44, right: 0, width: 284, background: bg, border: `1.5px solid ${borderColor}`, borderRadius: 16, padding: 20, boxShadow: '0 12px 40px rgba(0,0,0,0.28)', zIndex: 200, transform: open ? 'translateY(0) scale(1)' : 'translateY(-8px) scale(0.96)', opacity: open ? 1 : 0, pointerEvents: open ? 'all' : 'none', transition: 'all 0.2s cubic-bezier(0.34,1.56,0.64,1)' }}>
-                <p style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 10, fontWeight: 800, color: text, opacity: 0.38, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>Aa Cấu hình đọc</p>
+                <p style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 13, fontWeight: 800, color: text, opacity: 0.85, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 16 }}>Aa Cấu hình đọc</p>
 
                 {/* Kiểu đọc */}
                 <div style={row}>
@@ -743,7 +770,7 @@ const ConfigPanel = React.forwardRef<HTMLDivElement, { open: boolean; settings: 
                         <button onClick={() => onUpdate('readMode', 'scroll')} style={segBtn(settings.readMode === 'scroll')}>↕ Cuộn dọc</button>
                         <button onClick={() => onUpdate('readMode', 'page')}   style={segBtn(settings.readMode === 'page')}>↔ Lật trang</button>
                     </div>
-                    <p style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 10, color: text, opacity: 0.38, marginTop: 8, lineHeight: 1.6 }}>
+                    <p style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 11, color: text, opacity: 0.65, marginTop: 8, lineHeight: 1.6 }}>
                         ⌨️ Dùng phím <kbd style={{ padding: '1px 5px', borderRadius: 4, border: `1px solid ${borderColor}`, fontSize: 10 }}>←</kbd> <kbd style={{ padding: '1px 5px', borderRadius: 4, border: `1px solid ${borderColor}`, fontSize: 10 }}>→</kbd> để chuyển chương (cuộn dọc) hoặc lật trang / chuyển chương (lật trang).
                     </p>
                 </div>
@@ -762,9 +789,9 @@ const ConfigPanel = React.forwardRef<HTMLDivElement, { open: boolean; settings: 
                 <div style={row}>
                     <span style={lbl}>Cỡ chữ</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <button onClick={() => onUpdate('fontSize', Math.max(13, settings.fontSize - 1))} style={{ ...segBtn(false), flex: 'none', width: 32, height: 32, fontSize: 16 }}>−</button>
-                        <span style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 13, fontWeight: 700, color: text, minWidth: 28, textAlign: 'center' }}>{settings.fontSize}</span>
-                        <button onClick={() => onUpdate('fontSize', Math.min(28, settings.fontSize + 1))} style={{ ...segBtn(false), flex: 'none', width: 32, height: 32, fontSize: 16 }}>+</button>
+                        <button onClick={() => onUpdate('fontSize', Math.max(20, settings.fontSize - 1))} style={{ ...segBtn(false), flex: 'none', width: 32, height: 32, fontSize: 16 }}>−</button>
+                        <span style={{ fontFamily: 'var(--font-roboto), sans-serif', fontSize: 15, fontWeight: 700, color: text, minWidth: 28, textAlign: 'center' }}>{settings.fontSize}</span>
+                        <button onClick={() => onUpdate('fontSize', Math.min(40, settings.fontSize + 1))} style={{ ...segBtn(false), flex: 'none', width: 32, height: 32, fontSize: 16 }}>+</button>
                     </div>
                 </div>
 
@@ -772,11 +799,9 @@ const ConfigPanel = React.forwardRef<HTMLDivElement, { open: boolean; settings: 
                 <div style={row}>
                     <span style={lbl}>Phông chữ</span>
                     <select value={settings.fontFamily} onChange={e => onUpdate('fontFamily', e.target.value as FontFamily)} style={{ width: '100%', padding: '7px 10px', border: `1.5px solid ${borderColor}`, borderRadius: 8, background: bg, color: text, fontFamily: 'var(--font-roboto), sans-serif', fontSize: 12, outline: 'none', cursor: 'pointer' }}>
-                        <option value="roboto">Roboto (Mặc định)</option>
-                        <option value="vietnam">Be Vietnam Pro</option>
-                        <option value="lora">Lora (Serif)</option>
-                        <option value="garamond">EB Garamond</option>
+                        <option value="roboto">Mặc định (System)</option>
                         <option value="times">Times New Roman</option>
+                        <option value="lora">Georgia (Serif)</option>
                     </select>
                 </div>
 

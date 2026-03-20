@@ -2,18 +2,29 @@
 
 import { useEffect } from 'react';
 
-// Cleanup CSS variable --chapter-bg khi navigate ra khỏi trang đọc
-// Nếu không cleanup, --chapter-bg vẫn còn trên <html> element
-// nhưng vì chỉ là CSS variable (không phải inline style trên body)
-// nên nó không ảnh hưởng trang khác — trang chủ không dùng var này.
-//
-// Tuy nhiên vẫn cleanup cho sạch:
 export default function ChapterLayoutCleanup() {
     useEffect(() => {
+        // Re-set --chapter-bg mỗi lần mount (mỗi lần navigate sang chương mới)
+        // vì themeScript chỉ chạy lần đầu hard load
+        const THEME_BG: Record<string, string> = {
+            sepia: '#FDFAF7',
+            white: '#FFFFFF',
+            green: '#F0F4F0',
+            night: '#0F0A05',
+        };
+        let bg = '#0F0A05';
+        try {
+            const s = localStorage.getItem('mtc_reading_settings');
+            if (s) {
+                const theme = JSON.parse(s).theme;
+                if (theme && THEME_BG[theme]) bg = THEME_BG[theme];
+            }
+        } catch(e) {}
+        document.documentElement.style.setProperty('--chapter-bg', bg);
+
         return () => {
-            // Chạy khi component unmount (navigate ra khỏi chapter)
+            // Cleanup khi rời khỏi trang đọc
             document.documentElement.style.removeProperty('--chapter-bg');
-            // Reset body background về mặc định của trang chủ
             document.body.style.background = '';
         };
     }, []);
