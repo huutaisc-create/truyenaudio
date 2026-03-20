@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -9,11 +9,11 @@ import {
   CheckCircle2, List,
 } from 'lucide-react';
 
-// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // ── R2 CDN base URL ──────────────────────────────────────────────────────
 // Đổi URL này khi có custom domain, không cần sửa chỗ nào khác
 const R2_BASE = 'https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev';
 
+// ─── Types ────────────────────────────────────────────────
 interface Chapter {
   id: string;
   index: number;
@@ -37,11 +37,11 @@ interface Props {
   initialChapter: Chapter;
 }
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Helpers ──────────────────────────────────────────────
 function cleanTitle(title: string, index: number): string {
   return title
-    .replace(new RegExp(`^C${index}\s+`, 'i'), '')   // bá» "C3 "
-    .replace(/^ChÆ°Æ¡ng\s*\d+\s*/i, '')               // bá» "ChÆ°Æ¡ng 3 "
+    .replace(new RegExp(`^C${index}\s+`, 'i'), '')   // bỏ "C3 "
+    .replace(/^Chương\s*\d+\s*/i, '')               // bỏ "Chương 3 "
     .trim();
 }
 
@@ -53,7 +53,7 @@ const MAX_SPEED = 2.0;
 const SPEED_STEP = 0.05;
 const PAGE_SIZE = 20;
 
-// â”€â”€â”€ Wave Icon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Wave Icon ─────────────────────────────────────────────
 function WaveIcon() {
   return (
     <div className="flex items-center gap-[2px] h-3 shrink-0">
@@ -65,7 +65,7 @@ function WaveIcon() {
   );
 }
 
-// â”€â”€â”€ Loading Overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Loading Overlay ──────────────────────────────────────
 function LoadingOverlay({ chapterTitle, sentenceGenerated, sentenceTotal }: {
   chapterTitle: string;
   sentenceGenerated: number;
@@ -73,7 +73,7 @@ function LoadingOverlay({ chapterTitle, sentenceGenerated, sentenceTotal }: {
 }) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0f0d0a]/90 backdrop-blur-md">
-      {/* SĂ³ng Ă¢m */}
+      {/* Sóng âm */}
       <div className="flex items-center gap-[5px] mb-8" style={{ height: 60 }}>
         {[20,40,55,35,50,60,45,55,30,50,40,22].map((h, i) => (
           <span key={i} className="w-[4px] rounded-full bg-gradient-to-t from-[#e8580a] to-[#ff9f5a]"
@@ -88,7 +88,7 @@ function LoadingOverlay({ chapterTitle, sentenceGenerated, sentenceTotal }: {
 
       {/* Label */}
       <p className="text-[11px] font-black tracking-[.15em] uppercase text-[#e8580a] mb-3">
-        Äang táº¡o audio
+        Đang tạo audio
       </p>
 
       {/* Chapter title */}
@@ -102,12 +102,12 @@ function LoadingOverlay({ chapterTitle, sentenceGenerated, sentenceTotal }: {
           <span key={i} className="w-[6px] h-[6px] rounded-full bg-[#e8580a]"
             style={{ animation: 'dotPulse 1.4s ease-in-out infinite', animationDelay: `${delay}s` }} />
         ))}
-        <span className="text-[11px] text-[#8a7e72] font-medium ml-1">Vui lĂ²ng chá» trong giĂ¢y lĂ¡t</span>
+        <span className="text-[11px] text-[#8a7e72] font-medium ml-1">Vui lòng chờ trong giây lát</span>
       </div>
 
       {/* Counter */}
       <p className="text-[11px] text-[#8a7e72] font-medium tabular-nums">
-        Äang xá»­ lĂ½ cĂ¢u {sentenceGenerated} / {sentenceTotal > 0 ? sentenceTotal : '...'}
+        Đang xử lý câu {sentenceGenerated} / {sentenceTotal > 0 ? sentenceTotal : '...'}
       </p>
 
       <style>{`
@@ -124,8 +124,8 @@ function LoadingOverlay({ chapterTitle, sentenceGenerated, sentenceTotal }: {
   );
 }
 
-// â”€â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-export default function ListeningMobileAndroid({
+// ─── Main ─────────────────────────────────────────────────
+export default function ListeningClient({
   slug, storyId, storyTitle, storyCover, author,
   totalChapters, initialChapters, initialChapterIndex, initialChapter,
 }: Props) {
@@ -144,7 +144,7 @@ export default function ListeningMobileAndroid({
       const newChaps: ChapterMeta[] = (json.data?.chapters ?? []).map((c: any) => ({
         id: c.id,
         index: c.index,
-        title: c.title || `ChÆ°Æ¡ng ${c.index}`,
+        title: c.title || `Chương ${c.index}`,
       }));
       if (newChaps.length > 0) {
         setAllChapters(prev => {
@@ -161,42 +161,44 @@ export default function ListeningMobileAndroid({
   }, [storyId, allChapters.length, totalChapters]);
   const router = useRouter();
 
-  // â”€â”€ Audio engine refs â”€â”€
+  // ── Audio engine refs ──
   const actxRef      = useRef<AudioContext | null>(null);
   const nextStartRef = useRef<number>(0);
   const stopFlagRef  = useRef<boolean>(false);
   const speedRef     = useRef<number>(1);
 
-  // â”€â”€ Player state â”€â”€
+  // ── Player state ──
   const [isPlaying,         setIsPlaying]         = useState(false);
   const [speed,             setSpeed]              = useState(1.0);
   const [isGenerating,      setIsGenerating]       = useState(false);
 
-  // â”€â”€ Debug state â”€â”€
+  // ── Debug state ──
   const [sentencePlayed,    setSentencePlayed]    = useState(0);
   const [sentenceGenerated, setSentenceGenerated] = useState(0);
   const [sentenceTotal,     setSentenceTotal]     = useState(0);
   const [ramMB,             setRamMB]             = useState<number | null>(null);
 
-  // â”€â”€ Chapter state â”€â”€
+  // ── Chapter state ──
   const [currentChapter,    setCurrentChapter]    = useState<Chapter>(initialChapter);
   const [loadedChapters,    setLoadedChapters]    = useState<Record<number, Chapter>>({
     [initialChapter.index]: initialChapter,
   });
   const [completedChapters, setCompletedChapters] = useState<Set<number>>(new Set());
 
-  // â”€â”€ Voice state â”€â”€
+  // ── Voice state ──
   const [voices,        setVoices]       = useState<{ id: string; name: string; path?: string }[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<string>('');
   const [showVoiceMenu, setShowVoiceMenu] = useState(false);
 
-  // â”€â”€ Worker settings â”€â”€
+  // ── Worker settings ──
   const [showWorkerPanel, setShowWorkerPanel] = useState(false);
-  const [workerCount,     setWorkerCount]     = useState(2); // máº·c Ä‘á»‹nh 2
+  const [workerCount,     setWorkerCount]     = useState(2); // mặc định 2
   const [hwInfo, setHwInfo] = useState<{ cores: number; ram: number; isMT: boolean } | null>(null);
 
-  // â”€â”€ Chapter list UI â”€â”€
+  // ── Chapter list UI ──
   const [showChapterList,   setShowChapterList]   = useState(false);
+  const [deferredPrompt,    setDeferredPrompt]    = useState<any>(null);
+  const [pwaInstalled,      setPwaInstalled]      = useState(false);
   const [mobileVisible,     setMobileVisible]     = useState(PAGE_SIZE);
   const [desktopVisible,    setDesktopVisible]    = useState(PAGE_SIZE);
   const chapListRef        = useRef<HTMLDivElement>(null);
@@ -210,7 +212,7 @@ export default function ListeningMobileAndroid({
   const hasPrev        = sortedChapters.some(c => c.index < currentIdx);
   const hasNext        = sortedChapters.some(c => c.index > currentIdx);
 
-  // â”€â”€ Detect hardware info khi mount â”€â”€
+  // ── Detect hardware info khi mount ──
   useEffect(() => {
     const cores = navigator.hardwareConcurrency ?? 2;
     const ram   = (navigator as any).deviceMemory ?? 4;
@@ -219,11 +221,11 @@ export default function ListeningMobileAndroid({
     const maxByCore = Math.max(1, Math.floor(cores / 2));
     const autoMax   = Math.min(maxByRam, maxByCore, 4);
     setHwInfo({ cores, ram, isMT });
-    // Auto set vá» max náº¿u máº·c Ä‘á»‹nh 2 vÆ°á»£t quĂ¡ giá»›i háº¡n
+    // Auto set về max nếu mặc định 2 vượt quá giới hạn
     setWorkerCount(w => Math.max(2, Math.min(w, Math.max(2, autoMax))));
   }, []);
 
-  // â”€â”€ Load voice manifest â”€â”€
+  // ── Load voice manifest ──
   useEffect(() => {
     fetch(`${R2_BASE}/models/custom/manifest.json`)
       .then(r => r.json())
@@ -232,19 +234,42 @@ export default function ListeningMobileAndroid({
         if (data.length > 0) setSelectedVoice(data[0].id);
       })
       .catch(() => {
-        setVoices([{ id: 'default', name: 'Giá»ng máº·c Ä‘á»‹nh' }]);
+        setVoices([{ id: 'default', name: 'Giọng mặc định' }]);
         setSelectedVoice('default');
       });
   }, []);
 
-  // â”€â”€ Sync speedRef â”€â”€
+  // ── Sync speedRef ──
   useEffect(() => { speedRef.current = speed; }, [speed]);
 
-  // â”€â”€ Media Session â”€â”€
+  // ── PWA Install prompt ──
+  useEffect(() => {
+    // Kiểm tra đã install chưa
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setPwaInstalled(true);
+      return;
+    }
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallPWA = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') setPwaInstalled(true);
+    setDeferredPrompt(null);
+  };
+
+  // ── Media Session ──
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: currentChapter.title || `ChÆ°Æ¡ng ${currentIdx}`,
+      title: currentChapter.title || `Chương ${currentIdx}`,
       artist: author, album: storyTitle,
       artwork: storyCover ? [{ src: storyCover, sizes: '512x512', type: 'image/jpeg' }] : [],
     });
@@ -252,11 +277,11 @@ export default function ListeningMobileAndroid({
     navigator.mediaSession.setActionHandler('nexttrack',     () => goChapter('next'));
   }, [currentChapter]);
 
-  // â”€â”€ Scroll active chapter vĂ o view â”€â”€
+  // ── Scroll active chapter vào view ──
   useEffect(() => {
     if (showChapterList) {
       const curPos = sortedChapters.findIndex(c => c.index === currentIdx);
-      // Äáº£m báº£o active chapter náº±m trong range Ä‘Ă£ render
+      // Đảm bảo active chapter nằm trong range đã render
       setMobileVisible(prev => Math.max(prev, curPos + 5));
       setTimeout(() => {
         activeChapRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -264,13 +289,13 @@ export default function ListeningMobileAndroid({
     }
   }, [showChapterList]);
 
-  // â”€â”€ Scroll active chapter trĂªn desktop vĂ o view khi mount â”€â”€
+  // ── Scroll active chapter trên desktop vào view khi mount ──
   useEffect(() => {
     const curPos = sortedChapters.findIndex(c => c.index === currentIdx);
     setDesktopVisible(prev => Math.max(prev, curPos + 5));
   }, [currentIdx]);
 
-  // â”€â”€ IntersectionObserver: mobile drawer â”€â”€
+  // ── IntersectionObserver: mobile drawer ──
   useEffect(() => {
     const el = mobileSentinelRef.current;
     if (!el) return;
@@ -284,7 +309,7 @@ export default function ListeningMobileAndroid({
     return () => obs.disconnect();
   }, [showChapterList, sortedChapters.length, loadMoreChapters]);
 
-  // â”€â”€ IntersectionObserver: desktop panel â”€â”€
+  // ── IntersectionObserver: desktop panel ──
   useEffect(() => {
     const el = desktopSentinelRef.current;
     if (!el) return;
@@ -298,9 +323,9 @@ export default function ListeningMobileAndroid({
     return () => obs.disconnect();
   }, [sortedChapters.length, loadMoreChapters]);
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // â”€â”€ Audio core â”€â”€
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────
+  // ── Audio core ──
+  // ─────────────────────────────────────────────────────────
   const getActx = useCallback(() => {
     if (!actxRef.current || actxRef.current.state === 'closed') {
       actxRef.current = new AudioContext();
@@ -319,13 +344,13 @@ export default function ListeningMobileAndroid({
     nextStartRef.current = 0;
     setIsPlaying(false);
     setIsGenerating(false);
-    // Terminate toĂ n bá»™ worker pool
+    // Terminate toàn bộ worker pool
     for (const w of workerPoolRef.current) {
       try { w?.terminate(); } catch {}
     }
     workerPoolRef.current = [];
     piperRef.current = null;
-    // Dá»n prefetch state â€” trĂ¡nh rĂ¡c khi chuyá»ƒn chÆ°Æ¡ng báº¥t ngá»
+    // Dọn prefetch state — tránh rác khi chuyển chương bất ngờ
     prefetchedPCMRef.current  = [];
     prefetchDoneRef.current   = false;
     prefetchedChapRef.current = null;
@@ -334,11 +359,11 @@ export default function ListeningMobileAndroid({
     prefetchTotalRef.current  = 0;
   }, []);
 
-  // trimSilence: cáº¯t bá» silence á»Ÿ Ä‘áº§u/cuá»‘i PCM
-  // threshold: sample pháº£i vÆ°á»£t má»©c nĂ y má»›i tĂ­nh lĂ  "cĂ³ Ă¢m thanh"
-  // margin: giá»¯ láº¡i vĂ i ms Ä‘á»ƒ trĂ¡nh click artifact
+  // trimSilence: cắt bỏ silence ở đầu/cuối PCM
+  // threshold: sample phải vượt mức này mới tính là "có âm thanh"
+  // margin: giữ lại vài ms để tránh click artifact
   const trimSilence = useCallback((pcm: Float32Array, sampleRate: number, thresholdDb = -45): Float32Array => {
-    const threshold = Math.pow(10, thresholdDb / 20); // -45dB â‰ˆ 0.006
+    const threshold = Math.pow(10, thresholdDb / 20); // -45dB ≈ 0.006
     const marginSamples = Math.floor(sampleRate * 0.003); // 3ms margin
     let start = 0;
     let end   = pcm.length - 1;
@@ -351,18 +376,17 @@ export default function ListeningMobileAndroid({
     return pcm.slice(start, end + 1);
   }, []);
 
-  // schedulePCM: nháº­n raw PCM Float32Array â†’ táº¡o AudioBuffer â†’ schedule
-  // pauseMs: khoáº£ng nghá»‰ tá»± nhiĂªn sau chunk (ms) â€” context-aware
+  // schedulePCM: nhận raw PCM Float32Array → tạo AudioBuffer → schedule
+  // pauseMs: khoảng nghỉ tự nhiên sau chunk (ms) — context-aware
   const schedulePCM = useCallback((
     actx: AudioContext,
     pcm: Float32Array,
     sampleRate: number,
     isClauseBoundary = false,
     pauseMs = 150,
-    onEnded?: () => void,
   ): number => {
     try {
-      // KhĂ´ng trim silence â€” Piper tá»± generate silence Ä‘Ăºng chá»—
+      // Không trim silence — Piper tự generate silence đúng chỗ
       const audioBuffer = actx.createBuffer(1, pcm.length, sampleRate);
       const channel = audioBuffer.getChannelData(0);
       channel.set(pcm);
@@ -370,14 +394,14 @@ export default function ListeningMobileAndroid({
       const s       = speedRef.current;
       const startAt = Math.max(actx.currentTime, nextStartRef.current);
 
-      // Fade-in 10ms Ä‘áº§u chunk + fade-out 10ms cuá»‘i chunk â€” giáº£m click/pop
+      // Fade-in 10ms đầu chunk + fade-out 10ms cuối chunk — giảm click/pop
       const endAt    = startAt + audioBuffer.duration / s;
       const gainNode = actx.createGain();
       gainNode.connect(actx.destination);
-      // Fade-in: luĂ´n apply Ä‘á»ƒ trĂ¡nh click khi chunk báº¯t Ä‘áº§u
+      // Fade-in: luôn apply để tránh click khi chunk bắt đầu
       gainNode.gain.setValueAtTime(0, startAt);
       gainNode.gain.linearRampToValueAtTime(1, startAt + 0.01); // 10ms fade in
-      // Fade-out: 10ms trÆ°á»›c khi chunk káº¿t thĂºc
+      // Fade-out: 10ms trước khi chunk kết thúc
       gainNode.gain.setValueAtTime(1, Math.max(startAt + 0.01, endAt - 0.01));
       gainNode.gain.linearRampToValueAtTime(0, endAt);
 
@@ -386,15 +410,10 @@ export default function ListeningMobileAndroid({
       source.playbackRate.value = s;
       source.connect(gainNode);
       source.start(startAt);
-      // Disconnect sau khi play xong â€” trĂ¡nh memory leak trĂªn chapter dĂ i
-      // onEnded callback cho chunk cuá»‘i â†’ trigger auto-next (hoáº¡t Ä‘á»™ng khi táº¯t mĂ n hĂ¬nh)
-      source.onended = () => {
-        source.disconnect();
-        gainNode.disconnect();
-        onEnded?.();
-      };
+      // Disconnect sau khi play xong — tránh memory leak trên chapter dài
+      source.onended = () => { source.disconnect(); gainNode.disconnect(); };
 
-      // Pause tá»± nhiĂªn sau chunk â€” chia cho speed vĂ¬ audio cháº¡y nhanh hÆ¡n
+      // Pause tự nhiên sau chunk — chia cho speed vì audio chạy nhanh hơn
       const pauseSec = (pauseMs / 1000) / s;
       nextStartRef.current = startAt + audioBuffer.duration / s + pauseSec;
 
@@ -404,7 +423,7 @@ export default function ListeningMobileAndroid({
     }
   }, [trimSilence]);
 
-  // scheduleChunk legacy â€” backward compat náº¿u cáº§n
+  // scheduleChunk legacy — backward compat nếu cần
   const scheduleChunk = useCallback(async (actx: AudioContext, wavBlob: Blob): Promise<number> => {
     try {
       const arrayBuffer = await wavBlob.arrayBuffer();
@@ -423,53 +442,52 @@ export default function ListeningMobileAndroid({
     }
   }, []);
 
-  // â”€â”€ Pipeline refs â”€â”€
+  // ── Pipeline refs ──
   const endTimesRef      = useRef<number[]>([]);
   const generatedRef     = useRef<number>(0);
   const pipelineDone     = useRef<boolean>(false);
-  const audioHandledGlobalRef  = useRef<boolean>(false); // guard chung cho pollPlayed + pollFromBuffer â€” trĂ¡nh double auto-next
-  const activeChapIndexRef     = useRef<number>(-1);     // index chÆ°Æ¡ng Ä‘ang active â€” pollPlayed/pollFromBuffer stale tá»± dá»«ng
-  const autoNextCallbackRef    = useRef<(() => void) | null>(null); // callback khi chunk cuá»‘i káº¿t thĂºc â†’ auto-next (Android: onended thay setTimeout)
+  const audioHandledGlobalRef  = useRef<boolean>(false); // guard chung cho pollPlayed + pollFromBuffer — tránh double auto-next
+  const activeChapIndexRef     = useRef<number>(-1);     // index chương đang active — pollPlayed/pollFromBuffer stale tự dừng
   const streamChapterRef            = useRef<((ch: Chapter) => Promise<void>) | null>(null);
   const playFromPrefetchBufferRef   = useRef<((ch: Chapter) => void) | null>(null);
-  const piperRef         = useRef<any>(null); // giá»¯ worker sá»‘ng â†’ khĂ´ng load láº¡i model má»—i chÆ°Æ¡ng
-  const workerPoolRef    = useRef<any[]>([]);  // pool nhiá»u worker theo pháº§n cá»©ng
-  const workerCountRef   = useRef<number>(1);  // sá»‘ worker thá»±c táº¿ dĂ¹ng
+  const piperRef         = useRef<any>(null); // giữ worker sống → không load lại model mỗi chương
+  const workerPoolRef    = useRef<any[]>([]);  // pool nhiều worker theo phần cứng
+  const workerCountRef   = useRef<number>(1);  // số worker thực tế dùng
 
   const BUFFER_AHEAD = 4;
 
-  // â”€â”€ Prefetch chÆ°Æ¡ng tiáº¿p theo â”€â”€
+  // ── Prefetch chương tiếp theo ──
   const prefetchedChapRef    = useRef<Chapter | null>(null);      // chapter metadata
   const prefetchedPCMRef     = useRef<Array<{ pcm: Float32Array; sampleRate: number; isClause: boolean; pauseMs: number }>>([]);
   const prefetchDoneRef      = useRef<boolean>(false);
   const prefetchingIdRef     = useRef<string | null>(null);
   const prefetchNextChapterRef = useRef<((meta: { id: string; index: number; title: string }) => void) | null>(null);
   const prefetchStopRef      = useRef<boolean>(false);
-  const prefetchTotalRef     = useRef<number>(0);  // tá»•ng chunks cá»§a chÆ°Æ¡ng Ä‘ang prefetch â€” biáº¿t ngay sau splitChunks
+  const prefetchTotalRef     = useRef<number>(0);  // tổng chunks của chương đang prefetch — biết ngay sau splitChunks
 
-  // detectWorkerCount Ä‘á»c tá»« state workerCount (do user chá»n)
+  // detectWorkerCount đọc từ state workerCount (do user chọn)
   const detectWorkerCount = useCallback(() => workerCount, [workerCount]);
 
-  // â”€â”€ Sub-sentence splitter â”€â”€
-  // Target 40-80 chars/chunk â€” sweet spot VITS inference latency
-  // Tá»« ná»‘i quan trá»ng â†’ pause dĂ i hÆ¡n
-  const CONNECTORS = /^(nhÆ°ng|tuy nhiĂªn|vĂ¬ váº­y|do Ä‘Ă³|tuy váº­y|máº·c dĂ¹|tháº¿ nhÆ°ng|bá»Ÿi vĂ¬|vĂ¬ tháº¿|cho nĂªn)/i;
+  // ── Sub-sentence splitter ──
+  // Target 40-80 chars/chunk — sweet spot VITS inference latency
+  // Từ nối quan trọng → pause dài hơn
+  const CONNECTORS = /^(nhưng|tuy nhiên|vì vậy|do đó|tuy vậy|mặc dù|thế nhưng|bởi vì|vì thế|cho nên)/i;
 
-  // Äáº¿m sá»‘ tá»« tiáº¿ng Viá»‡t
+  // Đếm số từ tiếng Việt
   const countWords = (s: string) => s.trim().split(/\s+/).length;
 
   const splitChunks = useCallback((text: string): Array<{ text: string; isClause: boolean; pauseMs: number }> => {
     const raw: Array<{ text: string; isClause: boolean; pauseMs: number }> = [];
 
-    // TĂ¡ch theo paragraph (\n) trÆ°á»›c â€” pause dĂ i nháº¥t
+    // Tách theo paragraph (\n) trước — pause dài nhất
     const paragraphs = text.split(/\n+/);
 
     for (let pi = 0; pi < paragraphs.length; pi++) {
       const para = paragraphs[pi].trim();
       if (!para) continue;
 
-      // TĂ¡ch cĂ¢u theo .!?â€¦
-      const sentences = para.match(/[^.!?â€¦]+(?:[.!?](?![.!?])|â€¦|\.{3})+|[^.!?â€¦]+$/g) ?? [para];
+      // Tách câu theo .!?…
+      const sentences = para.match(/[^.!?…]+(?:[.!?](?![.!?])|…|\.{3})+|[^.!?…]+$/g) ?? [para];
 
       for (let si = 0; si < sentences.length; si++) {
         const sent = sentences[si].trim();
@@ -477,10 +495,10 @@ export default function ListeningMobileAndroid({
 
         const isLastSentenceInPara = si === sentences.length - 1;
         const isLastPara           = pi === paragraphs.length - 1;
-        const hasEllipsis          = /\.{3}|â€¦/.test(sent);
+        const hasEllipsis          = /\.{3}|…/.test(sent);
         const hasDash              = /[\u2014\u2013]/.test(sent);
 
-        // CĂ¢u ngáº¯n â‰¤ 15 tá»« â†’ khĂ´ng tĂ¡ch thĂªm
+        // Câu ngắn ≤ 15 từ → không tách thêm
         if (countWords(sent) <= 15) {
           let pauseMs = 400;
           if (isLastSentenceInPara && !isLastPara) pauseMs = 640;
@@ -489,7 +507,7 @@ export default function ListeningMobileAndroid({
           continue;
         }
 
-        // CĂ¢u dĂ i â†’ tĂ¡ch theo dáº¥u phá»¥: , ; : â€” â€¦
+        // Câu dài → tách theo dấu phụ: , ; : — …
         const parts: string[] = [];
         let buf = '';
         for (let ci = 0; ci < sent.length; ci++) {
@@ -500,7 +518,7 @@ export default function ListeningMobileAndroid({
         }
         if (buf.trim()) parts.push(buf.trim());
 
-        // Merge part < 4 tá»« vá»›i part sau
+        // Merge part < 4 từ với part sau
         for (let k = 0; k < parts.length; k++) {
           if (countWords(parts[k]) < 4 && k < parts.length - 1) {
             parts[k + 1] = parts[k] + ' ' + parts[k + 1];
@@ -515,7 +533,7 @@ export default function ListeningMobileAndroid({
           const nextText        = k + 1 < validParts.length ? validParts[k + 1] : '';
           const isBeforeConnector = CONNECTORS.test(nextText.trimStart());
           const partHasDash     = /[\u2014\u2013]/.test(p);
-          const partHasEllipsis = /\.{3}|â€¦/.test(p);
+          const partHasEllipsis = /\.{3}|…/.test(p);
 
           let pauseMs: number;
           if (!isClause) {
@@ -533,7 +551,7 @@ export default function ListeningMobileAndroid({
       }
     }
 
-    // Merge chunk < 3 tá»« vá»›i chunk káº¿
+    // Merge chunk < 3 từ với chunk kế
     const merged: Array<{ text: string; isClause: boolean; pauseMs: number }> = [];
     for (let i = 0; i < raw.length; i++) {
       const cur = raw[i];
@@ -547,15 +565,15 @@ export default function ListeningMobileAndroid({
   }, []);
 
 
-  // â”€â”€ prefetchNextChapter: generate ngáº§m chÆ°Æ¡ng tiáº¿p theo â€” pipeline song song nhÆ° streamChapter â”€â”€
+  // ── prefetchNextChapter: generate ngầm chương tiếp theo — pipeline song song như streamChapter ──
   const prefetchNextChapter = useCallback(async (nextMeta: { id: string; index: number; title: string }) => {
     if (prefetchedChapRef.current?.id === nextMeta.id && prefetchDoneRef.current) {
       console.log(`[W:Prefetch] SKIP: already done id=${nextMeta.id}`);
       return;
     }
 
-    // â”€â”€ Resume case: goToChapter Ä‘Ă£ restore buffer partial + spawn workers má»›i â”€â”€
-    // Nháº­n ra báº±ng: cĂ¹ng id + chÆ°a done + Ä‘Ă£ cĂ³ chap + Ä‘Ă£ cĂ³ chunks trong buffer
+    // ── Resume case: goToChapter đã restore buffer partial + spawn workers mới ──
+    // Nhận ra bằng: cùng id + chưa done + đã có chap + đã có chunks trong buffer
     const isResume = prefetchingIdRef.current === nextMeta.id
                   && !prefetchDoneRef.current
                   && prefetchedChapRef.current?.id === nextMeta.id
@@ -565,14 +583,14 @@ export default function ListeningMobileAndroid({
     let resumeFromIndex = 0;
 
     if (isResume) {
-      console.log(`[W:Prefetch] RESUME: id=${nextMeta.id} tá»« chunk ${prefetchedPCMRef.current.length}`);
+      console.log(`[W:Prefetch] RESUME: id=${nextMeta.id} từ chunk ${prefetchedPCMRef.current.length}`);
       prefetchStopRef.current = false;
       chap = prefetchedChapRef.current!;
       resumeFromIndex = prefetchedPCMRef.current.length;
     } else {
       console.log(`[W:Prefetch] START: id=${nextMeta.id} title="${nextMeta.title}"`);
 
-      // Set ngay láº­p tá»©c Ä‘á»ƒ trĂ¡nh gá»i láº¡i nhiá»u láº§n tá»« pollPlayed
+      // Set ngay lập tức để tránh gọi lại nhiều lần từ pollPlayed
       prefetchingIdRef.current = nextMeta.id;
 
       // Reset
@@ -607,13 +625,13 @@ export default function ListeningMobileAndroid({
       blobs: {},
     };
 
-    const text   = stripHtml((chap.title ? `ChÆ°Æ¡ng ${chap.index}. ${cleanTitle(chap.title, chap.index)}. ` : '') + chap.content);
+    const text   = stripHtml((chap.title ? `Chương ${chap.index}. ${cleanTitle(chap.title, chap.index)}. ` : '') + chap.content);
     const chunks = splitChunks(text);
     const total  = chunks.length;
-    prefetchTotalRef.current = total; // biáº¿t tá»•ng ngay sau splitChunks â†’ playFromPrefetchBuffer dĂ¹ng Ä‘Æ°á»£c
+    prefetchTotalRef.current = total; // biết tổng ngay sau splitChunks → playFromPrefetchBuffer dùng được
 
-    // â”€â”€ Song song nhÆ° streamChapter â”€â”€
-    // phonemeQueue + resolvers Ä‘á»ƒ stage1 notify stage2 ngay láº­p tá»©c
+    // ── Song song như streamChapter ──
+    // phonemeQueue + resolvers để stage1 notify stage2 ngay lập tức
     const phonemeQueue: Array<{ ids: number[]; isClause: boolean; pauseMs: number } | null> = new Array(total).fill(null);
     const phonemeResolvers: Array<((val: { ids: number[]; isClause: boolean; pauseMs: number }) => void) | null> = new Array(total).fill(null);
 
@@ -622,7 +640,7 @@ export default function ListeningMobileAndroid({
       return new Promise(resolve => { phonemeResolvers[i] = resolve; });
     };
 
-    // Stage 1: phonemize â€” resume: bá» qua chunks Ä‘Ă£ cĂ³, báº¯t Ä‘áº§u tá»« resumeFromIndex
+    // Stage 1: phonemize — resume: bỏ qua chunks đã có, bắt đầu từ resumeFromIndex
     const phonemizeWorker = pool[0];
     const phonemizeAll = (async () => {
       for (let i = resumeFromIndex; i < total; i++) {
@@ -649,17 +667,17 @@ export default function ListeningMobileAndroid({
       }
     })();
 
-    // Stage 2: N infer workers cháº¡y song song â€” lÆ°u PCM theo thá»© tá»±
-    // Resume: pcmBuffer giá»¯ láº¡i pháº§n Ä‘Ă£ cĂ³, nextTask báº¯t Ä‘áº§u tá»« resumeFromIndex
+    // Stage 2: N infer workers chạy song song — lưu PCM theo thứ tự
+    // Resume: pcmBuffer giữ lại phần đã có, nextTask bắt đầu từ resumeFromIndex
     const pcmBuffer: Array<{ pcm: Float32Array; sampleRate: number; isClause: boolean; pauseMs: number } | null> = new Array(total).fill(null);
-    // Restore pháº§n Ä‘Ă£ cĂ³ vĂ o pcmBuffer (resume case)
+    // Restore phần đã có vào pcmBuffer (resume case)
     for (let i = 0; i < resumeFromIndex; i++) {
       if (prefetchedPCMRef.current[i]) pcmBuffer[i] = prefetchedPCMRef.current[i];
     }
-    let nextTask = resumeFromIndex; // resume: bá» qua chunks Ä‘Ă£ cĂ³
+    let nextTask = resumeFromIndex; // resume: bỏ qua chunks đã có
 
     const consumers = pool.map((worker: Worker, wIdx: number) => {
-      if (pool.length > 1 && wIdx === 0) return Promise.resolve(); // worker[0] dĂ nh phonemize
+      if (pool.length > 1 && wIdx === 0) return Promise.resolve(); // worker[0] dành phonemize
       return (async () => {
         while (true) {
           if (prefetchStopRef.current) break;
@@ -685,7 +703,7 @@ export default function ListeningMobileAndroid({
             });
             if (!prefetchStopRef.current) {
               pcmBuffer[i] = { ...pcmResult, isClause, pauseMs };
-              // Push ngay vĂ o prefetchedPCMRef Ä‘á»ƒ pollNewChunks schedule Ä‘Æ°á»£c
+              // Push ngay vào prefetchedPCMRef để pollNewChunks schedule được
               prefetchedPCMRef.current[i] = { ...pcmResult, isClause, pauseMs };
               console.log(`[Prefetch:W${wIdx}] chunk ${i}/${total-1} done`);
             }
@@ -699,7 +717,7 @@ export default function ListeningMobileAndroid({
     if (!prefetchStopRef.current) {
       prefetchedPCMRef.current = pcmBuffer.filter(Boolean) as typeof prefetchedPCMRef.current;
       prefetchDoneRef.current  = true;
-      console.log(`[W:Prefetch] Done: ${chap.title} id=${chap.id} â€” ${prefetchedPCMRef.current.length} chunks`);
+      console.log(`[W:Prefetch] Done: ${chap.title} id=${chap.id} — ${prefetchedPCMRef.current.length} chunks`);
     }
   }, [voices, selectedVoice, splitChunks]);
 
@@ -721,7 +739,7 @@ export default function ListeningMobileAndroid({
 
     const actx = getActx();
 
-    // Worker pool â€” raw Worker (khĂ´ng qua Piper class)
+    // Worker pool — raw Worker (không qua Piper class)
     const workerCount = detectWorkerCount();
     workerCountRef.current = workerCount;
     const makeWorker = () => new Worker(`/workers/tts-worker.js?v=pcm1`, { type: 'module' });
@@ -729,8 +747,8 @@ export default function ListeningMobileAndroid({
     while (workerPoolRef.current.length > workerCount) {
       try { workerPoolRef.current.pop()?.terminate(); } catch {}
     }
-    console.log(`[TTS] Worker pool: ${workerPoolRef.current.length} workers â€” phonemize=worker[0], infer=worker[1..${workerPoolRef.current.length - 1}]`);
-    console.log(`[TTS] Chapter: ${chapter.title} â€” chunks will be split from text`);
+    console.log(`[TTS] Worker pool: ${workerPoolRef.current.length} workers — phonemize=worker[0], infer=worker[1..${workerPoolRef.current.length - 1}]`);
+    console.log(`[TTS] Chapter: ${chapter.title} — chunks will be split from text`);
 
     const voiceMeta = voices.find(v => v.id === selectedVoice);
     const modelBase = `${R2_BASE}/models/custom/${voiceMeta?.path ?? selectedVoice}`;
@@ -750,13 +768,13 @@ export default function ListeningMobileAndroid({
 
     const chapIndex = chapter.index;
 
-    // phonemeQueue[i]: null = chÆ°a xong, object = Ä‘Ă£ cĂ³ phonemeIds
+    // phonemeQueue[i]: null = chưa xong, object = đã có phonemeIds
     const phonemeQueue: Array<{ ids: number[]; isClause: boolean; pauseMs: number } | null> = new Array(chunks.length).fill(null);
-    // phonemeResolvers[i]: resolve callback â€” notify consumer ngay khi phonemize xong
+    // phonemeResolvers[i]: resolve callback — notify consumer ngay khi phonemize xong
     const phonemeResolvers: Array<((val: { ids: number[]; isClause: boolean; pauseMs: number }) => void) | null> = new Array(chunks.length).fill(null);
 
-    // Stage 1: phonemize toĂ n bá»™ chunks trĂªn worker[0] tuáº§n tá»± (nhanh, ~vĂ i ms/chunk)
-    // Cháº¡y song song vá»›i stage 2 bĂªn dÆ°á»›i
+    // Stage 1: phonemize toàn bộ chunks trên worker[0] tuần tự (nhanh, ~vài ms/chunk)
+    // Chạy song song với stage 2 bên dưới
     const phonemizeWorker = workerPoolRef.current[0];
     const phonemizeAll = (async () => {
       for (let i = 0; i < chunks.length; i++) {
@@ -768,7 +786,7 @@ export default function ListeningMobileAndroid({
               phonemizeWorker.removeEventListener('message', h);
               const val = { ids: e.data.phonemeIds, isClause: chunks[i].isClause, pauseMs: chunks[i].pauseMs };
               phonemeQueue[i] = val;
-              // Notify consumer ngay láº­p tá»©c â€” khĂ´ng cáº§n polling
+              // Notify consumer ngay lập tức — không cần polling
               phonemeResolvers[i]?.(val);
               phonemeResolvers[i] = null;
               resolve();
@@ -786,59 +804,29 @@ export default function ListeningMobileAndroid({
 
     
 
-    // â”€â”€ handleChapterEnd: Ä‘Æ°á»£c gá»i tá»« onEnded chunk cuá»‘i â€” hoáº¡t Ä‘á»™ng khi táº¯t mĂ n hĂ¬nh â”€â”€
-    const handleChapterEnd = () => {
-      if (audioHandledGlobalRef.current) return;
-      if (activeChapIndexRef.current !== chapIndex) return;
-      audioHandledGlobalRef.current = true;
-      setSentencePlayed(generatedRef.current);
-      setIsPlaying(false);
-      setCompletedChapters(prev => new Set(prev).add(chapIndex));
-
-      const sorted2  = [...allChapters].sort((a, b) => a.index - b.index);
-      const nextMeta = sorted2.find(c => c.index > chapIndex);
-      console.log(`[W:AutoNext] onEnded â€” nextMeta=${nextMeta?.id ?? 'null'} prefetchDone=${prefetchDoneRef.current}`);
-      if (!nextMeta) { console.log('[W:AutoNext] KhĂ´ng cĂ³ chÆ°Æ¡ng tiáº¿p â€” dá»«ng'); return; }
-
-      const hasPrefetch = prefetchedChapRef.current?.id === nextMeta.id &&
-                          (prefetchDoneRef.current || prefetchingIdRef.current === nextMeta.id);
-      if (hasPrefetch) {
-        const nextChap = prefetchedChapRef.current!;
-        setLoadedChapters(prev => ({ ...prev, [nextMeta.index]: nextChap }));
-        setCurrentChapter(nextChap);
-        router.replace(`/truyen/${slug}/nghe?chuong=${nextMeta.index}`, { scroll: false });
-        playFromPrefetchBuffer(nextChap);
-      } else {
-        fetch(`/api/chapters/${nextMeta.id}`)
-          .then(r => r.json())
-          .then((res: any) => {
-            const nextChap: Chapter = res.data ?? res;
-            setLoadedChapters(prev => ({ ...prev, [nextMeta.index]: nextChap }));
-            setCurrentChapter(nextChap);
-            router.replace(`/truyen/${slug}/nghe?chuong=${nextMeta.index}`, { scroll: false });
-            streamChapterRef.current?.(nextChap);
-          });
-      }
-    };
-    autoNextCallbackRef.current = handleChapterEnd;
-
-    // â”€â”€ pollPlayed: chá»‰ Ä‘á»ƒ update UI sentencePlayed â€” khĂ´ng dĂ¹ng Ä‘á»ƒ auto-next â”€â”€
     const pollPlayed = () => {
       if (stopFlagRef.current) { console.log('[W:Poll] stopped by stopFlag'); return; }
-      if (audioHandledGlobalRef.current) return;
-      if (activeChapIndexRef.current !== chapIndex) { console.log(`[W:Poll] stale â€” chapIndex=${chapIndex} active=${activeChapIndexRef.current} â€” dá»«ng`); return; }
+      if (audioHandledGlobalRef.current) return; // silent — đã xử lý rồi
+      if (activeChapIndexRef.current !== chapIndex) { console.log(`[W:Poll] stale — chapIndex=${chapIndex} active=${activeChapIndexRef.current} — dừng`); return; }
       const actxNow = actxRef.current;
-      if (!actxNow) { console.log('[W:Poll] no actx â€” actxRef null'); return; }
+      if (!actxNow) { console.log('[W:Poll] no actx — actxRef null'); return; }
       const now = actxNow.currentTime;
 
       const played = endTimesRef.current.filter(t => t <= now).length;
       setSentencePlayed(played);
 
+      // Prefetch được trigger trong finally sau khi restart workers
+
+      // Đo RAM: ưu tiên measureUserAgentSpecificMemory (cần crossOriginIsolated)
+      // Fallback: performance.memory (JS heap only, không tính worker)
+      // Estimate thực tế: JS heap + workers (~62MB/worker × N) + phonemize WASM (~10MB)
       const nWorkers = workerPoolRef.current.length;
-      const estimateWorkerMB = nWorkers * 62 + 10;
+      const estimateWorkerMB = nWorkers * 62 + 10; // model + phonemize WASM
       if ((performance as any).measureUserAgentSpecificMemory) {
         (performance as any).measureUserAgentSpecificMemory()
-          .then((result: any) => { setRamMB(Math.round(result.bytes / 1024 / 1024)); })
+          .then((result: any) => {
+            setRamMB(Math.round(result.bytes / 1024 / 1024));
+          })
           .catch(() => {
             const mem = (performance as any).memory;
             const jsMB = mem ? Math.round(mem.totalJSHeapSize / 1024 / 1024) : 0;
@@ -847,17 +835,63 @@ export default function ListeningMobileAndroid({
       } else {
         const mem = (performance as any).memory;
         const jsMB = mem ? Math.round(mem.totalJSHeapSize / 1024 / 1024) : 0;
+        // Cộng estimate worker memory vì performance.memory không tính worker
         setRamMB(jsMB + estimateWorkerMB);
       }
 
-      if (!audioHandledGlobalRef.current) setTimeout(pollPlayed, 500);
+      // audioEmpty: tất cả scheduled audio đã phát xong
+      // Dùng endTimesRef.current cuối cùng thay vì nextStartRef
+      // vì nextStartRef = thời điểm tương lai, không biết khi nào "hết"
+      const lastEndTime = endTimesRef.current[endTimesRef.current.length - 1] ?? 0;
+      const audioEmpty  = pipelineDone.current && lastEndTime > 0 && now >= lastEndTime - 0.3;
+      if (audioEmpty) {
+        if (audioHandledGlobalRef.current) return; // đã bị cái khác xử lý rồi
+        audioHandledGlobalRef.current = true; // claim ngay — atomic trong JS single-thread
+        setSentencePlayed(generatedRef.current);
+        setIsPlaying(false);
+        setCompletedChapters(prev => new Set(prev).add(chapIndex));
+
+        // Auto next — dùng prefetch buffer nếu có, không fetch lại
+        const sorted2  = [...allChapters].sort((a, b) => a.index - b.index);
+        const nextMeta = sorted2.find(c => c.index > chapIndex);
+        console.log(`[W:AutoNext] nextMeta=${nextMeta?.id ?? 'null'} prefetchId=${prefetchingIdRef.current} prefetchDone=${prefetchDoneRef.current} prefetchChap=${prefetchedChapRef.current?.id ?? 'null'}`);
+        if (!nextMeta) { console.log('[W:AutoNext] Không có chương tiếp — dừng'); return; }
+
+        // Có prefetch (đủ hoặc đang chạy) → play ngay, pollNewChunks sẽ schedule tiếp
+        const hasPrefetch = prefetchedChapRef.current?.id === nextMeta.id &&
+                            (prefetchDoneRef.current || prefetchingIdRef.current === nextMeta.id);
+        console.log(`[W:AutoNext] hasPrefetch=${hasPrefetch} prefetchDone=${prefetchDoneRef.current}`);
+        if (hasPrefetch) {
+          const nextChap = prefetchedChapRef.current!;
+          console.log(`[W:AutoNext] Play ngay từ buffer (partial ok): ${nextChap.title} chunks=${prefetchedPCMRef.current.length}`);
+          setLoadedChapters(prev => ({ ...prev, [nextMeta.index]: nextChap }));
+          setCurrentChapter(nextChap);
+          router.replace(`/truyen/${slug}/nghe?chuong=${nextMeta.index}`, { scroll: false });
+          playFromPrefetchBuffer(nextChap);
+        } else {
+          console.log(`[W:AutoNext] Buffer không có — fetch chapter ${nextMeta.id}...`);
+          fetch(`/api/chapters/${nextMeta.id}`)
+            .then(r => r.json())
+            .then((res: any) => {
+              const nextChap: Chapter = res.data ?? res;
+              console.log(`[W:AutoNext] Fetch xong: ${nextChap.title} — gọi streamChapter`);
+              setLoadedChapters(prev => ({ ...prev, [nextMeta.index]: nextChap }));
+              setCurrentChapter(nextChap);
+              router.replace(`/truyen/${slug}/nghe?chuong=${nextMeta.index}`, { scroll: false });
+              streamChapterRef.current?.(nextChap);
+            });
+        }
+        return;
+      }
+
+      setTimeout(pollPlayed, 100);
     };
 
     try {
-      // â”€â”€ Task Queue + PCM pipeline â”€â”€
-      // Stage 1: worker[0] phonemize táº¥t cáº£ chunks â†’ phonemeQueue (nhanh, song song)
-      // Stage 2: N workers láº¥y phonemeIds â†’ ONNX infer â†’ raw PCM â†’ schedulePCM
-      // Thá»© tá»± audio: slotPromise chain
+      // ── Task Queue + PCM pipeline ──
+      // Stage 1: worker[0] phonemize tất cả chunks → phonemeQueue (nhanh, song song)
+      // Stage 2: N workers lấy phonemeIds → ONNX infer → raw PCM → schedulePCM
+      // Thứ tự audio: slotPromise chain
 
       const pool  = workerPoolRef.current;
       const total = chunks.length;
@@ -869,16 +903,16 @@ export default function ListeningMobileAndroid({
 
       let nextTask = 0;
 
-      // Chá» phonemeQueue[i] sáºµn sĂ ng â€” Promise, khĂ´ng polling
+      // Chờ phonemeQueue[i] sẵn sàng — Promise, không polling
       const waitPhoneme = (i: number): Promise<{ ids: number[]; isClause: boolean; pauseMs: number }> => {
         if (phonemeQueue[i]) return Promise.resolve(phonemeQueue[i]!);
         return new Promise(resolve => { phonemeResolvers[i] = resolve; });
       };
 
-      // Consumer: worker[wIdx] láº¥y tasks, infer, schedule PCM
-      // Worker[0] Ä‘ang lĂ m phonemize â†’ náº¿u cĂ³ > 1 worker thĂ¬ worker[0] chá»‰ phonemize
+      // Consumer: worker[wIdx] lấy tasks, infer, schedule PCM
+      // Worker[0] đang làm phonemize → nếu có > 1 worker thì worker[0] chỉ phonemize
       const consumers = pool.map((worker: Worker, wIdx: number) => {
-        if (pool.length > 1 && wIdx === 0) return Promise.resolve(); // worker[0] dĂ nh cho phonemize
+        if (pool.length > 1 && wIdx === 0) return Promise.resolve(); // worker[0] dành cho phonemize
         return (async () => {
           while (true) {
             if (stopFlagRef.current) break;
@@ -888,7 +922,7 @@ export default function ListeningMobileAndroid({
             const { ids: phonemeIds, isClause, pauseMs } = await waitPhoneme(i);
             if (stopFlagRef.current) { slotReady[i](); break; }
 
-            // Gá»­i infer job â€” nháº­n raw PCM qua Transferable
+            // Gửi infer job — nhận raw PCM qua Transferable
             const jobId = `inf_${i}_${Date.now()}`;
             let pcmResult: { pcm: Float32Array; sampleRate: number };
             try {
@@ -913,20 +947,16 @@ export default function ListeningMobileAndroid({
             }
             if (stopFlagRef.current) { slotReady[i](); break; }
 
-            // Chá» chunk trÆ°á»›c schedule xong (Ä‘áº£m báº£o thá»© tá»± audio)
+            // Chờ chunk trước schedule xong (đảm bảo thứ tự audio)
             if (i > 0) await slotPromise[i - 1];
             if (stopFlagRef.current) { slotReady[i](); break; }
 
-            // Schedule PCM trá»±c tiáº¿p â€” zero-copy, khĂ´ng WAV, khĂ´ng Blob
-            // Chunk cuá»‘i (i === total-1) truyá»n handleChapterEnd vĂ o onEnded
-            const isLastChunk = i === total - 1;
-            const endTime = schedulePCM(actx, pcmResult.pcm, pcmResult.sampleRate, isClause, pauseMs,
-              isLastChunk ? () => autoNextCallbackRef.current?.() : undefined
-            );
+            // Schedule PCM trực tiếp — zero-copy, không WAV, không Blob
+            const endTime = schedulePCM(actx, pcmResult.pcm, pcmResult.sampleRate, isClause, pauseMs);
             endTimesRef.current.push(endTime);
             generatedRef.current++;
             setSentenceGenerated(generatedRef.current);
-            console.log(`[Worker:${wIdx}] chunk ${i}/${total-1} infer done â€” generated=${generatedRef.current}`);
+            console.log(`[Worker:${wIdx}] chunk ${i}/${total-1} infer done — generated=${generatedRef.current}`);
             slotReady[i]();
 
             if (generatedRef.current === BUFFER_AHEAD) {
@@ -951,33 +981,33 @@ export default function ListeningMobileAndroid({
       }
       stopFlagRef.current = false;
 
-      // Trigger prefetch náº¿u chÆ°a Ä‘Æ°á»£c trigger tá»« BUFFER_AHEAD
+      // Trigger prefetch nếu chưa được trigger từ BUFFER_AHEAD
       const sortedP   = [...allChapters].sort((a, b) => a.index - b.index);
       const nextMetaP = sortedP.find(c => c.index > chapIndex);
-      console.log(`[W:Finally] pipelineDone â€” chapIndex=${chapIndex} nextMeta=${nextMetaP?.id ?? 'null'} prefetchingId=${prefetchingIdRef.current} prefetchDone=${prefetchDoneRef.current}`);
+      console.log(`[W:Finally] pipelineDone — chapIndex=${chapIndex} nextMeta=${nextMetaP?.id ?? 'null'} prefetchingId=${prefetchingIdRef.current} prefetchDone=${prefetchDoneRef.current}`);
       if (nextMetaP && prefetchingIdRef.current !== nextMetaP.id && !prefetchDoneRef.current) {
-        console.log(`[W:Finally] Trigger prefetch (chÆ°a cĂ³ tá»« BUFFER_AHEAD): ${nextMetaP.id}`);
+        console.log(`[W:Finally] Trigger prefetch (chưa có từ BUFFER_AHEAD): ${nextMetaP.id}`);
         prefetchingIdRef.current = nextMetaP.id;
         prefetchNextChapter(nextMetaP);
       } else {
-        console.log(`[W:Finally] Prefetch Ä‘Ă£ cháº¡y rá»“i â€” skip`);
+        console.log(`[W:Finally] Prefetch đã chạy rồi — skip`);
       }
 
-      // Kick pollPlayed chá»‰ Ä‘á»ƒ update UI sentencePlayed â€” auto-next Ä‘Ă£ xá»­ lĂ½ báº±ng onEnded
-      setTimeout(pollPlayed, 200);
+      // Kick pollPlayed
+      setTimeout(pollPlayed, 100);
     }
   }, [selectedVoice, voices, getActx, schedulePCM, scheduleChunk, splitChunks, allChapters, slug, router, detectWorkerCount, prefetchNextChapter]);
 
-  // â”€â”€ playFromPrefetchBuffer: play ngay chunks Ä‘Ă£ cĂ³, poll schedule chunks má»›i tá»« prefetch â”€â”€
+  // ── playFromPrefetchBuffer: play ngay chunks đã có, poll schedule chunks mới từ prefetch ──
   const playFromPrefetchBuffer = useCallback((chapter: Chapter) => {
     const chapIdx  = chapter.index;
     const isDone   = prefetchDoneRef.current;
-    // Snapshot total NGAY Láº¬P Tá»¨C â€” trÆ°á»›c khi pollFromBuffer trigger prefetch chÆ°Æ¡ng tiáº¿p
-    // vĂ  prefetchNextChapter ghi Ä‘Ă¨ prefetchTotalRef báº±ng total cá»§a chÆ°Æ¡ng sau
+    // Snapshot total NGAY LẬP TỨC — trước khi pollFromBuffer trigger prefetch chương tiếp
+    // và prefetchNextChapter ghi đè prefetchTotalRef bằng total của chương sau
     const snapshotTotal = prefetchTotalRef.current;
-    prefetchTotalRef.current = 0; // reset Ä‘á»ƒ chÆ°Æ¡ng tiáº¿p khĂ´ng Ä‘á»c nháº§m
-    // KHĂ”NG snapshot buffer â€” Ä‘á»c trá»±c tiáº¿p prefetchedPCMRef Ä‘á»ƒ tháº¥y chunks má»›i
-    console.log(`[W:PlayBuffer] START: "${chapter.title}" chunks cĂ³ sáºµn=${prefetchedPCMRef.current.length} prefetchDone=${isDone}`);
+    prefetchTotalRef.current = 0; // reset để chương tiếp không đọc nhầm
+    // KHÔNG snapshot buffer — đọc trực tiếp prefetchedPCMRef để thấy chunks mới
+    console.log(`[W:PlayBuffer] START: "${chapter.title}" chunks có sẵn=${prefetchedPCMRef.current.length} prefetchDone=${isDone}`);
 
     stopFlagRef.current  = false;
     pipelineDone.current = false;
@@ -989,73 +1019,32 @@ export default function ListeningMobileAndroid({
     setIsPlaying(true);
     setSentencePlayed(0);
     setSentenceGenerated(0);
-    // DĂ¹ng prefetchTotalRef náº¿u cĂ³ (biáº¿t ngay sau splitChunks trong prefetchNextChapter)
-    // fallback vá» sá»‘ chunks Ä‘ang cĂ³ náº¿u chÆ°a cĂ³ total
+    // Dùng prefetchTotalRef nếu có (biết ngay sau splitChunks trong prefetchNextChapter)
+    // fallback về số chunks đang có nếu chưa có total
     const knownTotal = snapshotTotal > 0 ? snapshotTotal : prefetchedPCMRef.current.length;
     if (knownTotal > 0) setSentenceTotal(knownTotal);
 
     const actx = getActx();
 
-    // â”€â”€ handleBufferEnd: gá»i tá»« onEnded chunk cuá»‘i â€” hoáº¡t Ä‘á»™ng khi táº¯t mĂ n hĂ¬nh â”€â”€
-    const handleBufferEnd = () => {
-      if (audioHandledGlobalRef.current) return;
-      if (activeChapIndexRef.current !== chapIdx) return;
-      audioHandledGlobalRef.current = true;
-      setSentencePlayed(generatedRef.current);
-      setIsPlaying(false);
-      setCompletedChapters(prev => new Set(prev).add(chapIdx));
-
-      const sortedB  = [...allChapters].sort((a, b) => a.index - b.index);
-      const nextMeta = sortedB.find(c => c.index > chapIdx);
-      console.log(`[W:AutoNext] onEnded (buffer) â€” nextMeta=${nextMeta?.id ?? 'null'} prefetchDone=${prefetchDoneRef.current}`);
-      if (!nextMeta) return;
-
-      const hasPrefetch = prefetchedChapRef.current?.id === nextMeta.id &&
-                          (prefetchDoneRef.current || prefetchingIdRef.current === nextMeta.id);
-      if (hasPrefetch) {
-        const nextChap = prefetchedChapRef.current!;
-        setLoadedChapters(prev => ({ ...prev, [nextMeta.index]: nextChap }));
-        setCurrentChapter(nextChap);
-        router.replace(`/truyen/${slug}/nghe?chuong=${nextMeta.index}`, { scroll: false });
-        playFromPrefetchBufferRef.current?.(nextChap);
-      } else {
-        fetch(`/api/chapters/${nextMeta.id}`)
-          .then(r => r.json())
-          .then((res: any) => {
-            const nextChap: Chapter = res.data ?? res;
-            setLoadedChapters(prev => ({ ...prev, [nextMeta.index]: nextChap }));
-            setCurrentChapter(nextChap);
-            router.replace(`/truyen/${slug}/nghe?chuong=${nextMeta.index}`, { scroll: false });
-            streamChapterRef.current?.(nextChap);
-          });
-      }
-    };
-    autoNextCallbackRef.current = handleBufferEnd;
-
-    // â”€â”€ scheduleAvailable: schedule chunk Ä‘Ă£ cĂ³ + gáº¯n onEnded vĂ o chunk cuá»‘i â”€â”€
-    // Schedule chunks Ä‘Ă£ cĂ³ ngay láº­p tá»©c
+    // Schedule chunks đã có ngay lập tức
     let scheduledCount = 0;
-    const scheduleAvailable = (isLastBatch = false) => {
+    const scheduleAvailable = () => {
       const allChunks = prefetchedPCMRef.current;
-      const prevCount = scheduledCount;
       while (scheduledCount < allChunks.length && allChunks[scheduledCount] != null) {
         if (stopFlagRef.current) break;
-        const item = allChunks[scheduledCount];
-        const isLast = isLastBatch && scheduledCount === allChunks.length - 1;
-        schedulePCM(actx, item.pcm, item.sampleRate, item.isClause, item.pauseMs,
-          isLast ? () => autoNextCallbackRef.current?.() : undefined
-        );
-        endTimesRef.current.push(nextStartRef.current);
+        const item    = allChunks[scheduledCount];
+        const endTime = schedulePCM(actx, item.pcm, item.sampleRate, item.isClause, item.pauseMs);
+        endTimesRef.current.push(endTime);
         generatedRef.current++;
         scheduledCount++;
       }
-      if (scheduledCount > prevCount) setSentenceGenerated(generatedRef.current);
+      setSentenceGenerated(generatedRef.current);
     };
-    scheduleAvailable(isDone);
+    scheduleAvailable();
     console.log(`[W:PlayBuffer] Scheduled ${scheduledCount} chunks ngay`);
 
     if (isDone) {
-      // Prefetch Ä‘Ă£ xong hoĂ n toĂ n â€” clear buffer, set pipelineDone
+      // Prefetch đã xong hoàn toàn — clear buffer, set pipelineDone
       prefetchedPCMRef.current  = [];
       prefetchDoneRef.current   = false;
       prefetchedChapRef.current = null;
@@ -1063,29 +1052,28 @@ export default function ListeningMobileAndroid({
       pipelineDone.current      = true;
       setIsGenerating(false);
       setSentenceTotal(generatedRef.current);
-      console.log(`[W:PlayBuffer] prefetchDone=true â€” pipelineDone=true total=${generatedRef.current}`);
+      console.log(`[W:PlayBuffer] prefetchDone=true — pipelineDone=true total=${generatedRef.current}`);
     } else {
-      // Prefetch chÆ°a xong â€” poll Ä‘á»ƒ schedule chunks má»›i khi prefetch generate thĂªm
-      console.log(`[W:PlayBuffer] prefetchDone=false â€” poll schedule chunks má»›i`);
-
-      // Trigger prefetch chÆ°Æ¡ng tiáº¿p ngay náº¿u chÆ°a cĂ³
-      const triggerPrefetchNext = () => {
-        if (pipelineDone.current && prefetchingIdRef.current === null && !prefetchDoneRef.current) {
-          const sortedB  = [...allChapters].sort((a, b) => a.index - b.index);
-          const nextMeta = sortedB.find(c => c.index > chapIdx);
-          if (nextMeta) {
-            console.log(`[W:Prefetch] Trigger tá»« playBuffer: id=${nextMeta.id}`);
-            prefetchNextChapterRef.current?.(nextMeta);
-          }
-        }
-      };
+      // Prefetch chưa xong — poll để schedule chunks mới khi prefetch generate thêm
+      console.log(`[W:PlayBuffer] prefetchDone=false — poll schedule chunks mới`);
 
       const pollNewChunks = () => {
         if (stopFlagRef.current) { console.log('[W:PlayBuffer] pollNewChunks stopped'); return; }
 
+        // Schedule các chunks mới theo thứ tự liên tục — bỏ qua nếu chunk chưa có
+        const allChunks = prefetchedPCMRef.current;
+        while (scheduledCount < allChunks.length && allChunks[scheduledCount] != null) {
+          const item    = allChunks[scheduledCount];
+          const endTime = schedulePCM(actx, item.pcm, item.sampleRate, item.isClause, item.pauseMs);
+          endTimesRef.current.push(endTime);
+          generatedRef.current++;
+          scheduledCount++;
+        }
+        setSentenceGenerated(generatedRef.current);
+        console.log(`[W:PlayBuffer] pollNewChunks — scheduled=${scheduledCount} prefetchDone=${prefetchDoneRef.current}`);
+
         if (prefetchDoneRef.current) {
-          // Prefetch xong â€” schedule pháº§n cĂ²n láº¡i vá»›i onEnded chunk cuá»‘i
-          scheduleAvailable(true);
+          // Prefetch xong — clear buffer, set pipelineDone
           prefetchedPCMRef.current  = [];
           prefetchDoneRef.current   = false;
           prefetchedChapRef.current = null;
@@ -1093,27 +1081,88 @@ export default function ListeningMobileAndroid({
           pipelineDone.current      = true;
           setIsGenerating(false);
           setSentenceTotal(generatedRef.current);
-          console.log(`[W:PlayBuffer] Prefetch Done â€” tá»•ng ${generatedRef.current} chunks, pipelineDone=true`);
-          triggerPrefetchNext();
+          console.log(`[W:PlayBuffer] Prefetch Done — tổng ${generatedRef.current} chunks, pipelineDone=true`);
           return;
         }
 
-        scheduleAvailable(false);
-        console.log(`[W:PlayBuffer] pollNewChunks â€” scheduled=${scheduledCount} prefetchDone=${prefetchDoneRef.current}`);
         setTimeout(pollNewChunks, 100);
       };
       setTimeout(pollNewChunks, 100);
     }
+
+    // Poll theo dõi audio + chuyển chương
+    const pollFromBuffer = () => {
+      if (stopFlagRef.current) return;
+      if (audioHandledGlobalRef.current) return;
+      if (activeChapIndexRef.current !== chapIdx) { console.log(`[W:PlayBuffer] stale — chapIdx=${chapIdx} active=${activeChapIndexRef.current} — dừng`); return; }
+      const actxNow = actxRef.current;
+      if (!actxNow) return;
+      const now    = actxNow.currentTime;
+      const played = endTimesRef.current.filter(t => t <= now).length;
+      setSentencePlayed(played);
+
+      // Trigger prefetch chương tiếp khi pipelineDone
+      if (pipelineDone.current && prefetchingIdRef.current === null && !prefetchDoneRef.current) {
+        const sortedB  = [...allChapters].sort((a, b) => a.index - b.index);
+        const nextMeta = sortedB.find(c => c.index > chapIdx);
+        if (nextMeta) {
+          console.log(`[W:Prefetch] Trigger từ pollFromBuffer: id=${nextMeta.id}`);
+          prefetchNextChapterRef.current?.(nextMeta);
+        }
+      }
+
+      const lastEndTime = endTimesRef.current[endTimesRef.current.length - 1] ?? 0;
+      const audioEmpty  = pipelineDone.current && lastEndTime > 0 && now >= lastEndTime - 0.3;
+      if (audioEmpty) {
+        if (audioHandledGlobalRef.current) return; // đã bị pollPlayed xử lý rồi
+        audioHandledGlobalRef.current = true; // claim ngay
+        setSentencePlayed(generatedRef.current);
+        setIsPlaying(false);
+        setCompletedChapters(prev => new Set(prev).add(chapIdx));
+
+        const sortedB  = [...allChapters].sort((a, b) => a.index - b.index);
+        const nextMeta = sortedB.find(c => c.index > chapIdx);
+        console.log(`[W:AutoNext] audioEmpty (buffer) — nextMeta=${nextMeta?.id ?? 'null'} prefetchDone=${prefetchDoneRef.current}`);
+        if (!nextMeta) return;
+
+        // Có prefetch (done hay chưa done) → play ngay
+        const hasPrefetch = prefetchedChapRef.current?.id === nextMeta.id &&
+                            (prefetchDoneRef.current || prefetchingIdRef.current === nextMeta.id);
+        console.log(`[W:AutoNext] hasPrefetch=${hasPrefetch} prefetchDone=${prefetchDoneRef.current}`);
+        if (hasPrefetch) {
+          const nextChap = prefetchedChapRef.current!;
+          console.log(`[W:AutoNext] Play ngay từ buffer: ${nextChap.title} chunks=${prefetchedPCMRef.current.length}`);
+          setLoadedChapters(prev => ({ ...prev, [nextMeta.index]: nextChap }));
+          setCurrentChapter(nextChap);
+          router.replace(`/truyen/${slug}/nghe?chuong=${nextMeta.index}`, { scroll: false });
+          playFromPrefetchBufferRef.current?.(nextChap);
+        } else {
+          console.log(`[W:AutoNext] Fetch + stream: ${nextMeta.id}`);
+          fetch(`/api/chapters/${nextMeta.id}`)
+            .then(r => r.json())
+            .then((res: any) => {
+              const nextChap: Chapter = res.data ?? res;
+              setLoadedChapters(prev => ({ ...prev, [nextMeta.index]: nextChap }));
+              setCurrentChapter(nextChap);
+              router.replace(`/truyen/${slug}/nghe?chuong=${nextMeta.index}`, { scroll: false });
+              streamChapterRef.current?.(nextChap);
+            });
+        }
+        return;
+      }
+      setTimeout(pollFromBuffer, 100);
+    };
+    setTimeout(pollFromBuffer, 100);
   }, [getActx, schedulePCM, allChapters, slug, router]);
 
-  // â”€â”€ Sync refs Ä‘á»ƒ trĂ¡nh circular dependency â”€â”€
+  // ── Sync refs để tránh circular dependency ──
   useEffect(() => {
     streamChapterRef.current          = streamChapter;
     playFromPrefetchBufferRef.current = playFromPrefetchBuffer;
     prefetchNextChapterRef.current    = prefetchNextChapter;
   }, [streamChapter, playFromPrefetchBuffer, prefetchNextChapter]);
 
-  // â”€â”€ Play / Pause / Toggle â”€â”€
+  // ── Play / Pause / Toggle ──
   const handlePlay = useCallback(async () => {
     if (isPlaying) return;
     if (actxRef.current?.state === 'suspended') {
@@ -1130,17 +1179,17 @@ export default function ListeningMobileAndroid({
   }, []);
 
   const togglePlay = () => isPlaying ? handlePause() : handlePlay();
-  const skip       = (_secs: number) => {}; // seek khĂ´ng support vá»›i sentence streaming
+  const skip       = (_secs: number) => {}; // seek không support với sentence streaming
 
-  // â”€â”€ goToChapter: chuyá»ƒn chÆ°Æ¡ng + phĂ¡t luĂ´n â”€â”€
+  // ── goToChapter: chuyển chương + phát luôn ──
   const goToChapter = useCallback(async (meta: ChapterMeta) => {
     if (meta.index === currentIdx) return;
 
-    console.log(`[W:GoTo] chÆ°Æ¡ng ${meta.index} id=${meta.id} â€” prefetchingId=${prefetchingIdRef.current} prefetchChap=${prefetchedChapRef.current?.id ?? 'null'} prefetchDone=${prefetchDoneRef.current}`);
+    console.log(`[W:GoTo] chương ${meta.index} id=${meta.id} — prefetchingId=${prefetchingIdRef.current} prefetchChap=${prefetchedChapRef.current?.id ?? 'null'} prefetchDone=${prefetchDoneRef.current}`);
 
-    // â”€â”€ Snapshot prefetch state TRÆ¯á»C stopAll â”€â”€
-    // stopAll() sáº½ terminate workers + xĂ³a sáº¡ch táº¥t cáº£ prefetch refs
-    // nĂªn pháº£i snapshot trÆ°á»›c Ä‘á»ƒ cĂ²n dĂ¹ng Ä‘Æ°á»£c sau
+    // ── Snapshot prefetch state TRƯỚC stopAll ──
+    // stopAll() sẽ terminate workers + xóa sạch tất cả prefetch refs
+    // nên phải snapshot trước để còn dùng được sau
     const isPrefetching  = prefetchingIdRef.current === meta.id && !prefetchDoneRef.current;
     const isPrefetchDone = prefetchedChapRef.current?.id === meta.id && prefetchDoneRef.current;
     const hasPrefetch    = isPrefetchDone || isPrefetching;
@@ -1149,7 +1198,7 @@ export default function ListeningMobileAndroid({
     const snapshotPCM    = hasPrefetch ? [...prefetchedPCMRef.current] : [];
     const snapshotDone   = isPrefetchDone;
 
-    // Stop audio hiá»‡n táº¡i + terminate workers + xĂ³a refs
+    // Stop audio hiện tại + terminate workers + xóa refs
     stopAll();
 
     setSentencePlayed(0);
@@ -1157,38 +1206,38 @@ export default function ListeningMobileAndroid({
     setSentenceTotal(snapshotPCM.length > 0 ? snapshotPCM.length : 0);
 
     if (hasPrefetch && snapshotChap) {
-      console.log(`[W:GoTo] DĂ¹ng prefetch â€” done=${snapshotDone} chunks=${snapshotPCM.length}`);
+      console.log(`[W:GoTo] Dùng prefetch — done=${snapshotDone} chunks=${snapshotPCM.length}`);
 
-      // Restore PCM buffer vĂ  metadata
+      // Restore PCM buffer và metadata
       prefetchedChapRef.current = snapshotChap;
       prefetchedPCMRef.current  = snapshotPCM;
       prefetchDoneRef.current   = snapshotDone;
       prefetchStopRef.current   = false;
 
       if (!snapshotDone) {
-        // Partial: cáº§n spawn láº¡i workers Ä‘á»ƒ generate tiáº¿p pháº§n cĂ²n thiáº¿u
-        // prefetchNextChapter sáº½ detect prefetchedChapRef.id === meta.id
-        // nhÆ°ng prefetchDone=false â†’ nĂ³ sáº½ reset vĂ  generate láº¡i tá»« Ä‘áº§u
-        // nĂªn set prefetchingIdRef TRÆ¯á»C Ä‘á»ƒ nĂ³ skip reset, generate tiáº¿p tá»« chunk Ä‘Ă£ cĂ³
+        // Partial: cần spawn lại workers để generate tiếp phần còn thiếu
+        // prefetchNextChapter sẽ detect prefetchedChapRef.id === meta.id
+        // nhưng prefetchDone=false → nó sẽ reset và generate lại từ đầu
+        // nên set prefetchingIdRef TRƯỚC để nó skip reset, generate tiếp từ chunk đã có
         prefetchingIdRef.current = meta.id;
 
-        // Spawn workers má»›i (workers cÅ© Ä‘Ă£ bá»‹ terminate bá»Ÿi stopAll)
+        // Spawn workers mới (workers cũ đã bị terminate bởi stopAll)
         const wCount = detectWorkerCount();
         const makeWorker = () => new Worker(`/workers/tts-worker.js?v=pcm1`, { type: 'module' });
         while (workerPoolRef.current.length < wCount) workerPoolRef.current.push(makeWorker());
-        console.log(`[W:GoTo] Spawned ${workerPoolRef.current.length} workers má»›i Ä‘á»ƒ resume prefetch`);
+        console.log(`[W:GoTo] Spawned ${workerPoolRef.current.length} workers mới để resume prefetch`);
 
-        // Resume generate tá»« chunk tiáº¿p theo sau pháº§n Ä‘Ă£ cĂ³
-        // prefetchNextChapterRef sáº½ generate vĂ  push vĂ o prefetchedPCMRef tá»« index snapshotPCM.length
+        // Resume generate từ chunk tiếp theo sau phần đã có
+        // prefetchNextChapterRef sẽ generate và push vào prefetchedPCMRef từ index snapshotPCM.length
         const resumeMeta = { id: snapshotChap.id, index: snapshotChap.index, title: snapshotChap.title };
         prefetchNextChapterRef.current?.(resumeMeta);
       } else {
-        // Done: spawn workers sáºµn sĂ ng Ä‘á»ƒ prefetch chÆ°Æ¡ng tiáº¿p theo (ch+2)
+        // Done: spawn workers sẵn sàng để prefetch chương tiếp theo (ch+2)
         prefetchingIdRef.current = null;
         const wCount = detectWorkerCount();
         const makeWorker = () => new Worker(`/workers/tts-worker.js?v=pcm1`, { type: 'module' });
         while (workerPoolRef.current.length < wCount) workerPoolRef.current.push(makeWorker());
-        console.log(`[W:GoTo] Spawned ${workerPoolRef.current.length} workers má»›i cho prefetch ch+2`);
+        console.log(`[W:GoTo] Spawned ${workerPoolRef.current.length} workers mới cho prefetch ch+2`);
       }
 
       setLoadedChapters(prev => ({ ...prev, [meta.index]: snapshotChap }));
@@ -1196,8 +1245,8 @@ export default function ListeningMobileAndroid({
       router.replace(`/truyen/${slug}/nghe?chuong=${meta.index}`, { scroll: false });
       playFromPrefetchBufferRef.current?.(snapshotChap);
     } else {
-      // KhĂ´ng cĂ³ prefetch gĂ¬ â€” fetch + stream bĂ¬nh thÆ°á»ng
-      console.log(`[W:GoTo] KhĂ´ng cĂ³ prefetch â€” fetch + stream`);
+      // Không có prefetch gì — fetch + stream bình thường
+      console.log(`[W:GoTo] Không có prefetch — fetch + stream`);
 
       let chap = loadedChapters[meta.index];
       if (!chap) {
@@ -1222,11 +1271,11 @@ export default function ListeningMobileAndroid({
   const increaseSpeed = () => setSpeed(s => Math.min(MAX_SPEED, Math.round((s + SPEED_STEP) * 100) / 100));
   const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // â”€â”€ Shared UI â”€â”€
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────
+  // ── Shared UI ──
+  // ─────────────────────────────────────────────────────────
 
-  // Debug panel â€” 4 Ă´ ngang, luĂ´n flex row
+  // Debug panel — 4 ô ngang, luôn flex row
   const DebugPanel = (
     <div>
       {/* Progress bar 2 layer */}
@@ -1236,22 +1285,22 @@ export default function ListeningMobileAndroid({
         <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#e8580a] to-[#ff7c35] rounded-full transition-all duration-500"
           style={{ width: sentenceTotal > 0 ? `${(sentencePlayed / sentenceTotal) * 100}%` : '0%' }} />
       </div>
-      {/* 4 Ă´ */}
+      {/* 4 ô */}
       <div className="mt-2 flex gap-1.5">
         <div className="flex-1 flex flex-col items-center py-2 px-1 rounded-lg bg-[#e8580a]/10 border border-[#e8580a]/20 min-w-0">
           <span className="text-[20px] font-black text-[#ff7c35] leading-none">{sentencePlayed}</span>
-          <span className="text-[8px] font-bold uppercase tracking-widest text-[#8a7e72] mt-1 whitespace-nowrap">â–¶ PhĂ¡t</span>
+          <span className="text-[8px] font-bold uppercase tracking-widest text-[#8a7e72] mt-1 whitespace-nowrap">▶ Phát</span>
         </div>
         <div className="flex-1 flex flex-col items-center py-2 px-1 rounded-lg bg-green-900/20 border border-green-700/20 min-w-0">
           <span className="text-[20px] font-black text-green-400 leading-none">{sentenceGenerated}</span>
-          <span className="text-[8px] font-bold uppercase tracking-widest text-[#8a7e72] mt-1 whitespace-nowrap">âœ“ Táº¡o</span>
+          <span className="text-[8px] font-bold uppercase tracking-widest text-[#8a7e72] mt-1 whitespace-nowrap">✓ Tạo</span>
         </div>
         <div className="flex-1 flex flex-col items-center py-2 px-1 rounded-lg bg-white/[0.04] border border-white/[0.06] min-w-0">
           <span className="text-[20px] font-black text-[#f0ebe4] leading-none">{sentenceTotal}</span>
-          <span className="text-[8px] font-bold uppercase tracking-widest text-[#8a7e72] mt-1 whitespace-nowrap">âˆ‘ Tá»•ng</span>
+          <span className="text-[8px] font-bold uppercase tracking-widest text-[#8a7e72] mt-1 whitespace-nowrap">∑ Tổng</span>
         </div>
         <div className="flex-1 flex flex-col items-center py-2 px-1 rounded-lg bg-blue-900/20 border border-blue-700/20 min-w-0">
-          <span className="text-[20px] font-black text-blue-400 leading-none">{ramMB ?? 'â€”'}</span>
+          <span className="text-[20px] font-black text-blue-400 leading-none">{ramMB ?? '—'}</span>
           <span className="text-[8px] font-bold uppercase tracking-widest text-[#8a7e72] mt-1 whitespace-nowrap">MB RAM</span>
         </div>
       </div>
@@ -1283,6 +1332,16 @@ export default function ListeningMobileAndroid({
         className="w-9 h-9 rounded-full bg-[#231f1a] border border-white/[0.07] flex items-center justify-center text-[#8a7e72] disabled:opacity-30 hover:text-white transition-colors">
         <SkipForward size={16} />
       </button>
+      {/* PWA Install button — chỉ hiện khi chưa install và có prompt */}
+      {!pwaInstalled && deferredPrompt && (
+        <button onClick={handleInstallPWA}
+          title="Cài app để nghe khi tắt màn hình"
+          className="w-9 h-9 rounded-full bg-[#231f1a] border border-[#e8580a]/40 flex items-center justify-center text-[#e8580a] hover:bg-[#e8580a]/10 transition-colors active:scale-95">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2v13M7 11l5 5 5-5"/><path d="M3 19h18v2H3z"/>
+          </svg>
+        </button>
+      )}
     </div>
   );
 
@@ -1292,9 +1351,9 @@ export default function ListeningMobileAndroid({
       <div className="relative flex-1">
         <button onClick={() => setShowVoiceMenu(v => !v)}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-[#231f1a] border border-white/[0.07] hover:border-[#e8580a]/30 transition-colors">
-          <span className="text-sm">đŸ™</span>
+          <span className="text-sm">🎙</span>
           <span className="text-[11px] font-bold text-[#f0ebe4] flex-1 text-left truncate">
-            {voices.find(v => v.id === selectedVoice)?.name ?? 'Chá»n giá»ng'}
+            {voices.find(v => v.id === selectedVoice)?.name ?? 'Chọn giọng'}
           </span>
           <ChevronDown size={12} className="text-[#8a7e72]" />
         </button>
@@ -1313,7 +1372,7 @@ export default function ListeningMobileAndroid({
       </div>
       <div className="flex items-center gap-1 rounded-xl bg-[#231f1a] border border-[#e8580a]/35 overflow-hidden">
         <button onClick={decreaseSpeed} disabled={speed <= MIN_SPEED}
-          className="px-2.5 py-2 text-[#e8580a] text-[13px] font-black hover:bg-[#e8580a]/15 transition-colors disabled:opacity-30">âˆ’</button>
+          className="px-2.5 py-2 text-[#e8580a] text-[13px] font-black hover:bg-[#e8580a]/15 transition-colors disabled:opacity-30">−</button>
         <span className="text-[#e8580a] text-[11px] font-black min-w-[32px] text-center">{speed.toFixed(2)}x</span>
         <button onClick={increaseSpeed} disabled={speed >= MAX_SPEED}
           className="px-2.5 py-2 text-[#e8580a] text-[13px] font-black hover:bg-[#e8580a]/15 transition-colors disabled:opacity-30">+</button>
@@ -1326,11 +1385,11 @@ export default function ListeningMobileAndroid({
             const makeWorker = () => new Worker(`/workers/tts-worker.js?v=pcm1`, { type: 'module' });
             while (workerPoolRef.current.length < next) workerPoolRef.current.push(makeWorker());
             while (workerPoolRef.current.length > next) { try { workerPoolRef.current.pop()?.terminate(); } catch {} }
-            console.log(`[Worker] Pool resized â†’ ${workerPoolRef.current.length} workers`);
+            console.log(`[Worker] Pool resized → ${workerPoolRef.current.length} workers`);
           }}
           disabled={workerCount <= 2}
-          className="px-2.5 py-2 text-[#8a7e72] text-[13px] font-black hover:bg-white/[0.06] transition-colors disabled:opacity-30">âˆ’</button>
-        <span className="text-[#8a7e72] text-[11px] font-black min-w-[32px] text-center">â¡{workerCount}</span>
+          className="px-2.5 py-2 text-[#8a7e72] text-[13px] font-black hover:bg-white/[0.06] transition-colors disabled:opacity-30">−</button>
+        <span className="text-[#8a7e72] text-[11px] font-black min-w-[32px] text-center">⚡{workerCount}</span>
         <button
           onClick={() => {
             const next = Math.min(4, workerCount + 1);
@@ -1338,7 +1397,7 @@ export default function ListeningMobileAndroid({
             const makeWorker = () => new Worker(`/workers/tts-worker.js?v=pcm1`, { type: 'module' });
             while (workerPoolRef.current.length < next) workerPoolRef.current.push(makeWorker());
             while (workerPoolRef.current.length > next) { try { workerPoolRef.current.pop()?.terminate(); } catch {} }
-            console.log(`[Worker] Pool resized â†’ ${workerPoolRef.current.length} workers`);
+            console.log(`[Worker] Pool resized → ${workerPoolRef.current.length} workers`);
           }}
           disabled={workerCount >= 4}
           className="px-2.5 py-2 text-[#8a7e72] text-[13px] font-black hover:bg-white/[0.06] transition-colors disabled:opacity-30">+</button>
@@ -1346,7 +1405,7 @@ export default function ListeningMobileAndroid({
     </div>
   );
 
-  // â”€â”€ Worker Panel UI â”€â”€
+  // ── Worker Panel UI ──
   const maxWorker = (() => {
     if (!hwInfo) return 4;
     const maxByRam  = Math.max(1, Math.floor((hwInfo.ram * 1024 * 0.3) / 70));
@@ -1358,24 +1417,24 @@ export default function ListeningMobileAndroid({
     <div className="rounded-xl bg-[#1a1612] border border-white/[0.09] p-4 space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-black uppercase tracking-widest text-[#f0ebe4]">â¡ Luá»“ng Generate</span>
-        <button onClick={() => setShowWorkerPanel(false)} className="text-[#8a7e72] hover:text-white text-[11px]">âœ•</button>
+        <span className="text-[11px] font-black uppercase tracking-widest text-[#f0ebe4]">⚡ Luồng Generate</span>
+        <button onClick={() => setShowWorkerPanel(false)} className="text-[#8a7e72] hover:text-white text-[11px]">✕</button>
       </div>
 
       {/* HW info */}
       {hwInfo && (
         <div className="flex gap-2 text-[9px] text-[#8a7e72]">
-          <span className="px-2 py-0.5 rounded-full bg-white/[0.05]">đŸ–¥ {hwInfo.cores} cores</span>
-          <span className="px-2 py-0.5 rounded-full bg-white/[0.05]">đŸ’¾ {hwInfo.ram}GB RAM</span>
+          <span className="px-2 py-0.5 rounded-full bg-white/[0.05]">🖥 {hwInfo.cores} cores</span>
+          <span className="px-2 py-0.5 rounded-full bg-white/[0.05]">💾 {hwInfo.ram}GB RAM</span>
           <span className={`px-2 py-0.5 rounded-full ${hwInfo.isMT ? 'bg-green-900/40 text-green-400' : 'bg-yellow-900/40 text-yellow-400'}`}>
-            {hwInfo.isMT ? 'âœ“ Multi-thread' : 'â  Single-thread'}
+            {hwInfo.isMT ? '✓ Multi-thread' : '⚠ Single-thread'}
           </span>
         </div>
       )}
 
       {/* +/- buttons */}
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-[#8a7e72]">Sá»‘ luá»“ng song song</span>
+        <span className="text-[10px] text-[#8a7e72]">Số luồng song song</span>
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
@@ -1386,7 +1445,7 @@ export default function ListeningMobileAndroid({
               while (workerPoolRef.current.length > next) { try { workerPoolRef.current.pop()?.terminate(); } catch {} }
             }}
             disabled={workerCount <= 2}
-            className="w-7 h-7 rounded-lg bg-[#231f1a] border border-white/[0.07] text-white font-black text-sm disabled:opacity-30 hover:border-[#e8580a]/50 transition-colors">âˆ’</button>
+            className="w-7 h-7 rounded-lg bg-[#231f1a] border border-white/[0.07] text-white font-black text-sm disabled:opacity-30 hover:border-[#e8580a]/50 transition-colors">−</button>
           <span className="text-[15px] font-black text-[#e8580a] w-16 text-center">{workerCount} worker{workerCount > 1 ? 's' : ''}</span>
           <button
             onClick={() => {
@@ -1416,17 +1475,17 @@ export default function ListeningMobileAndroid({
 
       {/* RAM warning */}
       {workerCount >= 3 && workerCount * 70 > (hwInfo?.ram ?? 4) * 1024 * 0.5 && (
-        <p className="text-[9px] text-yellow-400/80">â  {workerCount} workers â‰ˆ {workerCount * 70}MB â€” cĂ³ thá»ƒ áº£nh hÆ°á»Ÿng hiá»‡u nÄƒng trĂªn mĂ¡y nĂ y</p>
+        <p className="text-[9px] text-yellow-400/80">⚠ {workerCount} workers ≈ {workerCount * 70}MB — có thể ảnh hưởng hiệu năng trên máy này</p>
       )}
 
       {hwInfo?.isMT && (
-        <p className="text-[9px] text-green-400/70">âœ“ ONNX Ä‘ang cháº¡y multi-thread â€” 1 worker thÆ°á»ng Ä‘á»§ nhanh</p>
+        <p className="text-[9px] text-green-400/70">✓ ONNX đang chạy multi-thread — 1 worker thường đủ nhanh</p>
       )}
     </div>
   );
 
-  // â”€â”€ Chapter row â”€â”€
-  // useCallback + deps Ä‘Ăºng Ä‘á»ƒ khĂ´ng bá»‹ stale closure vá»›i currentIdx / completedChapters
+  // ── Chapter row ──
+  // useCallback + deps đúng để không bị stale closure với currentIdx / completedChapters
   const renderChapRow = useCallback((chap: ChapterMeta) => {
     const isActive = chap.index === currentIdx;
     const isDone   = completedChapters.has(chap.index);
@@ -1436,7 +1495,7 @@ export default function ListeningMobileAndroid({
         ref={isActive ? activeChapRef : undefined}
         onClick={() => {
           setShowChapterList(false);
-          goToChapter(chap); // khĂ´ng await â€” trĂ¡nh block UI
+          goToChapter(chap); // không await — tránh block UI
         }}
         className={`flex items-center gap-3 h-[52px] px-4 cursor-pointer border-l-[3px] transition-all ${
           isActive
@@ -1451,7 +1510,7 @@ export default function ListeningMobileAndroid({
           <p className={`text-[12px] ${isActive ? 'text-[#ff7c35] font-bold' : 'text-[#f0ebe4]'}`}>
             {chap.title}
           </p>
-          {isActive && <p className="text-[9px] text-[#8a7e72] mt-0.5">Äang nghe</p>}
+          {isActive && <p className="text-[9px] text-[#8a7e72] mt-0.5">Đang nghe</p>}
         </div>
         {isActive
           ? <WaveIcon />
@@ -1462,28 +1521,28 @@ export default function ListeningMobileAndroid({
     );
   }, [currentIdx, completedChapters, goToChapter]);
 
-  // 4 chÆ°Æ¡ng preview quanh chapter hiá»‡n táº¡i (mobile)
+  // 4 chương preview quanh chapter hiện tại (mobile)
   const previewChaps = (() => {
     const curPos = sortedChapters.findIndex(c => c.index === currentIdx);
     return sortedChapters.slice(curPos, curPos + 3);
   })();
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // â”€â”€ RENDER â”€â”€
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────
+  // ── RENDER ──
+  // ─────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#0f0d0a] relative">
-      {/* â”€â”€ Version Badge â”€â”€ */}
+      {/* ── Version Badge ── */}
       <div className="fixed bottom-16 right-3 z-50 pointer-events-none">
         <div className="bg-[#1a1612]/90 border border-white/[0.07] rounded-lg px-2 py-1">
-          <span className="text-[10px] font-black text-[#e8580a]">Android v1.0</span>
+          <span className="text-[10px] font-black text-[#e8580a]">v5.5</span>
         </div>
       </div>
 
-      {/* â”€â”€ Loading Overlay â”€â”€ */}
+      {/* ── Loading Overlay ── */}
       {isGenerating && generatedRef.current === 0 && prefetchedPCMRef.current.length === 0 && (
         <LoadingOverlay
-          chapterTitle={currentChapter.title || `ChÆ°Æ¡ng ${currentChapter.index}`}
+          chapterTitle={currentChapter.title || `Chương ${currentChapter.index}`}
           sentenceGenerated={sentenceGenerated}
           sentenceTotal={sentenceTotal}
         />
@@ -1491,11 +1550,11 @@ export default function ListeningMobileAndroid({
 
       {isIOS && (
         <div className="bg-amber-900/40 border-b border-amber-700/40 px-4 py-2 text-center">
-          <p className="text-amber-300 text-xs font-medium">â ï¸ iOS: Giá»¯ mĂ n hĂ¬nh sĂ¡ng Ä‘á»ƒ nghe liĂªn tá»¥c</p>
+          <p className="text-amber-300 text-xs font-medium">⚠️ iOS: Giữ màn hình sáng để nghe liên tục</p>
         </div>
       )}
 
-      {/* â”€â”€ Back + title overlay â”€â”€ */}
+      {/* ── Back + title overlay ── */}
       <div className="absolute top-3 left-3 z-40 flex items-center gap-2">
         <Link href={`/truyen/${slug}`}
           className="w-8 h-8 rounded-lg bg-black/50 backdrop-blur-sm border border-white/[0.12] flex items-center justify-center text-[#8a7e72] hover:text-white transition-colors flex-shrink-0">
@@ -1503,7 +1562,7 @@ export default function ListeningMobileAndroid({
         </Link>
         <div className="bg-black/50 backdrop-blur-sm border border-white/[0.08] rounded-lg px-3 py-1.5 max-w-[260px] min-w-0">
           <p className="text-[12px] font-bold text-[#f0ebe4] truncate leading-tight">{storyTitle}</p>
-          <p className="text-[9px] text-[#8a7e72] leading-tight">Äang nghe Â· {author}</p>
+          <p className="text-[9px] text-[#8a7e72] leading-tight">Đang nghe · {author}</p>
         </div>
         <button onClick={() => setShowChapterList(true)}
           className="lg:hidden w-8 h-8 rounded-lg bg-black/50 backdrop-blur-sm border border-white/[0.12] flex items-center justify-center text-[#8a7e72] hover:text-white transition-colors">
@@ -1511,7 +1570,7 @@ export default function ListeningMobileAndroid({
         </button>
       </div>
 
-      {/* â•â•â•â• MOBILE (< lg) â€” full screen nhÆ° mockup â•â•â•â• */}
+      {/* ════ MOBILE (< lg) — full screen như mockup ════ */}
       <div className="lg:hidden relative min-h-screen">
         {/* Cover full screen */}
         <div className="absolute inset-0">
@@ -1526,16 +1585,16 @@ export default function ListeningMobileAndroid({
           <div className="absolute bottom-0 left-0 right-0 h-[480px] bg-gradient-to-t from-[#0f0d0a] via-[#0f0d0a]/80 to-transparent" />
         </div>
 
-        {/* Controls cÄƒn bottom */}
+        {/* Controls căn bottom */}
         <div className="relative flex flex-col justify-end min-h-screen pb-7">
           <div className="mt-auto">
             <div className="px-6 pb-3">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#e8580a]/50 bg-[#e8580a]/10 mb-2">
                 <Headphones size={9} className="text-[#e8580a]" />
-                <span className="text-[9px] font-black tracking-[.12em] uppercase text-[#e8580a]">ChÆ°Æ¡ng {currentIdx}</span>
+                <span className="text-[9px] font-black tracking-[.12em] uppercase text-[#e8580a]">Chương {currentIdx}</span>
               </div>
               <h1 className="font-serif text-[18px] font-bold text-[#f0ebe4] leading-tight mb-1">
-                {currentChapter.title || `ChÆ°Æ¡ng ${currentIdx}`}
+                {currentChapter.title || `Chương ${currentIdx}`}
               </h1>
               <p className="text-[11px] text-[#8a7e72]">{author}</p>
             </div>
@@ -1547,10 +1606,10 @@ export default function ListeningMobileAndroid({
             </div>
             <div className="px-6 mt-3 border-t border-white/[0.06] pt-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black uppercase tracking-[.1em] text-[#f0ebe4]">Danh sĂ¡ch chÆ°Æ¡ng</span>
+                <span className="text-[10px] font-black uppercase tracking-[.1em] text-[#f0ebe4]">Danh sách chương</span>
                 <button onClick={() => setShowChapterList(true)}
                   className="bg-[#1a1612] border border-white/[0.07] rounded-lg px-2.5 py-1 text-[10px] font-bold text-[#e8580a]">
-                  Xem táº¥t cáº£ â€º
+                  Xem tất cả ›
                 </button>
               </div>
               {previewChaps.map(renderChapRow)}
@@ -1559,10 +1618,10 @@ export default function ListeningMobileAndroid({
         </div>
       </div>
 
-      {/* â•â•â•â• DESKTOP (â‰¥ lg) â€” 9/3 â•â•â•â• */}
+      {/* ════ DESKTOP (≥ lg) — 9/3 ════ */}
       <div className="hidden lg:grid lg:grid-cols-12 h-screen">
 
-        {/* LEFT 9 cols â€” cover full + controls cÄƒn bottom */}
+        {/* LEFT 9 cols — cover full + controls căn bottom */}
         <div className="col-span-9 relative overflow-hidden">
           {/* Cover full */}
           <div className="absolute inset-0 flex items-center justify-center bg-[#0a0806]">
@@ -1578,15 +1637,15 @@ export default function ListeningMobileAndroid({
             <div className="absolute inset-0 bg-gradient-to-t from-[#0f0d0a] via-[#0f0d0a]/30 to-transparent" />
           </div>
 
-          {/* Controls cÄƒn bottom */}
+          {/* Controls căn bottom */}
           <div className="absolute bottom-0 left-0 right-0 px-8 pb-8 flex flex-col gap-5">
             <div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#e8580a]/50 bg-[#e8580a]/10 mb-2">
                 <Headphones size={9} className="text-[#e8580a]" />
-                <span className="text-[9px] font-black tracking-[.12em] uppercase text-[#e8580a]">ChÆ°Æ¡ng {currentIdx}</span>
+                <span className="text-[9px] font-black tracking-[.12em] uppercase text-[#e8580a]">Chương {currentIdx}</span>
               </div>
               <h1 className="font-serif text-[22px] font-bold text-[#f0ebe4] leading-tight mb-1">
-                {currentChapter.title || `ChÆ°Æ¡ng ${currentIdx}`}
+                {currentChapter.title || `Chương ${currentIdx}`}
               </h1>
               <p className="text-[12px] text-[#8a7e72]">{author}</p>
             </div>
@@ -1597,38 +1656,38 @@ export default function ListeningMobileAndroid({
           </div>
         </div>
 
-        {/* RIGHT 3 cols â€” infinite scroll chapter list */}
+        {/* RIGHT 3 cols — infinite scroll chapter list */}
         <div className="col-span-3 flex flex-col bg-[#0d0b08] border-l border-white/[0.06] h-screen">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] flex-shrink-0">
-            <span className="text-[10px] font-black uppercase tracking-[.12em] text-[#f0ebe4]">Danh sĂ¡ch chÆ°Æ¡ng</span>
-            <span className="text-[10px] text-[#8a7e72]">{totalChapters} chÆ°Æ¡ng</span>
+            <span className="text-[10px] font-black uppercase tracking-[.12em] text-[#f0ebe4]">Danh sách chương</span>
+            <span className="text-[10px] text-[#8a7e72]">{totalChapters} chương</span>
           </div>
           <div className="flex-1 overflow-y-auto">
             {sortedChapters.slice(0, desktopVisible).map(renderChapRow)}
             {(desktopVisible < sortedChapters.length || hasMoreChaps) && (
               <div ref={desktopSentinelRef} className="h-12 flex items-center justify-center">
-                <span className="text-[10px] text-[#8a7e72] animate-pulse">Äang táº£i thĂªm...</span>
+                <span className="text-[10px] text-[#8a7e72] animate-pulse">Đang tải thêm...</span>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* â•â•â•â• MOBILE CHAPTER DRAWER â•â•â•â• */}
+      {/* ════ MOBILE CHAPTER DRAWER ════ */}
       {showChapterList && (
         <div className="lg:hidden fixed inset-0 z-50 flex flex-col bg-[#0f0d0a]/96 backdrop-blur-sm">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.07] flex-shrink-0">
-            <span className="text-[13px] font-black text-[#f0ebe4] uppercase tracking-[.08em]">Táº¥t cáº£ chÆ°Æ¡ng</span>
+            <span className="text-[13px] font-black text-[#f0ebe4] uppercase tracking-[.08em]">Tất cả chương</span>
             <button onClick={() => setShowChapterList(false)}
               className="w-8 h-8 rounded-lg bg-white/[0.07] flex items-center justify-center text-[#8a7e72]">
-              âœ•
+              ✕
             </button>
           </div>
           <div className="flex-1 overflow-y-auto" ref={chapListRef}>
             {sortedChapters.slice(0, mobileVisible).map(renderChapRow)}
             {(mobileVisible < sortedChapters.length || hasMoreChaps) && (
               <div ref={mobileSentinelRef} className="h-12 flex items-center justify-center">
-                <span className="text-[10px] text-[#8a7e72] animate-pulse">Äang táº£i thĂªm...</span>
+                <span className="text-[10px] text-[#8a7e72] animate-pulse">Đang tải thêm...</span>
               </div>
             )}
           </div>
