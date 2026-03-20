@@ -30,7 +30,7 @@ export default function ChapterLayout({ children }: { children: React.ReactNode 
         <>
             <script dangerouslySetInnerHTML={{ __html: themeScript }} />
             <ChapterLayoutCleanup />
-            <div style={{ background: 'var(--chapter-bg, #0F0A05)', minHeight: '100vh' }}>
+            <div style={{ background: 'var(--chapter-bg, transparent)', minHeight: '100vh' }}>
                 {children}
             </div>
         </>

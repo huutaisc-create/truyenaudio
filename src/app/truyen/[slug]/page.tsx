@@ -163,39 +163,17 @@ const StoryDetail = async ({
                                         ))}
                                     </span>
                                     <span className="text-lg font-black text-warm-gold">{story.rating}</span>
-                                    <span className="text-sm text-warm-ink-soft">({story.ratingCount} đánh giá)</span>
+                                    <span className="text-base font-bold text-warm-ink-soft">({story.ratingCount})</span>
                                     {/* ✅ ReviewButton không cần currentUser — tự check auth khi click */}
                                     <ReviewButton
                                         storyId={storyData.id}
                                         text="Đánh giá"
                                         currentUser={undefined}
-                                        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-warm-primary-pale text-[#8c3a08] border border-warm-primary/50 hover:bg-warm-primary hover:text-white transition-all"
+                                        className="flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-bold bg-warm-primary-pale text-[#8c3a08] border border-warm-primary/50 hover:bg-warm-primary hover:text-white transition-all"
                                     />
                                 </div>
 
-                                {/* Stats bar */}
-                                <div className="flex rounded-xl overflow-hidden border border-warm-border-soft bg-warm-bg">
-                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-base font-bold text-warm-ink">
-                                        <Heart className="h-3.5 w-3.5 fill-current text-red-500" aria-hidden="true" />
-                                        <b className="text-lg font-bold text-warm-ink">{formatNumber(storyData.likeCount || 0)}</b>
-                                        <span className="text-base font-bold">Yêu thích</span>
-                                    </div>
-                                    <div className="w-px bg-warm-border" aria-hidden="true"></div>
-                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-base font-bold text-warm-ink">
-                                        <Bookmark className="h-3.5 w-3.5 fill-current text-blue-500" aria-hidden="true" />
-                                        <b className="text-lg font-bold text-warm-ink">{formatNumber(storyData.followCount || 0)}</b>
-                                        <span className="text-base font-bold">Theo dõi</span>
-                                    </div>
-                                    <div className="w-px bg-warm-border" aria-hidden="true"></div>
-                                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 text-base font-bold text-warm-ink">
-                                        <Trophy className="h-3.5 w-3.5 fill-current text-amber-400" aria-hidden="true" />
-                                        <b className="text-lg font-bold text-warm-ink">{formatNumber(storyData.nominationCount || 0)}</b>
-                                        <span className="text-base font-bold">Đề cử</span>
-                                    </div>
-                                </div>
-
-                                {/* ✅ StoryInteractions nhận userStatus mặc định (chưa đăng nhập)
-                                    Component tự check auth khi user bấm like/follow */}
+                                {/* ✅ StoryInteractions tự check auth khi click, tự đọc localStorage */}
                                 <StoryInteractions
                                     storyId={storyData.id}
                                     storySlug={slug}
