@@ -14,10 +14,9 @@ const nextConfig: NextConfig = {
   // Nói với SWC chỉ transpile cho browser hiện đại → bỏ các polyfill không cần
   // Tiết kiệm ~13.7KB theo Lighthouse report
   compiler: {
-    // Loại bỏ console.log ở production — nhỏ nhưng giúp bundle sạch hơn
-    removeConsole: process.env.NODE_ENV === 'production'
-      ? { exclude: ['error', 'warn'] }
-      : false,
+    // ⚠️ TẠM BẬT để debug log trên Vercel — tắt lại sau khi xong
+    // Đổi lại thành: removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+    removeConsole: false,
   },
 
   images: {
