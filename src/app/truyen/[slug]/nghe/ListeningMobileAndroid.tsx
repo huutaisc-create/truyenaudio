@@ -167,6 +167,9 @@ export default function ListeningClient({
   const stopFlagRef  = useRef<boolean>(false);
   const speedRef     = useRef<number>(1);
 
+  // ── WakeLock ref ──
+  const wakeLockRef  = useRef<any>(null);
+
   // ── Player state ──
   const [isPlaying,         setIsPlaying]         = useState(false);
   const [speed,             setSpeed]              = useState(1.0);
@@ -211,6 +214,7 @@ export default function ListeningClient({
   const sortedChapters = [...allChapters].sort((a, b) => a.index - b.index);
   const hasPrev        = sortedChapters.some(c => c.index < currentIdx);
   const hasNext        = sortedChapters.some(c => c.index > currentIdx);
+  const isIOS          = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   // ── Detect hardware info khi mount ──
   useEffect(() => {
@@ -264,6 +268,51 @@ export default function ListeningClient({
     if (outcome === 'accepted') setPwaInstalled(true);
     setDeferredPrompt(null);
   };
+
+  // ── WakeLock: giữ màn hình sáng khi đang phát (Android Chrome only) ──
+  useEffect(() => {
+    const requestWakeLock = async () => {
+      if (!('wakeLock' in navigator)) return;
+      if (isIOS) return; // iOS không support
+      try {
+        if (isPlaying && !wakeLockRef.current) {
+          wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+          console.log('[WakeLock] Màn hình được giữ sáng');
+          wakeLockRef.current.addEventListener('release', () => {
+            console.log('[WakeLock] Bị release tự động');
+            wakeLockRef.current = null;
+          });
+        } else if (!isPlaying && wakeLockRef.current) {
+          await wakeLockRef.current.release();
+          wakeLockRef.current = null;
+          console.log('[WakeLock] Đã thả màn hình');
+        }
+      } catch (e) {
+        console.warn('[WakeLock] Không được cấp phép:', e);
+      }
+    };
+    requestWakeLock();
+  }, [isPlaying]);
+
+  // ── WakeLock: re-acquire khi tab visible lại ──
+  useEffect(() => {
+    if (isIOS) return;
+    const handleVisibility = async () => {
+      if (document.visibilityState === 'visible' && isPlaying && !wakeLockRef.current) {
+        try {
+          wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+          console.log('[WakeLock] Re-acquired sau khi tab active lại');
+          wakeLockRef.current.addEventListener('release', () => {
+            wakeLockRef.current = null;
+          });
+        } catch (e) {
+          console.warn('[WakeLock] Re-acquire thất bại:', e);
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [isPlaying]);
 
   // ── Media Session ──
   useEffect(() => {
@@ -1269,7 +1318,6 @@ export default function ListeningClient({
 
   const decreaseSpeed = () => setSpeed(s => Math.max(MIN_SPEED, Math.round((s - SPEED_STEP) * 100) / 100));
   const increaseSpeed = () => setSpeed(s => Math.min(MAX_SPEED, Math.round((s + SPEED_STEP) * 100) / 100));
-  const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   // ─────────────────────────────────────────────────────────
   // ── Shared UI ──
