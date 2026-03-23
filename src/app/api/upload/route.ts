@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import path from 'path';
-import { mkdir, writeFile } from 'fs/promises';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+
+const R2 = new S3Client({
+    region: 'auto',
+    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+    },
+});
 
 export async function POST(request: NextRequest) {
     const data = await request.formData();
@@ -20,15 +28,16 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, message: 'File quá lớn, tối đa 5MB' }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const inputBuffer = Buffer.from(bytes);
-
     try {
+        const bytes = await file.arrayBuffer();
+        const inputBuffer = Buffer.from(bytes);
+
         const sharp = (await import('sharp')).default;
+        const timestamp = Date.now();
 
         let outputBuffer: Buffer;
         let filename: string;
-        const timestamp = Date.now();
+        let folder: string;
 
         if (type === 'avatar') {
             outputBuffer = await sharp(inputBuffer)
@@ -36,12 +45,14 @@ export async function POST(request: NextRequest) {
                 .webp({ quality: 80 })
                 .toBuffer();
             filename = `avatar-${timestamp}.webp`;
+            folder = 'avatars';
         } else if (type === 'cover') {
             outputBuffer = await sharp(inputBuffer)
                 .resize(600, 800, { fit: 'inside', withoutEnlargement: true })
                 .webp({ quality: 85 })
                 .toBuffer();
             filename = `cover-${timestamp}.webp`;
+            folder = 'covers';
         } else {
             outputBuffer = await sharp(inputBuffer)
                 .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
@@ -49,15 +60,23 @@ export async function POST(request: NextRequest) {
                 .toBuffer();
             const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '').replace(/\.[^.]+$/, '');
             filename = `${timestamp}-${safeName}.webp`;
+            folder = 'uploads';
         }
 
-        const uploadDir = path.join(process.cwd(), 'public/uploads');
-        await mkdir(uploadDir, { recursive: true });
-        await writeFile(path.join(uploadDir, filename), outputBuffer);
+        const key = `${folder}/${filename}`;
+
+        await R2.send(new PutObjectCommand({
+            Bucket: process.env.R2_BUCKET_NAME!,
+            Key: key,
+            Body: outputBuffer,
+            ContentType: 'image/webp',
+        }));
+
+        const publicUrl = `${process.env.R2_PUBLIC_URL}/${key}`;
 
         return NextResponse.json({
             success: true,
-            url: `/uploads/${filename}`,  // ✅ Sửa từ /api/uploads/ thành /uploads/
+            url: publicUrl,
             size: outputBuffer.length,
         });
     } catch (error) {
