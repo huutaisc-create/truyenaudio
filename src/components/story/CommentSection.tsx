@@ -1,19 +1,23 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Heart, CornerDownRight, Send, Loader2 } from "lucide-react";
-import Image from "next/image"; // FIX LCP
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Heart, CornerDownRight, Send, Loader2, Trash2, X } from "lucide-react";
+import Image from "next/image";
+
+type CommentUser = {
+    id: string;
+    name: string;
+    image: string | null;
+    role: string;
+};
 
 type Comment = {
     id: string;
     content: string;
+    likeCount: number;
+    isLiked: boolean;
     createdAt: string;
-    user: {
-        id: string;
-        name: string;
-        image: string | null;
-        role: string;
-    };
+    user: CommentUser;
 };
 
 type CommentSectionProps = {
@@ -22,6 +26,7 @@ type CommentSectionProps = {
         id: string;
         name: string;
         image?: string | null;
+        role?: string;
     } | null;
 };
 
@@ -31,25 +36,23 @@ function timeAgo(dateStr: string) {
     if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
     if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
     if (diff < 2592000) return `${Math.floor(diff / 86400)} ngày trước`;
-    return new Date(dateStr).toLocaleDateString('vi-VN');
+    return new Date(dateStr).toLocaleDateString("vi-VN");
 }
 
 function Avatar({ name, image, size = 38 }: { name: string; image?: string | null; size?: number }) {
     const colors = [
-        'linear-gradient(135deg,#E8580A,#F5A623)',
-        'linear-gradient(135deg,#667eea,#764ba2)',
-        'linear-gradient(135deg,#f093fb,#f5576c)',
-        'linear-gradient(135deg,#4facfe,#00f2fe)',
-        'linear-gradient(135deg,#43e97b,#38f9d7)',
+        "linear-gradient(135deg,#E8580A,#F5A623)",
+        "linear-gradient(135deg,#667eea,#764ba2)",
+        "linear-gradient(135deg,#f093fb,#f5576c)",
+        "linear-gradient(135deg,#4facfe,#00f2fe)",
+        "linear-gradient(135deg,#43e97b,#38f9d7)",
     ];
     const color = colors[name.charCodeAt(0) % colors.length];
-
     if (image) {
         return (
-            // FIX LCP: next/image thay <img>
             <Image
                 src={image}
-                alt={`Ảnh đại diện của ${name}`} // FIX A11Y: alt mô tả rõ
+                alt={`Ảnh đại diện của ${name}`}
                 width={size}
                 height={size}
                 className="rounded-full object-cover shrink-0"
@@ -60,7 +63,7 @@ function Avatar({ name, image, size = 38 }: { name: string; image?: string | nul
         <div
             className="rounded-full flex items-center justify-center shrink-0 text-white font-black"
             style={{ width: size, height: size, background: color, fontSize: size * 0.38 }}
-            aria-label={name} // FIX A11Y: tên user cho screen reader
+            aria-label={name}
         >
             {name.charAt(0).toUpperCase()}
         </div>
@@ -69,23 +72,33 @@ function Avatar({ name, image, size = 38 }: { name: string; image?: string | nul
 
 export default function CommentSection({ storySlug, currentUser }: CommentSectionProps) {
     const [comments, setComments] = useState<Comment[]>([]);
-    const [content, setContent] = useState("");
     const [isLoading, setIsLoading] = useState(true);
-    const [isSending, setIsSending] = useState(false);
-    const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
-    const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(false);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
 
+    const [content, setContent] = useState("");
+    const [isSending, setIsSending] = useState(false);
+
+    // replyTo: comment đang được reply
+    const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
+
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const topRef = useRef<HTMLDivElement>(null);
+
+    // ── Fetch lần đầu ──────────────────────────────────────────
     useEffect(() => {
         const fetchComments = async () => {
+            setIsLoading(true);
             try {
-                const res = await fetch(`/api/chat/${storySlug}/messages`);
+                const res = await fetch(`/api/stories/${storySlug}/comments?limit=20`);
                 if (res.ok) {
-                    const data = await res.json();
-                    setComments(data);
-                    const counts: Record<string, number> = {};
-                    data.forEach((c: Comment) => { counts[c.id] = Math.floor(Math.random() * 20); });
-                    setLikeCounts(counts);
+                    const json = await res.json();
+                    if (json.success) {
+                        setComments(json.data);
+                        setHasMore(json.hasMore);
+                        setNextCursor(json.nextCursor);
+                    }
                 }
             } catch (e) {
                 console.error(e);
@@ -96,100 +109,192 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
         fetchComments();
     }, [storySlug]);
 
+    // ── Load more (older) ──────────────────────────────────────
+    const handleLoadMore = useCallback(async () => {
+        if (!hasMore || isLoadingMore || !nextCursor) return;
+        setIsLoadingMore(true);
+        try {
+            const res = await fetch(
+                `/api/stories/${storySlug}/comments?limit=20&after=${nextCursor}`
+            );
+            if (res.ok) {
+                const json = await res.json();
+                if (json.success) {
+                    // older comments prepend lên đầu
+                    setComments(prev => [...json.data, ...prev]);
+                    setHasMore(json.hasMore);
+                    setNextCursor(json.nextCursor);
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsLoadingMore(false);
+        }
+    }, [hasMore, isLoadingMore, nextCursor, storySlug]);
+
+    // ── Gửi comment ───────────────────────────────────────────
     const handleSend = async () => {
         if (!content.trim() || isSending) return;
         if (!currentUser) {
-            if (confirm("Bạn cần đăng nhập để bình luận. Đăng nhập ngay?")) {
-                window.location.href = "/login?callbackUrl=" + window.location.pathname;
-            }
+            window.location.href = "/login?callbackUrl=" + window.location.pathname;
             return;
         }
 
+        // Nếu đang reply, prepend @tên vào nội dung
+        const body = replyTo
+            ? `@${replyTo.name} ${content.trim()}`
+            : content.trim();
+
         setIsSending(true);
         try {
-            const res = await fetch(`/api/chat/${storySlug}/messages`, {
+            const res = await fetch(`/api/stories/${storySlug}/comments`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ content: content.trim() }),
+                body: JSON.stringify({ content: body }),
             });
-
             if (res.ok) {
-                const newComment = await res.json();
-                setComments(prev => [...prev, newComment]);
-                setLikeCounts(prev => ({ ...prev, [newComment.id]: 0 }));
-                setContent("");
-                textareaRef.current?.focus();
+                const json = await res.json();
+                if (json.success) {
+                    setComments(prev => [...prev, json.data]);
+                    setContent("");
+                    setReplyTo(null);
+                    textareaRef.current?.focus();
+                    // Scroll xuống cuối
+                    setTimeout(() => {
+                        window.scrollBy({ top: 999, behavior: "smooth" });
+                    }, 100);
+                }
             } else {
                 const err = await res.json();
                 alert(err.error || "Gửi bình luận thất bại");
             }
-        } catch (e) {
+        } catch {
             alert("Lỗi kết nối, thử lại sau");
         } finally {
             setIsSending(false);
         }
     };
 
-    const handleLike = (id: string) => {
-        if (!currentUser) return;
-        setLikedIds(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) {
-                next.delete(id);
-                setLikeCounts(c => ({ ...c, [id]: (c[id] || 1) - 1 }));
+    // ── Toggle like ────────────────────────────────────────────
+    const handleLike = async (commentId: string) => {
+        if (!currentUser) {
+            window.location.href = "/login?callbackUrl=" + window.location.pathname;
+            return;
+        }
+
+        // Optimistic update
+        setComments(prev =>
+            prev.map(c =>
+                c.id === commentId
+                    ? { ...c, isLiked: !c.isLiked, likeCount: c.isLiked ? c.likeCount - 1 : c.likeCount + 1 }
+                    : c
+            )
+        );
+
+        try {
+            const res = await fetch(
+                `/api/stories/${storySlug}/comments/${commentId}/like`,
+                { method: "POST" }
+            );
+            if (res.ok) {
+                const json = await res.json();
+                if (json.success) {
+                    // Sync với data thật từ server
+                    setComments(prev =>
+                        prev.map(c =>
+                            c.id === commentId
+                                ? { ...c, isLiked: json.data.isLiked, likeCount: json.data.likeCount }
+                                : c
+                        )
+                    );
+                }
             } else {
-                next.add(id);
-                setLikeCounts(c => ({ ...c, [id]: (c[id] || 0) + 1 }));
+                // Rollback nếu lỗi
+                setComments(prev =>
+                    prev.map(c =>
+                        c.id === commentId
+                            ? { ...c, isLiked: !c.isLiked, likeCount: c.isLiked ? c.likeCount - 1 : c.likeCount + 1 }
+                            : c
+                    )
+                );
             }
-            return next;
-        });
+        } catch {
+            // Rollback
+            setComments(prev =>
+                prev.map(c =>
+                    c.id === commentId
+                        ? { ...c, isLiked: !c.isLiked, likeCount: c.isLiked ? c.likeCount - 1 : c.likeCount + 1 }
+                        : c
+                )
+            );
+        }
+    };
+
+    // ── Xóa comment ───────────────────────────────────────────
+    const handleDelete = async (commentId: string) => {
+        if (!confirm("Bạn có chắc muốn xóa bình luận này?")) return;
+        try {
+            const res = await fetch(
+                `/api/stories/${storySlug}/comments/${commentId}`,
+                { method: "DELETE" }
+            );
+            if (res.ok) {
+                setComments(prev => prev.filter(c => c.id !== commentId));
+            } else {
+                const err = await res.json();
+                alert(err.error || "Xóa thất bại");
+            }
+        } catch {
+            alert("Lỗi kết nối, thử lại sau");
+        }
+    };
+
+    const canDelete = (comment: Comment) =>
+        currentUser &&
+        (currentUser.id === comment.user.id || currentUser.role === "ADMIN");
+
+    // ── Reply: focus textarea + set replyTo ───────────────────
+    const handleReply = (comment: Comment) => {
+        if (!currentUser) {
+            window.location.href = "/login?callbackUrl=" + window.location.pathname;
+            return;
+        }
+        setReplyTo({ id: comment.id, name: comment.user.name });
+        setContent("");
+        textareaRef.current?.focus();
+        textareaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     };
 
     return (
         <section
-            aria-label="Bình luận" // FIX A11Y
+            aria-label="Bình luận"
             className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-6 md:p-8"
         >
             <h2 className="font-bold text-base mb-5 text-warm-ink flex items-center gap-2.5">
-                <span className="w-1 h-5 rounded-sm bg-warm-primary shrink-0" aria-hidden="true"></span>
+                <span className="w-1 h-5 rounded-sm bg-warm-primary shrink-0" aria-hidden="true" />
                 Bình luận
                 {comments.length > 0 && (
-                    <span className="text-xs font-semibold text-warm-ink-soft ml-1">({comments.length})</span>
+                    <span className="text-xs font-semibold text-warm-ink-soft ml-1">
+                        ({comments.length})
+                    </span>
                 )}
             </h2>
 
-            {/* Input box */}
-            <div className="flex gap-3 mb-6">
-                <Avatar name={currentUser?.name || "U"} image={currentUser?.image} size={38} />
-                <div className="flex-1 flex flex-col gap-2">
-                    <textarea
-                        ref={textareaRef}
-                        value={content}
-                        onChange={e => setContent(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) handleSend(); }}
-                        placeholder={currentUser ? "Chia sẻ cảm nhận của bạn về truyện..." : "Đăng nhập để bình luận..."}
-                        rows={3}
-                        aria-label="Nội dung bình luận" // FIX A11Y
-                        disabled={!currentUser}
-                        className="w-full px-4 py-3 text-sm rounded-xl resize-none outline-none transition-all bg-warm-bg border border-warm-border text-warm-ink placeholder:text-warm-ink-soft focus:border-warm-primary disabled:opacity-60"
-                    />
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm text-warm-ink-soft" aria-hidden="true">Ctrl+Enter để gửi</span>
-                        <button
-                            onClick={handleSend}
-                            disabled={isSending || !content.trim()}
-                            aria-label={isSending ? "Đang gửi bình luận..." : "Gửi bình luận"} // FIX A11Y
-                            className="flex items-center gap-2 px-5 py-2 rounded-xl text-base font-bold text-white bg-warm-primary hover:bg-warm-primary-soft transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {isSending
-                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                                : <Send className="h-3.5 w-3.5" aria-hidden="true" />
-                            }
-                            Gửi bình luận
-                        </button>
-                    </div>
+            {/* Load more (older) button */}
+            {hasMore && (
+                <div ref={topRef} className="flex justify-center mb-4">
+                    <button
+                        onClick={handleLoadMore}
+                        disabled={isLoadingMore}
+                        className="text-sm text-warm-primary hover:underline flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                        {isLoadingMore
+                            ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang tải...</>
+                            : "Xem bình luận cũ hơn"}
+                    </button>
                 </div>
-            </div>
+            )}
 
             {/* Comment list */}
             {isLoading ? (
@@ -201,44 +306,125 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                     Chưa có bình luận nào. Hãy là người đầu tiên! 💬
                 </p>
             ) : (
-                <ol className="space-y-3" aria-label="Danh sách bình luận"> {/* FIX A11Y: ol thay div */}
+                <ol className="space-y-3 mb-6" aria-label="Danh sách bình luận">
                     {comments.map(comment => (
-                        <li key={comment.id}
+                        <li
+                            key={comment.id}
                             className="flex gap-3 p-4 rounded-xl bg-warm-card border border-warm-border"
                         >
                             <Avatar name={comment.user.name} image={comment.user.image} size={36} />
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                    <span className="text-base font-bold text-warm-ink">{comment.user.name}</span>
-                                    {comment.user.role === 'ADMIN' && (
-                                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-warm-primary text-white uppercase tracking-wider">Admin</span>
+                                    <span className="text-base font-bold text-warm-ink">
+                                        {comment.user.name}
+                                    </span>
+                                    {comment.user.role === "ADMIN" && (
+                                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-warm-primary text-white uppercase tracking-wider">
+                                            Admin
+                                        </span>
                                     )}
                                 </div>
-                                <p className="text-base text-warm-ink leading-relaxed mb-2">{comment.content}</p>
-                                <div className="flex items-center gap-4 text-sm text-warm-ink-soft">
-                                    <time dateTime={comment.createdAt}>{timeAgo(comment.createdAt)}</time> {/* FIX A11Y: <time> */}
+                                <p className="text-base text-warm-ink leading-relaxed mb-2 whitespace-pre-wrap">
+                                    {comment.content}
+                                </p>
+                                <div className="flex items-center gap-4 text-sm text-warm-ink-soft flex-wrap">
+                                    <time dateTime={comment.createdAt}>{timeAgo(comment.createdAt)}</time>
+
+                                    {/* Like */}
                                     <button
                                         onClick={() => handleLike(comment.id)}
-                                        aria-label={`${likedIds.has(comment.id) ? 'Bỏ thích' : 'Thích'} bình luận của ${comment.user.name}. ${likeCounts[comment.id] || 0} lượt thích`}
-                                        aria-pressed={likedIds.has(comment.id)} // FIX A11Y
-                                        className={`flex items-center gap-1 transition-colors ${likedIds.has(comment.id) ? 'text-red-500' : 'hover:text-red-400'}`}
+                                        aria-label={`${comment.isLiked ? "Bỏ thích" : "Thích"} bình luận của ${comment.user.name}. ${comment.likeCount} lượt thích`}
+                                        aria-pressed={comment.isLiked}
+                                        className={`flex items-center gap-1 transition-colors ${comment.isLiked ? "text-red-500" : "hover:text-red-400"}`}
                                     >
-                                        <Heart className={`h-3.5 w-3.5 ${likedIds.has(comment.id) ? 'fill-current' : ''}`} aria-hidden="true" />
-                                        <span aria-hidden="true">{likeCounts[comment.id] || 0}</span>
+                                        <Heart
+                                            className={`h-3.5 w-3.5 ${comment.isLiked ? "fill-current" : ""}`}
+                                            aria-hidden="true"
+                                        />
+                                        <span>{comment.likeCount > 0 ? comment.likeCount : "Thích"}</span>
                                     </button>
+
+                                    {/* Reply */}
                                     <button
+                                        onClick={() => handleReply(comment)}
                                         className="flex items-center gap-1 hover:text-warm-primary transition-colors"
-                                        aria-label={`Trả lời bình luận của ${comment.user.name}`} // FIX A11Y
+                                        aria-label={`Trả lời bình luận của ${comment.user.name}`}
                                     >
                                         <CornerDownRight className="h-3.5 w-3.5" aria-hidden="true" />
                                         Trả lời
                                     </button>
+
+                                    {/* Delete */}
+                                    {canDelete(comment) && (
+                                        <button
+                                            onClick={() => handleDelete(comment.id)}
+                                            className="flex items-center gap-1 hover:text-red-500 transition-colors ml-auto"
+                                            aria-label={`Xóa bình luận của ${comment.user.name}`}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </li>
                     ))}
                 </ol>
             )}
+
+            {/* Input box */}
+            <div className="flex gap-3">
+                <Avatar name={currentUser?.name || "U"} image={currentUser?.image} size={38} />
+                <div className="flex-1 flex flex-col gap-2">
+                    {/* Reply badge */}
+                    {replyTo && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-warm-bg border border-warm-border text-sm text-warm-ink-soft">
+                            <CornerDownRight className="h-3.5 w-3.5 shrink-0" />
+                            <span>Trả lời <strong className="text-warm-ink">{replyTo.name}</strong></span>
+                            <button
+                                onClick={() => setReplyTo(null)}
+                                className="ml-auto hover:text-warm-ink transition-colors"
+                                aria-label="Hủy trả lời"
+                            >
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                    )}
+                    <textarea
+                        ref={textareaRef}
+                        value={content}
+                        onChange={e => setContent(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter" && e.ctrlKey) handleSend(); }}
+                        placeholder={
+                            currentUser
+                                ? replyTo
+                                    ? `Trả lời ${replyTo.name}...`
+                                    : "Chia sẻ cảm nhận của bạn về truyện..."
+                                : "Đăng nhập để bình luận..."
+                        }
+                        rows={3}
+                        aria-label="Nội dung bình luận"
+                        disabled={!currentUser}
+                        className="w-full px-4 py-3 text-sm rounded-xl resize-none outline-none transition-all bg-warm-bg border border-warm-border text-warm-ink placeholder:text-warm-ink-soft focus:border-warm-primary disabled:opacity-60"
+                    />
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm text-warm-ink-soft" aria-hidden="true">
+                            Ctrl+Enter để gửi
+                        </span>
+                        <button
+                            onClick={handleSend}
+                            disabled={isSending || !content.trim()}
+                            aria-label={isSending ? "Đang gửi bình luận..." : "Gửi bình luận"}
+                            className="flex items-center gap-2 px-5 py-2 rounded-xl text-base font-bold text-white bg-warm-primary hover:bg-warm-primary-soft transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isSending
+                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                                : <Send className="h-3.5 w-3.5" aria-hidden="true" />
+                            }
+                            {replyTo ? "Trả lời" : "Gửi bình luận"}
+                        </button>
+                    </div>
+                </div>
+            </div>
         </section>
     );
 }
