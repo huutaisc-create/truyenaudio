@@ -1,13 +1,14 @@
 'use client'
 
-import { useActionState, useEffect } from 'react'
+import { Suspense } from 'react'
+import { useActionState } from 'react'
 import { signIn } from 'next-auth/react'
 import { authenticate } from '../actions'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Loader2, Mail, Lock, BookOpen } from 'lucide-react'
 
-export default function LoginPage() {
+function LoginForm() {
     const searchParams = useSearchParams()
     const callbackUrl = searchParams.get('callbackUrl') || '/'
 
@@ -126,5 +127,13 @@ export default function LoginPage() {
                 </p>
             </div>
         </div>
+    )
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={null}>
+            <LoginForm />
+        </Suspense>
     )
 }
