@@ -12,15 +12,15 @@ export async function authenticate(
     try {
         await signIn('credentials', {
             ...Object.fromEntries(formData),
-            redirectTo: '/admin'
+            redirectTo: (formData.get('callbackUrl') as string) || '/',
         })
     } catch (error) {
         if (error instanceof AuthError) {
             switch (error.type) {
                 case 'CredentialsSignin':
-                    return 'Invalid credentials.'
+                    return 'Email hoặc mật khẩu không đúng.'
                 default:
-                    return 'Something went wrong.'
+                    return 'Đã có lỗi xảy ra, thử lại sau.'
             }
         }
         throw error
@@ -36,30 +36,22 @@ export async function register(
     const password = formData.get('password') as string
 
     if (!name || !email || !password) {
-        return 'Missing fields'
+        return 'Vui lòng điền đầy đủ thông tin.'
     }
 
     try {
-        const existingUser = await db.user.findUnique({
-            where: { email },
-        });
-
+        const existingUser = await db.user.findUnique({ where: { email } });
         if (existingUser) {
-            return 'Email already exists'
+            return 'Email này đã được đăng ký.'
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-
         await db.user.create({
-            data: {
-                name,
-                email,
-                password: hashedPassword,
-            },
+            data: { name, email, password: hashedPassword },
         });
 
-        return 'User created! Please log in.'
+        return 'success'
     } catch (error) {
-        return 'Failed to create user.'
+        return 'Tạo tài khoản thất bại, thử lại sau.'
     }
 }

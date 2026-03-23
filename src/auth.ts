@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth';
 import { authConfig } from './auth.config';
 import Credentials from 'next-auth/providers/credentials';
+import Google from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import db from './lib/db';
 import bcrypt from 'bcryptjs';
@@ -10,6 +11,11 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     adapter: PrismaAdapter(db),
     session: { strategy: "jwt" },
     providers: [
+        Google({
+            clientId: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+            allowDangerousEmailAccountLinking: true,
+        }),
         Credentials({
             async authorize(credentials) {
                 const { email, password } = credentials as any;
@@ -25,17 +31,47 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         }),
     ],
     callbacks: {
+        async signIn({ user, account }) {
+            // Google login: upsert user vào DB
+            if (account?.provider === 'google' && user.email) {
+                const existing = await db.user.findUnique({
+                    where: { email: user.email },
+                });
+                if (!existing) {
+                    await db.user.create({
+                        data: {
+                            email: user.email,
+                            name: user.name ?? '',
+                            image: user.image ?? null,
+                            googleId: account.providerAccountId,
+                        },
+                    });
+                } else if (!existing.googleId) {
+                    // Link Google vào account đã có
+                    await db.user.update({
+                        where: { email: user.email },
+                        data: {
+                            googleId: account.providerAccountId,
+                            image: existing.image ?? user.image ?? null,
+                        },
+                    });
+                }
+            }
+            return true;
+        },
         async jwt({ token, user, trigger, session }) {
-            // Chỉ set data khi login lần đầu
             if (user) {
-                token.role = user.role || "USER";
-                token.id = user.id || "";
-                token.chaptersRead = (user as any).chaptersRead ?? 0;
-                token.image = user.image || null;
+                // Lấy thêm role từ DB (Google login không có role trong user object)
+                const dbUser = await db.user.findUnique({
+                    where: { email: user.email! },
+                    select: { id: true, role: true, chaptersRead: true, image: true },
+                });
+                token.role = dbUser?.role ?? "USER";
+                token.id = dbUser?.id ?? user.id ?? "";
+                token.chaptersRead = dbUser?.chaptersRead ?? 0;
+                token.image = dbUser?.image ?? user.image ?? null;
             }
 
-            // ✅ Chỉ refresh DB khi user chủ động update (trigger = 'update')
-            // Bỏ refresh mỗi request → tiết kiệm 1 DB query mỗi lần auth() được gọi
             if (trigger === 'update' && token.id) {
                 const freshUser = await db.user.findUnique({
                     where: { id: token.id as string },

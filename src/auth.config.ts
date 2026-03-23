@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from "next-auth"
+import Google from "next-auth/providers/google"
 
 export const authConfig = {
     pages: {
@@ -10,10 +11,10 @@ export const authConfig = {
             const isOnDashboard = nextUrl.pathname.startsWith('/admin')
             if (isOnDashboard) {
                 if (isLoggedIn) return true
-                return false // Redirect unauthenticated users to login page
+                return false
             }
             return true
         },
     },
-    providers: [], // Add providers with an empty array for now
+    providers: [Google],
 } satisfies NextAuthConfig
