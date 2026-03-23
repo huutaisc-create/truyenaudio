@@ -2,13 +2,11 @@ import NextAuth from 'next-auth';
 import { authConfig } from './auth.config';
 import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
-import { PrismaAdapter } from '@auth/prisma-adapter';
 import db from './lib/db';
 import bcrypt from 'bcryptjs';
 
 export const { auth, signIn, signOut, handlers } = NextAuth({
     ...authConfig,
-    adapter: PrismaAdapter(db),
     session: { strategy: "jwt" },
     providers: [
         Google({
@@ -32,7 +30,6 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     ],
     callbacks: {
         async signIn({ user, account }) {
-            // Google login: upsert user vào DB
             if (account?.provider === 'google' && user.email) {
                 const existing = await db.user.findUnique({
                     where: { email: user.email },
@@ -47,7 +44,6 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         },
                     });
                 } else if (!existing.googleId) {
-                    // Link Google vào account đã có
                     await db.user.update({
                         where: { email: user.email },
                         data: {
@@ -61,7 +57,6 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         },
         async jwt({ token, user, trigger, session }) {
             if (user) {
-                // Lấy thêm role từ DB (Google login không có role trong user object)
                 const dbUser = await db.user.findUnique({
                     where: { email: user.email! },
                     select: { id: true, role: true, chaptersRead: true, image: true },
