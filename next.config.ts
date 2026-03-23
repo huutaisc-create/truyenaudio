@@ -23,6 +23,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: '**.r2.dev' },
       { protocol: 'https', hostname: '**.r2.cloudflarestorage.com' },
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' }, // ← ảnh đại diện Google
     ],
     deviceSizes: [640, 828, 1080, 1200, 1920],
     imageSizes: [36, 48, 64, 96, 128, 160, 256],
