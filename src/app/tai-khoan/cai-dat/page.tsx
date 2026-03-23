@@ -67,7 +67,7 @@ export default function CaiDatPage() {
       if (res.ok) {
         setMessage({ type: 'success', text: '✓ Đã lưu! Đang cập nhật...' });
         // Gọi update() để NextAuth re-fetch JWT từ DB (bao gồm image mới)
-        await update();
+        await update({ image: selected });
         // Refresh server components rồi redirect
         router.refresh();
         setTimeout(() => router.push('/tai-khoan'), 600);
