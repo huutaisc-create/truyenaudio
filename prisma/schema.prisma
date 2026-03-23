@@ -29,9 +29,11 @@ model User {
   library        Library[]
   reviews        Review[]
   comments       Comment[]
+  commentLikes   CommentLike[]
   likes          Like[]
   nominations    Nomination[]
   chatMessages   ChatMessage[]
+  storyRequests  StoryRequest[]
 }
 
 // --- STORY MANAGEMENT ---
@@ -63,6 +65,7 @@ model Story {
   comments        Comment[]
   likes           Like[]
   nominations     Nomination[]
+  storyRequests   StoryRequest[]
 }
 
 model Chapter {
@@ -166,6 +169,7 @@ model Review {
 model Comment {
   id          String   @id @default(uuid())
   content     String
+  likeCount   Int      @default(0)
   createdAt   DateTime @default(now())
 
   userId      String
@@ -173,6 +177,42 @@ model Comment {
   
   storyId     String
   story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  commentLikes CommentLike[]
+
+  @@index([storyId, createdAt])
+}
+
+model CommentLike {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  commentId   String
+  comment     Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
+}
+
+model StoryRequest {
+  id          String   @id @default(uuid())
+  title       String
+  link        String?
+  note        String?
+  status      String   @default("PENDING") // PENDING, DONE, REJECTED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Khi admin làm xong → link tới truyện trong app
+  storyId     String?
+  story       Story?   @relation(fields: [storyId], references: [id])
+
+  @@index([status, createdAt])
 }
 
 model ChatMessage {
