@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Headphones, SkipBack, SkipForward,
   Play, Pause, RotateCcw, RotateCw, ChevronDown,
-  CheckCircle2, List, Info, MessageSquare, Star, Eye, BookOpen, Heart, ChevronLeft, ChevronRight,
+  CheckCircle2, List,
 } from 'lucide-react';
 
 // ── R2 CDN base URL ──────────────────────────────────────────────────────
@@ -25,31 +25,6 @@ interface ChapterMeta {
   index: number;
   title: string;
 }
-interface StoryInfo {
-  description: string;
-  status: string;
-  genres: string[];
-  ratingScore: number;
-  ratingCount: number;
-  viewCount: number;
-  likeCount: number;
-  followCount: number;
-}
-
-interface CommentUser {
-  id: string;
-  name: string;
-  image: string | null;
-}
-
-interface Comment {
-  id: string;
-  content: string;
-  likeCount: number;
-  createdAt: string;
-  user: CommentUser;
-}
-
 interface Props {
   slug: string;
   storyId: string;
@@ -60,7 +35,6 @@ interface Props {
   initialChapters: ChapterMeta[];
   initialChapterIndex: number;
   initialChapter: Chapter;
-  storyInfo: StoryInfo;
 }
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -150,13 +124,10 @@ function LoadingOverlay({ chapterTitle, sentenceGenerated, sentenceTotal }: {
   );
 }
 
-type DrawerTab = 'chapters' | 'info' | 'comments';
-
 // ─── Main ─────────────────────────────────────────────────
 export default function ListeningClient({
   slug, storyId, storyTitle, storyCover, author,
   totalChapters, initialChapters, initialChapterIndex, initialChapter,
-  storyInfo,
 }: Props) {
   const [allChapters, setAllChapters] = useState<ChapterMeta[]>(initialChapters);
   const chapPageRef    = useRef<number>(1);
@@ -232,21 +203,6 @@ export default function ListeningClient({
   const activeChapRef      = useRef<HTMLDivElement>(null);
   const mobileSentinelRef  = useRef<HTMLDivElement>(null);
   const desktopSentinelRef = useRef<HTMLDivElement>(null);
-
-  // ── Tab & Info/Comment UI ──
-  const [desktopTab,       setDesktopTab]        = useState<DrawerTab>('chapters');
-  const [mobileDrawer,     setMobileDrawer]      = useState<DrawerTab | null>(null);
-
-  // ── Comments state ──
-  const [comments,         setComments]          = useState<Comment[]>([]);
-  const [commentPage,      setCommentPage]       = useState(1);
-  const [commentTotal,     setCommentTotal]      = useState(0);
-  const [commentLoading,   setCommentLoading]    = useState(false);
-  const [commentLoaded,    setCommentLoaded]     = useState(false);
-  const [commentInput,     setCommentInput]      = useState('');
-  const [commentSending,   setCommentSending]    = useState(false);
-  const [infoLoaded,       setInfoLoaded]        = useState(false);
-  const COMMENT_PAGE_SIZE = 10;
 
 
   const currentIdx     = currentChapter.index;
@@ -341,94 +297,6 @@ export default function ListeningClient({
     obs.observe(el);
     return () => obs.disconnect();
   }, [sortedChapters.length, loadMoreChapters]);
-
-  // ── Fetch comments (lazy: chỉ khi user mở tab lần đầu) ──
-  const fetchComments = useCallback(async (page: number) => {
-    setCommentLoading(true);
-    try {
-      const res = await fetch(`/api/stories/${slug}/comments?limit=${COMMENT_PAGE_SIZE}&page=${page}`);
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success) {
-          setComments(json.data);
-          setCommentTotal(json.total ?? json.data.length);
-          setCommentPage(page);
-          setCommentLoaded(true);
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setCommentLoading(false);
-    }
-  }, [slug]);
-
-  // ── Khi user mở tab info/comments lần đầu ──
-  const handleOpenTab = useCallback((tab: DrawerTab) => {
-    if (tab === 'comments' && !commentLoaded) {
-      fetchComments(1);
-    }
-    if (tab === 'info') {
-      setInfoLoaded(true);
-    }
-  }, [commentLoaded, fetchComments]);
-
-  // ── Desktop tab switch ──
-  const handleDesktopTab = useCallback((tab: DrawerTab) => {
-    setDesktopTab(tab);
-    handleOpenTab(tab);
-  }, [handleOpenTab]);
-
-  // ── Mobile drawer open ──
-  const handleMobileDrawer = useCallback((tab: DrawerTab) => {
-    setMobileDrawer(tab);
-    handleOpenTab(tab);
-  }, [handleOpenTab]);
-
-  // ── Gửi comment ──
-  const handleSendComment = useCallback(async () => {
-    if (!commentInput.trim() || commentSending) return;
-    setCommentSending(true);
-    try {
-      const res = await fetch(`/api/stories/${slug}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: commentInput.trim() }),
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success) {
-          setCommentInput('');
-          fetchComments(commentPage);
-        }
-      } else {
-        const err = await res.json();
-        alert(err.error || 'Gửi thất bại');
-      }
-    } catch {
-      alert('Lỗi kết nối');
-    } finally {
-      setCommentSending(false);
-    }
-  }, [commentInput, commentSending, slug, commentPage, fetchComments]);
-
-  // ── Format thời gian comment ──
-  const timeAgo = (dateStr: string) => {
-    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-    if (diff < 60) return 'Vừa xong';
-    if (diff < 3600) return Math.floor(diff / 60) + ' phút trước';
-    if (diff < 86400) return Math.floor(diff / 3600) + ' giờ trước';
-    return Math.floor(diff / 86400) + ' ngày trước';
-  };
-
-  const statusLabel = (s: string) => {
-    if (s === 'COMPLETED') return 'Hoàn thành';
-    if (s === 'TRANSLATED') return 'Dịch';
-    if (s === 'CONVERTED') return 'Convert';
-    return 'Đang ra';
-  };
-
-  const totalCommentPages = Math.ceil(commentTotal / COMMENT_PAGE_SIZE);
 
   // ─────────────────────────────────────────────────────────
   // ── Audio core ──
@@ -1625,124 +1493,6 @@ export default function ListeningClient({
   })();
 
   // ─────────────────────────────────────────────────────────
-  // ── INFO PANEL ──
-  // ─────────────────────────────────────────────────────────
-  const InfoPanel = (
-    <div className="flex flex-col gap-4 px-4 py-4">
-      {/* Stats row */}
-      <div className="grid grid-cols-3 gap-2">
-        {[
-          { icon: <Star size={12} className="text-[#e8580a]" />, label: 'Đánh giá', value: storyInfo.ratingScore > 0 ? storyInfo.ratingScore.toFixed(1) : '—' },
-          { icon: <Eye size={12} className="text-[#8a7e72]" />, label: 'Lượt xem', value: storyInfo.viewCount > 999 ? (storyInfo.viewCount / 1000).toFixed(1) + 'k' : String(storyInfo.viewCount) },
-          { icon: <BookOpen size={12} className="text-[#8a7e72]" />, label: 'Chương', value: String(totalChapters) },
-        ].map(({ icon, label, value }) => (
-          <div key={label} className="bg-[#1a1612] rounded-lg p-2.5 flex flex-col items-center gap-1">
-            {icon}
-            <span className="text-[11px] font-bold text-[#f0ebe4]">{value}</span>
-            <span className="text-[9px] text-[#8a7e72]">{label}</span>
-          </div>
-        ))}
-      </div>
-      {/* Status + Genres */}
-      <div className="flex flex-wrap gap-1.5">
-        <span className="text-[9px] font-bold px-2 py-1 rounded-full bg-[#e8580a]/20 text-[#e8580a] border border-[#e8580a]/30">
-          {statusLabel(storyInfo.status)}
-        </span>
-        {storyInfo.genres.slice(0, 4).map(g => (
-          <span key={g} className="text-[9px] px-2 py-1 rounded-full bg-white/[0.06] text-[#8a7e72] border border-white/[0.08]">{g}</span>
-        ))}
-      </div>
-      {/* Description */}
-      {storyInfo.description && (
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[.1em] text-[#8a7e72] mb-2">Giới thiệu</p>
-          <p className="text-[12px] text-[#c8bfb5] leading-relaxed line-clamp-6">{storyInfo.description}</p>
-        </div>
-      )}
-    </div>
-  );
-
-  // ─────────────────────────────────────────────────────────
-  // ── COMMENTS PANEL ──
-  // ─────────────────────────────────────────────────────────
-  const CommentsPanel = (
-    <div className="flex flex-col h-full">
-      {/* Comment list */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
-        {commentLoading ? (
-          <div className="flex justify-center py-8">
-            <span className="text-[11px] text-[#8a7e72] animate-pulse">Đang tải...</span>
-          </div>
-        ) : comments.length === 0 ? (
-          <p className="text-[11px] text-[#8a7e72] text-center py-8 italic">Chưa có bình luận nào</p>
-        ) : (
-          comments.map(cmt => (
-            <div key={cmt.id} className="flex gap-2.5">
-              {/* Avatar */}
-              {cmt.user.image ? (
-                <img src={cmt.user.image} alt={cmt.user.name}
-                  className="w-7 h-7 rounded-full object-cover shrink-0" style={{ borderRadius: '50%' }} />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-[#e8580a] flex items-center justify-center shrink-0 text-white text-[10px] font-bold">
-                  {cmt.user.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-1.5 mb-0.5">
-                  <span className="text-[11px] font-bold text-[#f0ebe4]">{cmt.user.name}</span>
-                  <span className="text-[9px] text-[#8a7e72]">{timeAgo(cmt.createdAt)}</span>
-                </div>
-                <p className="text-[11px] text-[#c8bfb5] leading-relaxed">{cmt.content}</p>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Pagination */}
-      {totalCommentPages > 1 && (
-        <div className="flex items-center justify-center gap-2 px-3 py-2 border-t border-white/[0.06] shrink-0">
-          <button
-            onClick={() => fetchComments(commentPage - 1)}
-            disabled={commentPage <= 1 || commentLoading}
-            className="w-6 h-6 rounded flex items-center justify-center text-[#8a7e72] disabled:opacity-30 hover:text-white transition-colors"
-          >
-            <ChevronLeft size={13} />
-          </button>
-          <span className="text-[10px] text-[#8a7e72]">{commentPage} / {totalCommentPages}</span>
-          <button
-            onClick={() => fetchComments(commentPage + 1)}
-            disabled={commentPage >= totalCommentPages || commentLoading}
-            className="w-6 h-6 rounded flex items-center justify-center text-[#8a7e72] disabled:opacity-30 hover:text-white transition-colors"
-          >
-            <ChevronRight size={13} />
-          </button>
-        </div>
-      )}
-
-      {/* Input */}
-      <div className="px-3 py-3 border-t border-white/[0.06] shrink-0">
-        <div className="flex gap-2">
-          <input
-            value={commentInput}
-            onChange={e => setCommentInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendComment(); } }}
-            placeholder="Viết bình luận..."
-            className="flex-1 bg-[#1a1612] border border-white/[0.08] rounded-lg px-3 py-2 text-[11px] text-[#f0ebe4] placeholder:text-[#8a7e72] outline-none focus:border-[#e8580a]/50"
-          />
-          <button
-            onClick={handleSendComment}
-            disabled={commentSending || !commentInput.trim()}
-            className="px-3 py-2 bg-[#e8580a] rounded-lg text-white text-[10px] font-bold disabled:opacity-40 hover:bg-[#d4500a] transition-colors shrink-0"
-          >
-            Gửi
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ─────────────────────────────────────────────────────────
   // ── RENDER ──
   // ─────────────────────────────────────────────────────────
   return (
@@ -1782,14 +1532,6 @@ export default function ListeningClient({
         <button onClick={() => setShowChapterList(true)}
           className="lg:hidden w-8 h-8 rounded-lg bg-black/50 backdrop-blur-sm border border-white/[0.12] flex items-center justify-center text-[#8a7e72] hover:text-white transition-colors">
           <List size={15} />
-        </button>
-        <button onClick={() => handleMobileDrawer('info')}
-          className="lg:hidden w-8 h-8 rounded-lg bg-black/50 backdrop-blur-sm border border-white/[0.12] flex items-center justify-center text-[#8a7e72] hover:text-white transition-colors">
-          <Info size={15} />
-        </button>
-        <button onClick={() => handleMobileDrawer('comments')}
-          className="lg:hidden w-8 h-8 rounded-lg bg-black/50 backdrop-blur-sm border border-white/[0.12] flex items-center justify-center text-[#8a7e72] hover:text-white transition-colors">
-          <MessageSquare size={15} />
         </button>
       </div>
 
@@ -1879,43 +1621,19 @@ export default function ListeningClient({
           </div>
         </div>
 
-        {/* RIGHT 3 cols — tabbed panel */}
+        {/* RIGHT 3 cols — infinite scroll chapter list */}
         <div className="col-span-3 flex flex-col bg-[#0d0b08] border-l border-white/[0.06] h-screen">
-          {/* Tab bar */}
-          <div className="flex border-b border-white/[0.06] flex-shrink-0">
-            {([
-              { id: 'chapters', icon: <List size={11} />, label: 'Chương' },
-              { id: 'info',     icon: <Info size={11} />, label: 'Thông tin' },
-              { id: 'comments', icon: <MessageSquare size={11} />, label: 'Bình luận' },
-            ] as { id: DrawerTab; icon: React.ReactNode; label: string }[]).map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => handleDesktopTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-1 py-2.5 text-[9px] font-black uppercase tracking-[.08em] transition-colors border-b-[1.5px] ${
-                  desktopTab === tab.id
-                    ? 'text-[#e8580a] border-[#e8580a]'
-                    : 'text-[#8a7e72] border-transparent hover:text-[#f0ebe4]'
-                }`}
-              >
-                {tab.icon}{tab.label}
-              </button>
-            ))}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] flex-shrink-0">
+            <span className="text-[10px] font-black uppercase tracking-[.12em] text-[#f0ebe4]">Danh sách chương</span>
+            <span className="text-[10px] text-[#8a7e72]">{totalChapters} chương</span>
           </div>
-
-          {/* Tab content */}
           <div className="flex-1 overflow-y-auto">
-            {desktopTab === 'chapters' && (
-              <>
-                {sortedChapters.slice(0, desktopVisible).map(renderChapRow)}
-                {(desktopVisible < sortedChapters.length || hasMoreChaps) && (
-                  <div ref={desktopSentinelRef} className="h-12 flex items-center justify-center">
-                    <span className="text-[10px] text-[#8a7e72] animate-pulse">Đang tải thêm...</span>
-                  </div>
-                )}
-              </>
+            {sortedChapters.slice(0, desktopVisible).map(renderChapRow)}
+            {(desktopVisible < sortedChapters.length || hasMoreChaps) && (
+              <div ref={desktopSentinelRef} className="h-12 flex items-center justify-center">
+                <span className="text-[10px] text-[#8a7e72] animate-pulse">Đang tải thêm...</span>
+              </div>
             )}
-            {desktopTab === 'info' && InfoPanel}
-            {desktopTab === 'comments' && CommentsPanel}
           </div>
         </div>
       </div>
@@ -1937,40 +1655,6 @@ export default function ListeningClient({
                 <span className="text-[10px] text-[#8a7e72] animate-pulse">Đang tải thêm...</span>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* ════ MOBILE INFO DRAWER ════ */}
-      {mobileDrawer === 'info' && (
-        <div className="lg:hidden fixed inset-0 z-50 flex flex-col bg-[#0f0d0a]/96 backdrop-blur-sm">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.07] flex-shrink-0">
-            <span className="text-[13px] font-black text-[#f0ebe4] uppercase tracking-[.08em]">Thông tin truyện</span>
-            <button onClick={() => setMobileDrawer(null)}
-              className="w-8 h-8 rounded-lg bg-white/[0.07] flex items-center justify-center text-[#8a7e72]">
-              ✕
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {InfoPanel}
-          </div>
-        </div>
-      )}
-
-      {/* ════ MOBILE COMMENTS DRAWER ════ */}
-      {mobileDrawer === 'comments' && (
-        <div className="lg:hidden fixed inset-0 z-50 flex flex-col bg-[#0f0d0a]/96 backdrop-blur-sm">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.07] flex-shrink-0">
-            <span className="text-[13px] font-black text-[#f0ebe4] uppercase tracking-[.08em]">
-              Bình luận {commentTotal > 0 ? `(${commentTotal})` : ''}
-            </span>
-            <button onClick={() => setMobileDrawer(null)}
-              className="w-8 h-8 rounded-lg bg-white/[0.07] flex items-center justify-center text-[#8a7e72]">
-              ✕
-            </button>
-          </div>
-          <div className="flex-1 overflow-hidden flex flex-col">
-            {CommentsPanel}
           </div>
         </div>
       )}

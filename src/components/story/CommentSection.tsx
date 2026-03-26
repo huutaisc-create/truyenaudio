@@ -56,6 +56,7 @@ function Avatar({ name, image, size = 38 }: { name: string; image?: string | nul
                 width={size}
                 height={size}
                 className="rounded-full object-cover shrink-0"
+                style={{ borderRadius: "50%", width: size, height: size, minWidth: size }}
             />
         );
     }

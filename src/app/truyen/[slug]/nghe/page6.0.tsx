@@ -60,17 +60,7 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
       id: chapterData.chapter.id,
       index: chapterData.chapter.index,
       title: chapterData.chapter.title,
-      content,
-    },
-    storyInfo: {
-      description: storyData.description ?? '',
-      status: storyData.status ?? '',
-      genres: storyData.genres.map((g: any) => g.name),
-      ratingScore: storyData.ratingScore ?? 0,
-      ratingCount: storyData.ratingCount ?? 0,
-      viewCount: storyData.viewCount ?? 0,
-      likeCount: storyData.likeCount ?? 0,
-      followCount: storyData.followCount ?? 0,
+      content, // content từ R2
     },
   };
 
