@@ -9,7 +9,7 @@ import {
   CheckCircle2, List, Info, MessageSquare, Star, Eye, BookOpen, Heart,
   Loader2, CornerDownRight, Trash2, X, Send, Bookmark, Trophy,
 } from 'lucide-react';
-import { toggleFollow, toggleLike, nominateStory } from '@/actions/interactions';
+import { toggleFollow, toggleLike, nominateStory, getStoryInteractions } from '@/actions/interactions';
 
 // ── R2 CDN base URL ──────────────────────────────────────────────────────
 // Đổi URL này khi có custom domain, không cần sửa chỗ nào khác
@@ -280,6 +280,24 @@ export default function ListeningClient({
   });
   const [interactLoading, setInteractLoading] = useState<'like' | 'follow' | 'nominate' | null>(null);
   // (interactLoading reserved for future use)
+
+  // ── Fetch interaction status & stats mới nhất từ DB khi mount ──
+  useEffect(() => {
+    getStoryInteractions(storyId).then(({ stats, userStatus: us }) => {
+      if (stats) {
+        setInteractStats({
+          likeCount:       stats.likeCount,
+          followCount:     stats.followCount,
+          nominationCount: stats.nominationCount,
+        });
+      }
+      setUserStatus({
+        isLiked:     us.isLiked,
+        isFollowed:  us.isFollowed,
+        isNominated: false, // nominations là 1 chiều, không toggle
+      });
+    });
+  }, [storyId]);
 
 
   const currentIdx     = currentChapter.index;
@@ -1597,11 +1615,11 @@ export default function ListeningClient({
   const Controls = (
     <div className="flex items-center justify-center gap-3">
       <button onClick={() => goChapter('prev')} disabled={!hasPrev}
-        className="w-9 h-9 rounded-full bg-[#231f1a] border border-white/[0.07] flex items-center justify-center text-[#8a7e72] disabled:opacity-30 hover:text-white transition-colors">
+        className="w-9 h-9 rounded-full bg-[#2a2520] border border-white/[0.20] flex items-center justify-center text-white disabled:opacity-30 hover:border-white/40 transition-colors">
         <SkipBack size={16} />
       </button>
       <button onClick={() => skip(-15)}
-        className="w-9 h-9 rounded-full bg-[#231f1a] border border-white/[0.07] flex items-center justify-center text-[#8a7e72] hover:text-white transition-colors">
+        className="w-9 h-9 rounded-full bg-[#2a2520] border border-white/[0.20] flex items-center justify-center text-white hover:border-white/40 transition-colors">
         <RotateCcw size={15} />
       </button>
       <button onClick={togglePlay} disabled={isGenerating && generatedRef.current === 0}
@@ -1611,11 +1629,11 @@ export default function ListeningClient({
           : <Play  size={22} fill="white" className="translate-x-0.5" />}
       </button>
       <button onClick={() => skip(15)}
-        className="w-9 h-9 rounded-full bg-[#231f1a] border border-white/[0.07] flex items-center justify-center text-[#8a7e72] hover:text-white transition-colors">
+        className="w-9 h-9 rounded-full bg-[#2a2520] border border-white/[0.20] flex items-center justify-center text-white hover:border-white/40 transition-colors">
         <RotateCw size={15} />
       </button>
       <button onClick={() => goChapter('next')} disabled={!hasNext}
-        className="w-9 h-9 rounded-full bg-[#231f1a] border border-white/[0.07] flex items-center justify-center text-[#8a7e72] disabled:opacity-30 hover:text-white transition-colors">
+        className="w-9 h-9 rounded-full bg-[#2a2520] border border-white/[0.20] flex items-center justify-center text-white disabled:opacity-30 hover:border-white/40 transition-colors">
         <SkipForward size={16} />
       </button>
     </div>
@@ -1628,10 +1646,10 @@ export default function ListeningClient({
         <button onClick={() => setShowVoiceMenu(v => !v)}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-[#231f1a] border border-white/[0.07] hover:border-[#e8580a]/30 transition-colors">
           <span className="text-sm">🎙</span>
-          <span className="text-[11px] font-bold text-[#f0ebe4] flex-1 text-left truncate">
+          <span className="text-[12px] font-bold text-white flex-1 text-left truncate">
             {voices.find(v => v.id === selectedVoice)?.name ?? 'Chọn giọng'}
           </span>
-          <ChevronDown size={12} className="text-[#8a7e72]" />
+          <ChevronDown size={12} className="text-[#c0b4a8]" />
         </button>
         {showVoiceMenu && voices.length > 0 && (
           <div className="absolute bottom-full left-0 right-0 mb-1 bg-[#1a1612] border border-white/[0.09] rounded-xl overflow-hidden shadow-xl z-20 max-h-48 overflow-y-auto">
@@ -1664,8 +1682,8 @@ export default function ListeningClient({
             console.log(`[Worker] Pool resized → ${workerPoolRef.current.length} workers`);
           }}
           disabled={workerCount <= 2}
-          className="px-2.5 py-2 text-[#8a7e72] text-[13px] font-black hover:bg-white/[0.06] transition-colors disabled:opacity-30">−</button>
-        <span className="text-[#8a7e72] text-[11px] font-black min-w-[32px] text-center">⚡{workerCount}</span>
+          className="px-2.5 py-2 text-[#c0b4a8] text-[13px] font-black hover:bg-white/[0.06] transition-colors disabled:opacity-30">−</button>
+        <span className="text-[#c0b4a8] text-[11px] font-black min-w-[32px] text-center">⚡{workerCount}</span>
         <button
           onClick={() => {
             const next = Math.min(4, workerCount + 1);
@@ -1676,7 +1694,7 @@ export default function ListeningClient({
             console.log(`[Worker] Pool resized → ${workerPoolRef.current.length} workers`);
           }}
           disabled={workerCount >= 4}
-          className="px-2.5 py-2 text-[#8a7e72] text-[13px] font-black hover:bg-white/[0.06] transition-colors disabled:opacity-30">+</button>
+          className="px-2.5 py-2 text-[#c0b4a8] text-[13px] font-black hover:bg-white/[0.06] transition-colors disabled:opacity-30">+</button>
       </div>
     </div>
   );
@@ -2060,37 +2078,38 @@ export default function ListeningClient({
       {/* ── Back + title overlay ── */}
       <div className="absolute top-3 left-3 z-40 flex items-center gap-2">
         <Link href={`/truyen/${slug}`}
-          className="w-8 h-8 rounded-lg bg-black/50 backdrop-blur-sm border border-white/[0.12] flex items-center justify-center text-[#8a7e72] hover:text-white transition-colors flex-shrink-0">
+          className="w-8 h-8 rounded-lg bg-black/60 backdrop-blur-sm border border-white/[0.25] flex items-center justify-center text-white hover:text-white hover:border-white/50 transition-colors flex-shrink-0">
           <ArrowLeft size={15} />
         </Link>
         <div className="bg-black/50 backdrop-blur-sm border border-white/[0.08] rounded-lg px-3 py-1.5 max-w-[260px] min-w-0">
-          <p className="text-[12px] font-bold text-[#f0ebe4] truncate leading-tight">{storyTitle}</p>
-          <p className="text-[9px] text-[#8a7e72] leading-tight">Đang nghe · {author}</p>
+          <p className="text-[13px] font-bold text-white truncate leading-tight">{storyTitle}</p>
         </div>
         <button onClick={() => setShowChapterList(true)}
-          className="lg:hidden w-8 h-8 rounded-lg bg-black/50 backdrop-blur-sm border border-white/[0.12] flex items-center justify-center text-[#8a7e72] hover:text-white transition-colors">
+          className="lg:hidden w-8 h-8 rounded-lg bg-black/60 backdrop-blur-sm border border-white/[0.25] flex items-center justify-center text-white hover:border-white/50 transition-colors">
           <List size={15} />
         </button>
         <button onClick={() => handleMobileDrawer('info')}
-          className="lg:hidden w-8 h-8 rounded-lg bg-black/50 backdrop-blur-sm border border-white/[0.12] flex items-center justify-center text-[#8a7e72] hover:text-white transition-colors">
+          className="lg:hidden w-8 h-8 rounded-lg bg-black/60 backdrop-blur-sm border border-white/[0.25] flex items-center justify-center text-white hover:border-white/50 transition-colors">
           <Info size={15} />
         </button>
         <button onClick={() => handleMobileDrawer('comments')}
-          className="lg:hidden w-8 h-8 rounded-lg bg-black/50 backdrop-blur-sm border border-white/[0.12] flex items-center justify-center text-[#8a7e72] hover:text-white transition-colors">
+          className="lg:hidden w-8 h-8 rounded-lg bg-black/60 backdrop-blur-sm border border-white/[0.25] flex items-center justify-center text-white hover:border-white/50 transition-colors">
           <MessageSquare size={15} />
         </button>
       </div>
 
       {/* ════ MOBILE (< lg) — full screen như mockup ════ */}
       <div className="lg:hidden relative min-h-screen">
-        {/* Cover full screen */}
+        {/* Cover centered - not full screen */}
         <div className="absolute inset-0">
           {storyCover
             ? <>
                 <div className="absolute inset-0 bg-cover bg-center opacity-20 blur-xl scale-110"
                   style={{ backgroundImage: `url(${storyCover})` }} />
-                <img src={storyCover} alt={storyTitle}
-                  className="absolute inset-0 w-full h-full object-contain" />
+                <div className="absolute inset-0 flex items-center justify-center" style={{ top: '60px', bottom: '320px' }}>
+                  <img src={storyCover} alt={storyTitle}
+                    className="max-h-full max-w-[75%] object-contain drop-shadow-2xl rounded-lg" />
+                </div>
               </>
             : <div className="absolute inset-0 bg-gradient-to-br from-[#3d1f08] to-[#0f0d0a]" />}
           <div className="absolute bottom-0 left-0 right-0 h-[480px] bg-gradient-to-t from-[#0f0d0a] via-[#0f0d0a]/80 to-transparent" />
@@ -2104,10 +2123,10 @@ export default function ListeningClient({
                 <Headphones size={9} className="text-[#e8580a]" />
                 <span className="text-[9px] font-black tracking-[.12em] uppercase text-[#e8580a]">Chương {currentIdx}</span>
               </div>
-              <h1 className="font-serif text-[18px] font-bold text-[#f0ebe4] leading-tight mb-1">
+              <h1 className="font-serif text-[20px] font-bold text-white leading-tight mb-1">
                 {currentChapter.title || `Chương ${currentIdx}`}
               </h1>
-              <p className="text-[11px] text-[#8a7e72]">{author}</p>
+              <p className="text-[12px] text-[#c0b4a8]">{author}</p>
             </div>
             <div className="px-6 flex flex-col gap-3">
               {DebugPanel}
@@ -2141,7 +2160,7 @@ export default function ListeningClient({
                 style={{ backgroundImage: `url(${storyCover})` }} />
             )}
             {storyCover
-              ? <img src={storyCover} alt={storyTitle} className="relative z-10 max-h-full max-w-full object-contain drop-shadow-2xl" style={{ maxHeight: '70%' }} />
+              ? <img src={storyCover} alt={storyTitle} className="relative z-10 object-contain drop-shadow-2xl" style={{ maxHeight: '65%', maxWidth: '55%' }} />
               : <div className="absolute inset-0 bg-gradient-to-br from-[#4a2f10] to-[#1a0e06] flex items-center justify-center">
                   <Headphones size={80} className="text-[#e8580a]/20" />
                 </div>}
@@ -2155,10 +2174,10 @@ export default function ListeningClient({
                 <Headphones size={9} className="text-[#e8580a]" />
                 <span className="text-[9px] font-black tracking-[.12em] uppercase text-[#e8580a]">Chương {currentIdx}</span>
               </div>
-              <h1 className="font-serif text-[22px] font-bold text-[#f0ebe4] leading-tight mb-1">
+              <h1 className="font-serif text-[26px] font-bold text-white leading-tight mb-1">
                 {currentChapter.title || `Chương ${currentIdx}`}
               </h1>
-              <p className="text-[12px] text-[#8a7e72]">{author}</p>
+              <p className="text-[13px] text-[#c0b4a8]">{author}</p>
             </div>
             {DebugPanel}
             {Controls}
