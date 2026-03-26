@@ -9,6 +9,7 @@ import {
   CheckCircle2, List, Info, MessageSquare, Star, Eye, BookOpen, Heart,
   Loader2, CornerDownRight, Trash2, X, Send, Bookmark, Trophy,
 } from 'lucide-react';
+import { toggleFollow, toggleLike, nominateStory } from '@/actions/interactions';
 
 // ── R2 CDN base URL ──────────────────────────────────────────────────────
 // Đổi URL này khi có custom domain, không cần sửa chỗ nào khác
@@ -278,6 +279,7 @@ export default function ListeningClient({
     isNominated: false,
   });
   const [interactLoading, setInteractLoading] = useState<'like' | 'follow' | 'nominate' | null>(null);
+  // (interactLoading reserved for future use)
 
 
   const currentIdx     = currentChapter.index;
@@ -469,107 +471,58 @@ export default function ListeningClient({
     } catch { alert('Lỗi kết nối'); }
   }, [slug]);
 
-  // ── Fetch userStatus khi mount (nếu đã đăng nhập) ──
-  useEffect(() => {
-    if (!currentUser) return;
-    fetch(`/api/stories/${slug}/interactions/status`)
-      .then(r => r.ok ? r.json() : null)
-      .then(json => {
-        if (json?.success) {
-          setUserStatus({
-            isLiked:     json.data.isLiked    ?? false,
-            isFollowed:  json.data.isFollowed ?? false,
-            isNominated: json.data.isNominated ?? false,
-          });
-        }
-      })
-      .catch(() => {});
-  }, [currentUser, slug]);
+  // ── checkAuth ──
+  const checkAuth = useCallback(() => {
+    if (!currentUser) {
+      if (confirm('Bạn cần đăng nhập để thực hiện chức năng này. Đăng nhập ngay?')) {
+        router.push('/login?callbackUrl=' + window.location.pathname);
+      }
+      return false;
+    }
+    return true;
+  }, [currentUser, router]);
 
   // ── Like handler ──
   const handleLike = useCallback(async () => {
-    if (!currentUser) { window.location.href = '/login?callbackUrl=' + window.location.pathname; return; }
-    if (interactLoading) return;
-    const wasLiked = userStatus.isLiked;
-    setUserStatus(s => ({ ...s, isLiked: !wasLiked }));
-    setInteractStats(s => ({ ...s, likeCount: wasLiked ? s.likeCount - 1 : s.likeCount + 1 }));
-    setInteractLoading('like');
-    try {
-      const res = await fetch(`/api/stories/${slug}/like`, { method: 'POST' });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success) {
-          setUserStatus(s => ({ ...s, isLiked: json.data.isLiked }));
-          setInteractStats(s => ({ ...s, likeCount: json.data.likeCount }));
-        }
-      } else {
-        // rollback
-        setUserStatus(s => ({ ...s, isLiked: wasLiked }));
-        setInteractStats(s => ({ ...s, likeCount: wasLiked ? s.likeCount + 1 : s.likeCount - 1 }));
-      }
-    } catch {
-      setUserStatus(s => ({ ...s, isLiked: wasLiked }));
-      setInteractStats(s => ({ ...s, likeCount: wasLiked ? s.likeCount + 1 : s.likeCount - 1 }));
-    } finally {
-      setInteractLoading(null);
+    if (!checkAuth()) return;
+    const newLiked = !userStatus.isLiked;
+    setUserStatus(s => ({ ...s, isLiked: newLiked }));
+    setInteractStats(s => ({ ...s, likeCount: s.likeCount + (newLiked ? 1 : -1) }));
+    const res = await toggleLike(storyId);
+    if (res.error) {
+      setUserStatus(s => ({ ...s, isLiked: !newLiked }));
+      setInteractStats(s => ({ ...s, likeCount: s.likeCount + (newLiked ? -1 : 1) }));
+      alert(res.error);
     }
-  }, [currentUser, interactLoading, userStatus.isLiked, slug]);
+  }, [checkAuth, userStatus.isLiked, storyId]);
 
   // ── Follow handler ──
   const handleFollow = useCallback(async () => {
-    if (!currentUser) { window.location.href = '/login?callbackUrl=' + window.location.pathname; return; }
-    if (interactLoading) return;
-    const wasFollowed = userStatus.isFollowed;
-    setUserStatus(s => ({ ...s, isFollowed: !wasFollowed }));
-    setInteractStats(s => ({ ...s, followCount: wasFollowed ? s.followCount - 1 : s.followCount + 1 }));
-    setInteractLoading('follow');
-    try {
-      const res = await fetch(`/api/stories/${slug}/follow`, { method: 'POST' });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success) {
-          setUserStatus(s => ({ ...s, isFollowed: json.data.isFollowed }));
-          setInteractStats(s => ({ ...s, followCount: json.data.followCount }));
-        }
-      } else {
-        setUserStatus(s => ({ ...s, isFollowed: wasFollowed }));
-        setInteractStats(s => ({ ...s, followCount: wasFollowed ? s.followCount + 1 : s.followCount - 1 }));
-      }
-    } catch {
-      setUserStatus(s => ({ ...s, isFollowed: wasFollowed }));
-      setInteractStats(s => ({ ...s, followCount: wasFollowed ? s.followCount + 1 : s.followCount - 1 }));
-    } finally {
-      setInteractLoading(null);
+    if (!checkAuth()) return;
+    const newFollowed = !userStatus.isFollowed;
+    setUserStatus(s => ({ ...s, isFollowed: newFollowed }));
+    setInteractStats(s => ({ ...s, followCount: s.followCount + (newFollowed ? 1 : -1) }));
+    const res = await toggleFollow(storyId);
+    if (res.error) {
+      setUserStatus(s => ({ ...s, isFollowed: !newFollowed }));
+      setInteractStats(s => ({ ...s, followCount: s.followCount + (newFollowed ? -1 : 1) }));
+      alert(res.error);
     }
-  }, [currentUser, interactLoading, userStatus.isFollowed, slug]);
+  }, [checkAuth, userStatus.isFollowed, storyId]);
 
   // ── Nominate handler ──
   const handleNominate = useCallback(async () => {
-    if (!currentUser) { window.location.href = '/login?callbackUrl=' + window.location.pathname; return; }
-    if (interactLoading) return;
-    const wasNominated = userStatus.isNominated;
-    setUserStatus(s => ({ ...s, isNominated: !wasNominated }));
-    setInteractStats(s => ({ ...s, nominationCount: wasNominated ? s.nominationCount - 1 : s.nominationCount + 1 }));
-    setInteractLoading('nominate');
-    try {
-      const res = await fetch(`/api/stories/${slug}/nominate`, { method: 'POST' });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success) {
-          setUserStatus(s => ({ ...s, isNominated: json.data.isNominated }));
-          setInteractStats(s => ({ ...s, nominationCount: json.data.nominationCount }));
-        }
-      } else {
-        setUserStatus(s => ({ ...s, isNominated: wasNominated }));
-        setInteractStats(s => ({ ...s, nominationCount: wasNominated ? s.nominationCount + 1 : s.nominationCount - 1 }));
-      }
-    } catch {
-      setUserStatus(s => ({ ...s, isNominated: wasNominated }));
-      setInteractStats(s => ({ ...s, nominationCount: wasNominated ? s.nominationCount + 1 : s.nominationCount - 1 }));
-    } finally {
-      setInteractLoading(null);
+    if (!checkAuth()) return;
+    if (!confirm('Bạn muốn đề cử cho truyện này?')) return;
+    setInteractStats(s => ({ ...s, nominationCount: s.nominationCount + 1 }));
+    const res = await nominateStory(storyId);
+    if (res.error) {
+      setInteractStats(s => ({ ...s, nominationCount: s.nominationCount - 1 }));
+      alert(res.error);
+    } else {
+      alert('Đề cử thành công!');
     }
-  }, [currentUser, interactLoading, userStatus.isNominated, slug]);
+  }, [checkAuth, storyId]);
 
   // ── Gửi comment ──
   const handleSendComment = useCallback(async () => {
@@ -1873,69 +1826,60 @@ export default function ListeningClient({
         </div>
       )}
 
-      {/* Stats row: yêu thích / theo dõi / đề cử — dùng interactStats (live) */}
-      <div className="grid grid-cols-3 gap-2">
-        {[
-          { icon: <Heart size={12} className="text-rose-400" />,    label: 'Yêu thích', value: fmtNum(interactStats.likeCount) },
-          { icon: <Bookmark size={12} className="text-sky-400" />,  label: 'Theo dõi',  value: fmtNum(interactStats.followCount) },
-          { icon: <Trophy size={12} className="text-amber-400" />,  label: 'Đề cử',     value: fmtNum(interactStats.nominationCount) },
-        ].map(({ icon, label, value }) => (
-          <div key={label} className="bg-[#1a1612] rounded-lg p-2.5 flex flex-col items-center gap-1">
-            {icon}
-            <span className="text-[11px] font-bold text-[#f0ebe4]">{value}</span>
-            <span className="text-[9px] text-[#8a7e72]">{label}</span>
-          </div>
-        ))}
-      </div>
+      {/* Interaction bar — giống StoryInteractions: label trên, icon+số dưới, click được */}
+      <div className="flex rounded-xl overflow-hidden border border-white/[0.10]">
 
-      {/* 3 nút tương tác */}
-      <div className="grid grid-cols-3 gap-2">
-        {/* Like */}
+        {/* Yêu thích */}
         <button
           onClick={handleLike}
-          disabled={interactLoading === 'like'}
           aria-pressed={userStatus.isLiked}
           aria-label={userStatus.isLiked ? 'Bỏ yêu thích' : 'Yêu thích'}
-          className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border text-[10px] font-bold transition-all ${
-            userStatus.isLiked
-              ? 'bg-rose-500/15 border-rose-500/50 text-rose-400'
-              : 'bg-[#1a1612] border-white/[0.08] text-[#8a7e72] hover:border-rose-500/40 hover:text-rose-400'
-          } disabled:opacity-50`}
+          className={`flex-1 flex flex-col items-center cursor-pointer transition-all active:scale-95 ${
+            userStatus.isLiked ? 'bg-red-500/10' : 'bg-[#1a1612] hover:bg-red-500/10'
+          }`}
         >
-          <Heart size={14} className={userStatus.isLiked ? 'fill-current' : ''} />
-          {userStatus.isLiked ? 'Đã thích' : 'Yêu thích'}
+          <div className={`w-full text-center px-2 py-1 text-[9px] font-semibold border-b border-white/[0.08] ${
+            userStatus.isLiked ? 'text-red-400 bg-red-500/10' : 'text-[#8a7e72] bg-[#1a1612]'
+          }`}>+ Yêu thích</div>
+          <div className="flex items-center justify-center gap-1.5 py-2.5">
+            <Heart size={14} className={`transition-all ${userStatus.isLiked ? 'fill-current text-red-500 scale-110' : 'text-red-400'}`} />
+            <span className={`text-[12px] font-bold ${userStatus.isLiked ? 'text-red-500' : 'text-[#f0ebe4]'}`}>{interactStats.likeCount}</span>
+          </div>
         </button>
 
-        {/* Follow */}
+        <div className="w-px bg-white/[0.08]" />
+
+        {/* Theo dõi */}
         <button
           onClick={handleFollow}
-          disabled={interactLoading === 'follow'}
           aria-pressed={userStatus.isFollowed}
           aria-label={userStatus.isFollowed ? 'Bỏ theo dõi' : 'Theo dõi'}
-          className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border text-[10px] font-bold transition-all ${
-            userStatus.isFollowed
-              ? 'bg-sky-500/15 border-sky-500/50 text-sky-400'
-              : 'bg-[#1a1612] border-white/[0.08] text-[#8a7e72] hover:border-sky-500/40 hover:text-sky-400'
-          } disabled:opacity-50`}
+          className={`flex-1 flex flex-col items-center cursor-pointer transition-all active:scale-95 ${
+            userStatus.isFollowed ? 'bg-blue-500/10' : 'bg-[#1a1612] hover:bg-blue-500/10'
+          }`}
         >
-          <Bookmark size={14} className={userStatus.isFollowed ? 'fill-current' : ''} />
-          {userStatus.isFollowed ? 'Đang theo' : 'Theo dõi'}
+          <div className={`w-full text-center px-2 py-1 text-[9px] font-semibold border-b border-white/[0.08] ${
+            userStatus.isFollowed ? 'text-blue-400 bg-blue-500/10' : 'text-[#8a7e72] bg-[#1a1612]'
+          }`}>+ Theo dõi</div>
+          <div className="flex items-center justify-center gap-1.5 py-2.5">
+            <Bookmark size={14} className={`transition-all ${userStatus.isFollowed ? 'fill-current text-blue-500 scale-110' : 'text-blue-400'}`} />
+            <span className={`text-[12px] font-bold ${userStatus.isFollowed ? 'text-blue-500' : 'text-[#f0ebe4]'}`}>{interactStats.followCount}</span>
+          </div>
         </button>
 
-        {/* Nominate */}
+        <div className="w-px bg-white/[0.08]" />
+
+        {/* Đề cử */}
         <button
           onClick={handleNominate}
-          disabled={interactLoading === 'nominate'}
-          aria-pressed={userStatus.isNominated}
-          aria-label={userStatus.isNominated ? 'Bỏ đề cử' : 'Đề cử'}
-          className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border text-[10px] font-bold transition-all ${
-            userStatus.isNominated
-              ? 'bg-amber-500/15 border-amber-500/50 text-amber-400'
-              : 'bg-[#1a1612] border-white/[0.08] text-[#8a7e72] hover:border-amber-500/40 hover:text-amber-400'
-          } disabled:opacity-50`}
+          aria-label="Đề cử"
+          className="flex-1 flex flex-col items-center cursor-pointer bg-[#1a1612] hover:bg-amber-500/10 transition-all active:scale-95"
         >
-          <Trophy size={14} className={userStatus.isNominated ? 'fill-current' : ''} />
-          {userStatus.isNominated ? 'Đã đề cử' : 'Đề cử'}
+          <div className="w-full text-center px-2 py-1 text-[9px] font-semibold border-b border-white/[0.08] text-[#8a7e72] bg-[#1a1612]">+ Đề cử</div>
+          <div className="flex items-center justify-center gap-1.5 py-2.5">
+            <Trophy size={14} className="text-amber-400" />
+            <span className="text-[12px] font-bold text-[#f0ebe4]">{interactStats.nominationCount}</span>
+          </div>
         </button>
       </div>
 
@@ -2094,7 +2038,7 @@ export default function ListeningClient({
       {/* ── Version Badge ── */}
       <div className="fixed bottom-16 right-3 z-50 pointer-events-none">
         <div className="bg-[#1a1612]/90 border border-white/[0.07] rounded-lg px-2 py-1">
-          <span className="text-[10px] font-black text-[#e8580a]">v5.6</span>
+          <span className="text-[10px] font-black text-[#e8580a]">v5.7</span>
         </div>
       </div>
 
