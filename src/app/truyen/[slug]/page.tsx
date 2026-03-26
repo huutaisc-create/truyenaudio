@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 import ReviewButton from '@/components/story/ReviewButton';
 import StoryInteractions from '@/components/story/StoryInteractions';
-import CommentSection from '@/components/story/CommentSection';
+import CommentSectionWrapper from '@/components/story/CommentSectionWrapper';
 
 import { getStoryBySlug, getChaptersByStoryId, getRelatedStories, getStoriesByAuthor, getTopNominations } from '@/actions/stories';
 import db from '@/lib/db';
@@ -295,11 +295,8 @@ const StoryDetail = async ({
                             </div>
                         </div>
 
-                        {/* BÌNH LUẬN — không cần currentUser, tự check auth khi submit */}
-                        <CommentSection
-                            storySlug={slug}
-                            currentUser={null}
-                        />
+                        {/* BÌNH LUẬN — wrapper tự fetch session client-side, không phá cache */}
+                        <CommentSectionWrapper storySlug={slug} />
                     </div>
 
                     {/* ── SIDEBAR ── */}
