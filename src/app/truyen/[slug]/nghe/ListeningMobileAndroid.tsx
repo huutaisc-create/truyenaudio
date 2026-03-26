@@ -25,6 +25,16 @@ interface ChapterMeta {
   index: number;
   title: string;
 }
+interface StoryInfo {
+  description: string;
+  status: string;
+  genres: string[];
+  ratingScore: number;
+  ratingCount: number;
+  viewCount: number;
+  likeCount: number;
+  followCount: number;
+}
 interface Props {
   slug: string;
   storyId: string;
@@ -35,6 +45,7 @@ interface Props {
   initialChapters: ChapterMeta[];
   initialChapterIndex: number;
   initialChapter: Chapter;
+  storyInfo: StoryInfo;
 }
 
 // ─── Helpers ──────────────────────────────────────────────
