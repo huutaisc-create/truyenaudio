@@ -7,6 +7,7 @@ import {
   ArrowLeft, Headphones, SkipBack, SkipForward,
   Play, Pause, RotateCcw, RotateCw, ChevronDown,
   CheckCircle2, List, Info, MessageSquare, Star, Eye, BookOpen, Heart,
+  Loader2, CornerDownRight, Trash2, X, Send, Bookmark, Trophy,
 } from 'lucide-react';
 
 // ── R2 CDN base URL ──────────────────────────────────────────────────────
@@ -34,6 +35,7 @@ interface StoryInfo {
   viewCount: number;
   likeCount: number;
   followCount: number;
+  nominationCount: number;
 }
 
 interface CommentUser {
@@ -264,6 +266,19 @@ export default function ListeningClient({
   const [infoLoaded,       setInfoLoaded]        = useState(false);
   const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // ── Interaction state (like / follow / nominate) ──
+  const [interactStats, setInteractStats] = useState({
+    likeCount:       storyInfo.likeCount,
+    followCount:     storyInfo.followCount,
+    nominationCount: storyInfo.nominationCount,
+  });
+  const [userStatus, setUserStatus] = useState({
+    isLiked:    false,
+    isFollowed: false,
+    isNominated: false,
+  });
+  const [interactLoading, setInteractLoading] = useState<'like' | 'follow' | 'nominate' | null>(null);
+
 
   const currentIdx     = currentChapter.index;
   const sortedChapters = [...allChapters].sort((a, b) => a.index - b.index);
@@ -454,6 +469,108 @@ export default function ListeningClient({
     } catch { alert('Lỗi kết nối'); }
   }, [slug]);
 
+  // ── Fetch userStatus khi mount (nếu đã đăng nhập) ──
+  useEffect(() => {
+    if (!currentUser) return;
+    fetch(`/api/stories/${slug}/interactions/status`)
+      .then(r => r.ok ? r.json() : null)
+      .then(json => {
+        if (json?.success) {
+          setUserStatus({
+            isLiked:     json.data.isLiked    ?? false,
+            isFollowed:  json.data.isFollowed ?? false,
+            isNominated: json.data.isNominated ?? false,
+          });
+        }
+      })
+      .catch(() => {});
+  }, [currentUser, slug]);
+
+  // ── Like handler ──
+  const handleLike = useCallback(async () => {
+    if (!currentUser) { window.location.href = '/login?callbackUrl=' + window.location.pathname; return; }
+    if (interactLoading) return;
+    const wasLiked = userStatus.isLiked;
+    setUserStatus(s => ({ ...s, isLiked: !wasLiked }));
+    setInteractStats(s => ({ ...s, likeCount: wasLiked ? s.likeCount - 1 : s.likeCount + 1 }));
+    setInteractLoading('like');
+    try {
+      const res = await fetch(`/api/stories/${slug}/like`, { method: 'POST' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          setUserStatus(s => ({ ...s, isLiked: json.data.isLiked }));
+          setInteractStats(s => ({ ...s, likeCount: json.data.likeCount }));
+        }
+      } else {
+        // rollback
+        setUserStatus(s => ({ ...s, isLiked: wasLiked }));
+        setInteractStats(s => ({ ...s, likeCount: wasLiked ? s.likeCount + 1 : s.likeCount - 1 }));
+      }
+    } catch {
+      setUserStatus(s => ({ ...s, isLiked: wasLiked }));
+      setInteractStats(s => ({ ...s, likeCount: wasLiked ? s.likeCount + 1 : s.likeCount - 1 }));
+    } finally {
+      setInteractLoading(null);
+    }
+  }, [currentUser, interactLoading, userStatus.isLiked, slug]);
+
+  // ── Follow handler ──
+  const handleFollow = useCallback(async () => {
+    if (!currentUser) { window.location.href = '/login?callbackUrl=' + window.location.pathname; return; }
+    if (interactLoading) return;
+    const wasFollowed = userStatus.isFollowed;
+    setUserStatus(s => ({ ...s, isFollowed: !wasFollowed }));
+    setInteractStats(s => ({ ...s, followCount: wasFollowed ? s.followCount - 1 : s.followCount + 1 }));
+    setInteractLoading('follow');
+    try {
+      const res = await fetch(`/api/stories/${slug}/follow`, { method: 'POST' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          setUserStatus(s => ({ ...s, isFollowed: json.data.isFollowed }));
+          setInteractStats(s => ({ ...s, followCount: json.data.followCount }));
+        }
+      } else {
+        setUserStatus(s => ({ ...s, isFollowed: wasFollowed }));
+        setInteractStats(s => ({ ...s, followCount: wasFollowed ? s.followCount + 1 : s.followCount - 1 }));
+      }
+    } catch {
+      setUserStatus(s => ({ ...s, isFollowed: wasFollowed }));
+      setInteractStats(s => ({ ...s, followCount: wasFollowed ? s.followCount + 1 : s.followCount - 1 }));
+    } finally {
+      setInteractLoading(null);
+    }
+  }, [currentUser, interactLoading, userStatus.isFollowed, slug]);
+
+  // ── Nominate handler ──
+  const handleNominate = useCallback(async () => {
+    if (!currentUser) { window.location.href = '/login?callbackUrl=' + window.location.pathname; return; }
+    if (interactLoading) return;
+    const wasNominated = userStatus.isNominated;
+    setUserStatus(s => ({ ...s, isNominated: !wasNominated }));
+    setInteractStats(s => ({ ...s, nominationCount: wasNominated ? s.nominationCount - 1 : s.nominationCount + 1 }));
+    setInteractLoading('nominate');
+    try {
+      const res = await fetch(`/api/stories/${slug}/nominate`, { method: 'POST' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          setUserStatus(s => ({ ...s, isNominated: json.data.isNominated }));
+          setInteractStats(s => ({ ...s, nominationCount: json.data.nominationCount }));
+        }
+      } else {
+        setUserStatus(s => ({ ...s, isNominated: wasNominated }));
+        setInteractStats(s => ({ ...s, nominationCount: wasNominated ? s.nominationCount + 1 : s.nominationCount - 1 }));
+      }
+    } catch {
+      setUserStatus(s => ({ ...s, isNominated: wasNominated }));
+      setInteractStats(s => ({ ...s, nominationCount: wasNominated ? s.nominationCount + 1 : s.nominationCount - 1 }));
+    } finally {
+      setInteractLoading(null);
+    }
+  }, [currentUser, interactLoading, userStatus.isNominated, slug]);
+
   // ── Gửi comment ──
   const handleSendComment = useCallback(async () => {
     if (!commentInput.trim() || commentSending) return;
@@ -502,32 +619,7 @@ export default function ListeningClient({
     handleOpenTab(tab);
   }, [handleOpenTab]);
 
-  // ── Gửi comment ──
-  const handleSendComment = useCallback(async () => {
-    if (!commentInput.trim() || commentSending) return;
-    setCommentSending(true);
-    try {
-      const res = await fetch(`/api/stories/${slug}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: commentInput.trim() }),
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success) {
-          setCommentInput('');
-          fetchComments(commentPage);
-        }
-      } else {
-        const err = await res.json();
-        alert(err.error || 'Gửi thất bại');
-      }
-    } catch {
-      alert('Lỗi kết nối');
-    } finally {
-      setCommentSending(false);
-    }
-  }, [commentInput, commentSending, slug, commentPage, fetchComments]);
+
 
   // ── Format thời gian comment ──
   const timeAgo = (dateStr: string) => {
@@ -1781,12 +1873,12 @@ export default function ListeningClient({
         </div>
       )}
 
-      {/* Stats row: yêu thích / theo dõi / đề cử */}
+      {/* Stats row: yêu thích / theo dõi / đề cử — dùng interactStats (live) */}
       <div className="grid grid-cols-3 gap-2">
         {[
-          { icon: <Heart size={12} className="text-rose-400" />,   label: 'Yêu thích', value: fmtNum(storyInfo.likeCount) },
-          { icon: <BookOpen size={12} className="text-sky-400" />, label: 'Theo dõi',  value: fmtNum(storyInfo.followCount) },
-          { icon: <Eye size={12} className="text-[#8a7e72]" />,    label: 'Lượt xem',  value: fmtNum(storyInfo.viewCount) },
+          { icon: <Heart size={12} className="text-rose-400" />,    label: 'Yêu thích', value: fmtNum(interactStats.likeCount) },
+          { icon: <Bookmark size={12} className="text-sky-400" />,  label: 'Theo dõi',  value: fmtNum(interactStats.followCount) },
+          { icon: <Trophy size={12} className="text-amber-400" />,  label: 'Đề cử',     value: fmtNum(interactStats.nominationCount) },
         ].map(({ icon, label, value }) => (
           <div key={label} className="bg-[#1a1612] rounded-lg p-2.5 flex flex-col items-center gap-1">
             {icon}
@@ -1794,6 +1886,57 @@ export default function ListeningClient({
             <span className="text-[9px] text-[#8a7e72]">{label}</span>
           </div>
         ))}
+      </div>
+
+      {/* 3 nút tương tác */}
+      <div className="grid grid-cols-3 gap-2">
+        {/* Like */}
+        <button
+          onClick={handleLike}
+          disabled={interactLoading === 'like'}
+          aria-pressed={userStatus.isLiked}
+          aria-label={userStatus.isLiked ? 'Bỏ yêu thích' : 'Yêu thích'}
+          className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border text-[10px] font-bold transition-all ${
+            userStatus.isLiked
+              ? 'bg-rose-500/15 border-rose-500/50 text-rose-400'
+              : 'bg-[#1a1612] border-white/[0.08] text-[#8a7e72] hover:border-rose-500/40 hover:text-rose-400'
+          } disabled:opacity-50`}
+        >
+          <Heart size={14} className={userStatus.isLiked ? 'fill-current' : ''} />
+          {userStatus.isLiked ? 'Đã thích' : 'Yêu thích'}
+        </button>
+
+        {/* Follow */}
+        <button
+          onClick={handleFollow}
+          disabled={interactLoading === 'follow'}
+          aria-pressed={userStatus.isFollowed}
+          aria-label={userStatus.isFollowed ? 'Bỏ theo dõi' : 'Theo dõi'}
+          className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border text-[10px] font-bold transition-all ${
+            userStatus.isFollowed
+              ? 'bg-sky-500/15 border-sky-500/50 text-sky-400'
+              : 'bg-[#1a1612] border-white/[0.08] text-[#8a7e72] hover:border-sky-500/40 hover:text-sky-400'
+          } disabled:opacity-50`}
+        >
+          <Bookmark size={14} className={userStatus.isFollowed ? 'fill-current' : ''} />
+          {userStatus.isFollowed ? 'Đang theo' : 'Theo dõi'}
+        </button>
+
+        {/* Nominate */}
+        <button
+          onClick={handleNominate}
+          disabled={interactLoading === 'nominate'}
+          aria-pressed={userStatus.isNominated}
+          aria-label={userStatus.isNominated ? 'Bỏ đề cử' : 'Đề cử'}
+          className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border text-[10px] font-bold transition-all ${
+            userStatus.isNominated
+              ? 'bg-amber-500/15 border-amber-500/50 text-amber-400'
+              : 'bg-[#1a1612] border-white/[0.08] text-[#8a7e72] hover:border-amber-500/40 hover:text-amber-400'
+          } disabled:opacity-50`}
+        >
+          <Trophy size={14} className={userStatus.isNominated ? 'fill-current' : ''} />
+          {userStatus.isNominated ? 'Đã đề cử' : 'Đề cử'}
+        </button>
       </div>
 
       {/* Status + Genres */}
@@ -1833,62 +1976,72 @@ export default function ListeningClient({
             <button
               onClick={handleLoadMoreComments}
               disabled={commentLoadingMore}
-              className="text-[10px] text-[#e8580a] hover:underline flex items-center gap-1 disabled:opacity-50"
+              className="text-[10px] text-[#e8580a] hover:underline flex items-center gap-1.5 disabled:opacity-50"
             >
-              {commentLoadingMore ? 'Đang tải...' : 'Xem bình luận cũ hơn'}
+              {commentLoadingMore
+                ? <><Loader2 size={11} className="animate-spin" /> Đang tải...</>
+                : 'Xem bình luận cũ hơn'}
             </button>
           </div>
         )}
 
         {commentLoading ? (
-          <div className="flex justify-center py-8">
-            <span className="text-[11px] text-[#8a7e72] animate-pulse">Đang tải...</span>
+          <div className="flex justify-center py-8" role="status" aria-label="Đang tải bình luận...">
+            <Loader2 size={18} className="animate-spin text-[#8a7e72]" />
           </div>
         ) : comments.length === 0 ? (
           <p className="text-[11px] text-[#8a7e72] text-center py-8 italic">Chưa có bình luận nào. Hãy là người đầu tiên! 💬</p>
         ) : (
-          comments.map(cmt => (
-            <div key={cmt.id} className="flex gap-2.5 p-2.5 rounded-xl hover:bg-white/[0.03] transition-colors">
-              {getAvatar(cmt.user.name, cmt.user.image, 28)}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                  <span className="text-[11px] font-bold text-[#f0ebe4]">{cmt.user.name}</span>
-                  {cmt.user.role === 'ADMIN' && (
-                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-[#e8580a] text-white uppercase tracking-wider">Admin</span>
-                  )}
-                  <span className="text-[9px] text-[#8a7e72]">{timeAgo(cmt.createdAt)}</span>
-                </div>
-                <p className="text-[11px] text-[#c8bfb5] leading-relaxed mb-1.5 whitespace-pre-wrap">{cmt.content}</p>
-                <div className="flex items-center gap-3">
-                  {/* Like */}
-                  <button
-                    onClick={() => handleLikeComment(cmt.id)}
-                    className={`flex items-center gap-1 text-[10px] transition-colors ${cmt.isLiked ? 'text-rose-400' : 'text-[#8a7e72] hover:text-rose-400'}`}
-                  >
-                    <Heart size={11} className={cmt.isLiked ? 'fill-current' : ''} />
-                    <span>{cmt.likeCount > 0 ? cmt.likeCount : 'Thích'}</span>
-                  </button>
-                  {/* Reply */}
-                  <button
-                    onClick={() => handleReplyComment(cmt)}
-                    className="flex items-center gap-1 text-[10px] text-[#8a7e72] hover:text-[#e8580a] transition-colors"
-                  >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-                    Trả lời
-                  </button>
-                  {/* Delete */}
-                  {currentUser && (currentUser.id === cmt.user.id || currentUser.role === 'ADMIN') && (
+          <ol aria-label="Danh sách bình luận" className="space-y-0.5">
+            {comments.map(cmt => (
+              <li key={cmt.id} className="flex gap-2.5 p-2.5 rounded-xl hover:bg-white/[0.03] transition-colors">
+                {getAvatar(cmt.user.name, cmt.user.image, 28)}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                    <span className="text-[11px] font-bold text-[#f0ebe4]">{cmt.user.name}</span>
+                    {cmt.user.role === 'ADMIN' && (
+                      <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-[#e8580a] text-white uppercase tracking-wider">Admin</span>
+                    )}
+                    <time dateTime={cmt.createdAt} className="text-[9px] text-[#8a7e72]">{timeAgo(cmt.createdAt)}</time>
+                  </div>
+                  <p className="text-[11px] text-[#c8bfb5] leading-relaxed mb-1.5 whitespace-pre-wrap">{cmt.content}</p>
+                  <div className="flex items-center gap-3">
+                    {/* Like */}
                     <button
-                      onClick={() => handleDeleteComment(cmt.id)}
-                      className="flex items-center gap-1 text-[10px] text-[#8a7e72] hover:text-red-500 transition-colors ml-auto"
+                      onClick={() => handleLikeComment(cmt.id)}
+                      aria-label={`${cmt.isLiked ? 'Bỏ thích' : 'Thích'} bình luận của ${cmt.user.name}. ${cmt.likeCount} lượt thích`}
+                      aria-pressed={cmt.isLiked}
+                      className={`flex items-center gap-1 text-[10px] transition-colors ${cmt.isLiked ? 'text-rose-400' : 'text-[#8a7e72] hover:text-rose-400'}`}
                     >
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      <Heart size={11} className={cmt.isLiked ? 'fill-current' : ''} />
+                      <span>{cmt.likeCount > 0 ? cmt.likeCount : 'Thích'}</span>
                     </button>
-                  )}
+                    {/* Reply */}
+                    <button
+                      onClick={() => handleReplyComment(cmt)}
+                      aria-label={`Trả lời bình luận của ${cmt.user.name}`}
+                      className="flex items-center gap-1 text-[10px] text-[#8a7e72] hover:text-[#e8580a] transition-colors"
+                    >
+                      <CornerDownRight size={11} />
+                      Trả lời
+                    </button>
+                    {/* Delete */}
+                    {currentUser && (currentUser.id === cmt.user.id || currentUser.role === 'ADMIN') && (
+                      <button
+                        onClick={() => {
+                          if (confirm('Bạn có chắc muốn xóa bình luận này?')) handleDeleteComment(cmt.id);
+                        }}
+                        aria-label={`Xóa bình luận của ${cmt.user.name}`}
+                        className="flex items-center gap-1 text-[10px] text-[#8a7e72] hover:text-red-500 transition-colors ml-auto"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))
+              </li>
+            ))}
+          </ol>
         )}
       </div>
 
@@ -1897,10 +2050,10 @@ export default function ListeningClient({
         {/* Reply badge */}
         {replyTo && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[10px] text-[#8a7e72] mb-2">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+            <CornerDownRight size={11} className="shrink-0" />
             <span>Trả lời <strong className="text-[#f0ebe4]">{replyTo.name}</strong></span>
-            <button onClick={() => setReplyTo(null)} className="ml-auto hover:text-[#f0ebe4]">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <button onClick={() => setReplyTo(null)} className="ml-auto hover:text-[#f0ebe4]" aria-label="Hủy trả lời">
+              <X size={11} />
             </button>
           </div>
         )}
@@ -1913,15 +2066,19 @@ export default function ListeningClient({
             onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) handleSendComment(); }}
             placeholder={currentUser ? (replyTo ? `Trả lời ${replyTo.name}...` : 'Chia sẻ cảm nhận...') : 'Đăng nhập để bình luận...'}
             rows={2}
+            aria-label="Nội dung bình luận"
             disabled={!currentUser}
             className="flex-1 bg-[#1a1612] border border-white/[0.08] rounded-lg px-3 py-2 text-[11px] text-[#f0ebe4] placeholder:text-[#8a7e72] outline-none focus:border-[#e8580a]/50 resize-none disabled:opacity-50"
           />
           <button
             onClick={handleSendComment}
             disabled={commentSending || !commentInput.trim()}
+            aria-label={commentSending ? 'Đang gửi...' : replyTo ? 'Gửi trả lời' : 'Gửi bình luận'}
             className="px-2.5 py-2 bg-[#e8580a] rounded-lg text-white disabled:opacity-40 hover:bg-[#d4500a] transition-colors shrink-0"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            {commentSending
+              ? <Loader2 size={13} className="animate-spin" />
+              : <Send size={13} />}
           </button>
         </div>
         {currentUser && <p className="text-[9px] text-[#8a7e72] mt-1 text-right">Ctrl+Enter để gửi</p>}

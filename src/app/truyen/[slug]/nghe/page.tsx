@@ -73,6 +73,7 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
       viewCount: storyData.viewCount ?? 0,
       likeCount: storyData.likeCount ?? 0,
       followCount: storyData.followCount ?? 0,
+      nominationCount: (storyData as any).nominationCount ?? 0,
     },
     currentUser: session?.user ? {
       id: session.user.id as string,
