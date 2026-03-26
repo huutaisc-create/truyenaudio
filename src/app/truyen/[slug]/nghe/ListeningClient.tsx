@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Headphones, SkipBack, SkipForward,
   Play, Pause, RotateCcw, RotateCw, ChevronDown,
-  CheckCircle2, List, Info, MessageSquare, Star, Eye, BookOpen, Heart, ChevronLeft, ChevronRight,
+  CheckCircle2, List, Info, MessageSquare, Star, Eye, BookOpen, Heart,
 } from 'lucide-react';
 
 // ── R2 CDN base URL ──────────────────────────────────────────────────────
@@ -40,14 +40,23 @@ interface CommentUser {
   id: string;
   name: string;
   image: string | null;
+  role: string;
 }
 
 interface Comment {
   id: string;
   content: string;
   likeCount: number;
+  isLiked: boolean;
   createdAt: string;
   user: CommentUser;
+}
+
+interface CurrentUser {
+  id: string;
+  name: string;
+  image: string | null;
+  role: string;
 }
 
 interface Props {
@@ -61,6 +70,7 @@ interface Props {
   initialChapterIndex: number;
   initialChapter: Chapter;
   storyInfo: StoryInfo;
+  currentUser: CurrentUser | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -156,15 +166,16 @@ type DrawerTab = 'chapters' | 'info' | 'comments';
 export default function ListeningClient({
   slug, storyId, storyTitle, storyCover, author,
   totalChapters, initialChapters, initialChapterIndex, initialChapter,
-  storyInfo,
+  storyInfo, currentUser,
 }: Props) {
   const [allChapters, setAllChapters] = useState<ChapterMeta[]>(initialChapters);
   const chapPageRef    = useRef<number>(1);
   const chapLoadingRef = useRef<boolean>(false);
-  const hasMoreChaps   = allChapters.length < totalChapters;
+  const noMoreChapsRef = useRef<boolean>(false);
+  const hasMoreChaps   = allChapters.length < totalChapters && !noMoreChapsRef.current;
 
   const loadMoreChapters = useCallback(async () => {
-    if (chapLoadingRef.current || allChapters.length >= totalChapters) return;
+    if (chapLoadingRef.current || noMoreChapsRef.current || allChapters.length >= totalChapters) return;
     chapLoadingRef.current = true;
     const nextPage = chapPageRef.current + 1;
     try {
@@ -181,6 +192,9 @@ export default function ListeningClient({
           return [...prev, ...newChaps.filter(c => !existingIds.has(c.id))];
         });
         chapPageRef.current = nextPage;
+      } else {
+        // API hết data → dừng hẳn, không loop nữa
+        noMoreChapsRef.current = true;
       }
     } catch (e) {
       console.error('[ChapterList] loadMore error', e);
@@ -239,14 +253,16 @@ export default function ListeningClient({
 
   // ── Comments state ──
   const [comments,         setComments]          = useState<Comment[]>([]);
-  const [commentPage,      setCommentPage]       = useState(1);
-  const [commentTotal,     setCommentTotal]      = useState(0);
+  const [commentHasMore,   setCommentHasMore]    = useState(false);
+  const [commentNextCursor,setCommentNextCursor] = useState<string | null>(null);
   const [commentLoading,   setCommentLoading]    = useState(false);
+  const [commentLoadingMore, setCommentLoadingMore] = useState(false);
   const [commentLoaded,    setCommentLoaded]     = useState(false);
   const [commentInput,     setCommentInput]      = useState('');
   const [commentSending,   setCommentSending]    = useState(false);
+  const [replyTo,          setReplyTo]           = useState<{ id: string; name: string } | null>(null);
   const [infoLoaded,       setInfoLoaded]        = useState(false);
-  const COMMENT_PAGE_SIZE = 10;
+  const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
 
   const currentIdx     = currentChapter.index;
@@ -343,34 +359,135 @@ export default function ListeningClient({
   }, [sortedChapters.length, loadMoreChapters]);
 
   // ── Fetch comments (lazy: chỉ khi user mở tab lần đầu) ──
-  const fetchComments = useCallback(async (page: number) => {
+  const fetchComments = useCallback(async () => {
     setCommentLoading(true);
     try {
-      const res = await fetch(`/api/stories/${slug}/comments?limit=${COMMENT_PAGE_SIZE}&page=${page}`);
+      const res = await fetch(`/api/stories/${slug}/comments?limit=20`);
       if (res.ok) {
         const json = await res.json();
         if (json.success) {
           setComments(json.data);
-          setCommentTotal(json.total ?? json.data.length);
-          setCommentPage(page);
+          setCommentHasMore(json.hasMore ?? false);
+          setCommentNextCursor(json.nextCursor ?? null);
           setCommentLoaded(true);
         }
       }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setCommentLoading(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setCommentLoading(false); }
   }, [slug]);
+
+  // ── Load more older comments ──
+  const handleLoadMoreComments = useCallback(async () => {
+    if (!commentHasMore || commentLoadingMore || !commentNextCursor) return;
+    setCommentLoadingMore(true);
+    try {
+      const res = await fetch(`/api/stories/${slug}/comments?limit=20&after=${commentNextCursor}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          setComments(prev => [...json.data, ...prev]);
+          setCommentHasMore(json.hasMore ?? false);
+          setCommentNextCursor(json.nextCursor ?? null);
+        }
+      }
+    } catch (e) { console.error(e); }
+    finally { setCommentLoadingMore(false); }
+  }, [slug, commentHasMore, commentLoadingMore, commentNextCursor]);
+
+  // ── Like comment (optimistic) ──
+  const handleLikeComment = useCallback(async (commentId: string) => {
+    if (!currentUser) { window.location.href = '/login?callbackUrl=' + window.location.pathname; return; }
+    // Optimistic
+    setComments(prev => prev.map(c =>
+      c.id === commentId
+        ? { ...c, isLiked: !c.isLiked, likeCount: c.isLiked ? c.likeCount - 1 : c.likeCount + 1 }
+        : c
+    ));
+    try {
+      const res = await fetch(`/api/stories/${slug}/comments/${commentId}/like`, { method: 'POST' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          setComments(prev => prev.map(c =>
+            c.id === commentId ? { ...c, isLiked: json.data.isLiked, likeCount: json.data.likeCount } : c
+          ));
+        }
+      } else {
+        // Rollback
+        setComments(prev => prev.map(c =>
+          c.id === commentId
+            ? { ...c, isLiked: !c.isLiked, likeCount: c.isLiked ? c.likeCount - 1 : c.likeCount + 1 }
+            : c
+        ));
+      }
+    } catch {
+      setComments(prev => prev.map(c =>
+        c.id === commentId
+          ? { ...c, isLiked: !c.isLiked, likeCount: c.isLiked ? c.likeCount - 1 : c.likeCount + 1 }
+          : c
+      ));
+    }
+  }, [slug, currentUser]);
+
+  // ── Reply ──
+  const handleReplyComment = useCallback((comment: Comment) => {
+    if (!currentUser) { window.location.href = '/login?callbackUrl=' + window.location.pathname; return; }
+    setReplyTo({ id: comment.id, name: comment.user.name });
+    setCommentInput('');
+    setTimeout(() => {
+      commentTextareaRef.current?.focus();
+      commentTextareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 50);
+  }, [currentUser]);
+
+  // ── Delete comment ──
+  const handleDeleteComment = useCallback(async (commentId: string) => {
+    if (!confirm('Bạn có chắc muốn xóa bình luận này?')) return;
+    try {
+      const res = await fetch(`/api/stories/${slug}/comments/${commentId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setComments(prev => prev.filter(c => c.id !== commentId));
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Xóa thất bại');
+      }
+    } catch { alert('Lỗi kết nối'); }
+  }, [slug]);
+
+  // ── Gửi comment ──
+  const handleSendComment = useCallback(async () => {
+    if (!commentInput.trim() || commentSending) return;
+    if (!currentUser) { window.location.href = '/login?callbackUrl=' + window.location.pathname; return; }
+    const body = replyTo ? `@${replyTo.name} ${commentInput.trim()}` : commentInput.trim();
+    setCommentSending(true);
+    try {
+      const res = await fetch(`/api/stories/${slug}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: body }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          setComments(prev => [...prev, json.data]);
+          setCommentInput('');
+          setReplyTo(null);
+          commentTextareaRef.current?.focus();
+        }
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Gửi thất bại');
+      }
+    } catch { alert('Lỗi kết nối'); }
+    finally { setCommentSending(false); }
+  }, [commentInput, commentSending, slug, replyTo, currentUser]);
 
   // ── Khi user mở tab info/comments lần đầu ──
   const handleOpenTab = useCallback((tab: DrawerTab) => {
     if (tab === 'comments' && !commentLoaded) {
-      fetchComments(1);
+      fetchComments();
     }
-    if (tab === 'info') {
-      setInfoLoaded(true);
-    }
+    if (tab === 'info') setInfoLoaded(true);
   }, [commentLoaded, fetchComments]);
 
   // ── Desktop tab switch ──
@@ -418,7 +535,8 @@ export default function ListeningClient({
     if (diff < 60) return 'Vừa xong';
     if (diff < 3600) return Math.floor(diff / 60) + ' phút trước';
     if (diff < 86400) return Math.floor(diff / 3600) + ' giờ trước';
-    return Math.floor(diff / 86400) + ' ngày trước';
+    if (diff < 2592000) return Math.floor(diff / 86400) + ' ngày trước';
+    return new Date(dateStr).toLocaleDateString('vi-VN');
   };
 
   const statusLabel = (s: string) => {
@@ -428,7 +546,23 @@ export default function ListeningClient({
     return 'Đang ra';
   };
 
-  const totalCommentPages = Math.ceil(commentTotal / COMMENT_PAGE_SIZE);
+  // Avatar với gradient
+  const avatarColors = [
+    'linear-gradient(135deg,#E8580A,#F5A623)',
+    'linear-gradient(135deg,#667eea,#764ba2)',
+    'linear-gradient(135deg,#f093fb,#f5576c)',
+    'linear-gradient(135deg,#4facfe,#00f2fe)',
+    'linear-gradient(135deg,#43e97b,#38f9d7)',
+  ];
+  const getAvatar = (name: string, image: string | null, size = 28) => {
+    const bg = avatarColors[name.charCodeAt(0) % avatarColors.length];
+    if (image) return <img src={image} alt={name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />;
+    return (
+      <div style={{ width: size, height: size, borderRadius: '50%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: size * 0.38, fontWeight: 900, color: '#fff' }}>
+        {name.charAt(0).toUpperCase()}
+      </div>
+    );
+  };
 
   // ─────────────────────────────────────────────────────────
   // ── Audio core ──
@@ -1627,14 +1761,32 @@ export default function ListeningClient({
   // ─────────────────────────────────────────────────────────
   // ── INFO PANEL ──
   // ─────────────────────────────────────────────────────────
+  const fmtNum = (n: number) => n > 999 ? (n / 1000).toFixed(1) + 'k' : String(n);
+
   const InfoPanel = (
     <div className="flex flex-col gap-4 px-4 py-4">
-      {/* Stats row */}
+
+      {/* Rating stars */}
+      {storyInfo.ratingScore > 0 && (
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5">
+            {[1,2,3,4,5].map(i => (
+              <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill={i <= Math.round(storyInfo.ratingScore) ? '#e8580a' : 'none'} stroke="#e8580a" strokeWidth="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+            ))}
+          </div>
+          <span className="text-[12px] font-bold text-[#f0ebe4]">{storyInfo.ratingScore.toFixed(1)}</span>
+          <span className="text-[10px] text-[#8a7e72]">({storyInfo.ratingCount} đánh giá)</span>
+        </div>
+      )}
+
+      {/* Stats row: yêu thích / theo dõi / đề cử */}
       <div className="grid grid-cols-3 gap-2">
         {[
-          { icon: <Star size={12} className="text-[#e8580a]" />, label: 'Đánh giá', value: storyInfo.ratingScore > 0 ? storyInfo.ratingScore.toFixed(1) : '—' },
-          { icon: <Eye size={12} className="text-[#8a7e72]" />, label: 'Lượt xem', value: storyInfo.viewCount > 999 ? (storyInfo.viewCount / 1000).toFixed(1) + 'k' : String(storyInfo.viewCount) },
-          { icon: <BookOpen size={12} className="text-[#8a7e72]" />, label: 'Chương', value: String(totalChapters) },
+          { icon: <Heart size={12} className="text-rose-400" />,   label: 'Yêu thích', value: fmtNum(storyInfo.likeCount) },
+          { icon: <BookOpen size={12} className="text-sky-400" />, label: 'Theo dõi',  value: fmtNum(storyInfo.followCount) },
+          { icon: <Eye size={12} className="text-[#8a7e72]" />,    label: 'Lượt xem',  value: fmtNum(storyInfo.viewCount) },
         ].map(({ icon, label, value }) => (
           <div key={label} className="bg-[#1a1612] rounded-lg p-2.5 flex flex-col items-center gap-1">
             {icon}
@@ -1643,15 +1795,20 @@ export default function ListeningClient({
           </div>
         ))}
       </div>
+
       {/* Status + Genres */}
       <div className="flex flex-wrap gap-1.5">
         <span className="text-[9px] font-bold px-2 py-1 rounded-full bg-[#e8580a]/20 text-[#e8580a] border border-[#e8580a]/30">
           {statusLabel(storyInfo.status)}
         </span>
+        <span className="text-[9px] px-2 py-1 rounded-full bg-white/[0.06] text-[#8a7e72] border border-white/[0.08]">
+          {totalChapters} chương
+        </span>
         {storyInfo.genres.slice(0, 4).map(g => (
           <span key={g} className="text-[9px] px-2 py-1 rounded-full bg-white/[0.06] text-[#8a7e72] border border-white/[0.08]">{g}</span>
         ))}
       </div>
+
       {/* Description */}
       {storyInfo.description && (
         <div>
@@ -1668,76 +1825,106 @@ export default function ListeningClient({
   const CommentsPanel = (
     <div className="flex flex-col h-full">
       {/* Comment list */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
+
+        {/* Load more older */}
+        {commentHasMore && (
+          <div className="flex justify-center pb-3">
+            <button
+              onClick={handleLoadMoreComments}
+              disabled={commentLoadingMore}
+              className="text-[10px] text-[#e8580a] hover:underline flex items-center gap-1 disabled:opacity-50"
+            >
+              {commentLoadingMore ? 'Đang tải...' : 'Xem bình luận cũ hơn'}
+            </button>
+          </div>
+        )}
+
         {commentLoading ? (
           <div className="flex justify-center py-8">
             <span className="text-[11px] text-[#8a7e72] animate-pulse">Đang tải...</span>
           </div>
         ) : comments.length === 0 ? (
-          <p className="text-[11px] text-[#8a7e72] text-center py-8 italic">Chưa có bình luận nào</p>
+          <p className="text-[11px] text-[#8a7e72] text-center py-8 italic">Chưa có bình luận nào. Hãy là người đầu tiên! 💬</p>
         ) : (
           comments.map(cmt => (
-            <div key={cmt.id} className="flex gap-2.5">
-              {/* Avatar */}
-              {cmt.user.image ? (
-                <img src={cmt.user.image} alt={cmt.user.name}
-                  className="w-7 h-7 rounded-full object-cover shrink-0" style={{ borderRadius: '50%' }} />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-[#e8580a] flex items-center justify-center shrink-0 text-white text-[10px] font-bold">
-                  {cmt.user.name.charAt(0).toUpperCase()}
-                </div>
-              )}
+            <div key={cmt.id} className="flex gap-2.5 p-2.5 rounded-xl hover:bg-white/[0.03] transition-colors">
+              {getAvatar(cmt.user.name, cmt.user.image, 28)}
               <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-1.5 mb-0.5">
+                <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                   <span className="text-[11px] font-bold text-[#f0ebe4]">{cmt.user.name}</span>
+                  {cmt.user.role === 'ADMIN' && (
+                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-[#e8580a] text-white uppercase tracking-wider">Admin</span>
+                  )}
                   <span className="text-[9px] text-[#8a7e72]">{timeAgo(cmt.createdAt)}</span>
                 </div>
-                <p className="text-[11px] text-[#c8bfb5] leading-relaxed">{cmt.content}</p>
+                <p className="text-[11px] text-[#c8bfb5] leading-relaxed mb-1.5 whitespace-pre-wrap">{cmt.content}</p>
+                <div className="flex items-center gap-3">
+                  {/* Like */}
+                  <button
+                    onClick={() => handleLikeComment(cmt.id)}
+                    className={`flex items-center gap-1 text-[10px] transition-colors ${cmt.isLiked ? 'text-rose-400' : 'text-[#8a7e72] hover:text-rose-400'}`}
+                  >
+                    <Heart size={11} className={cmt.isLiked ? 'fill-current' : ''} />
+                    <span>{cmt.likeCount > 0 ? cmt.likeCount : 'Thích'}</span>
+                  </button>
+                  {/* Reply */}
+                  <button
+                    onClick={() => handleReplyComment(cmt)}
+                    className="flex items-center gap-1 text-[10px] text-[#8a7e72] hover:text-[#e8580a] transition-colors"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                    Trả lời
+                  </button>
+                  {/* Delete */}
+                  {currentUser && (currentUser.id === cmt.user.id || currentUser.role === 'ADMIN') && (
+                    <button
+                      onClick={() => handleDeleteComment(cmt.id)}
+                      className="flex items-center gap-1 text-[10px] text-[#8a7e72] hover:text-red-500 transition-colors ml-auto"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))
         )}
       </div>
 
-      {/* Pagination */}
-      {totalCommentPages > 1 && (
-        <div className="flex items-center justify-center gap-2 px-3 py-2 border-t border-white/[0.06] shrink-0">
-          <button
-            onClick={() => fetchComments(commentPage - 1)}
-            disabled={commentPage <= 1 || commentLoading}
-            className="w-6 h-6 rounded flex items-center justify-center text-[#8a7e72] disabled:opacity-30 hover:text-white transition-colors"
-          >
-            <ChevronLeft size={13} />
-          </button>
-          <span className="text-[10px] text-[#8a7e72]">{commentPage} / {totalCommentPages}</span>
-          <button
-            onClick={() => fetchComments(commentPage + 1)}
-            disabled={commentPage >= totalCommentPages || commentLoading}
-            className="w-6 h-6 rounded flex items-center justify-center text-[#8a7e72] disabled:opacity-30 hover:text-white transition-colors"
-          >
-            <ChevronRight size={13} />
-          </button>
-        </div>
-      )}
-
-      {/* Input */}
+      {/* Input box */}
       <div className="px-3 py-3 border-t border-white/[0.06] shrink-0">
-        <div className="flex gap-2">
-          <input
+        {/* Reply badge */}
+        {replyTo && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[10px] text-[#8a7e72] mb-2">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+            <span>Trả lời <strong className="text-[#f0ebe4]">{replyTo.name}</strong></span>
+            <button onClick={() => setReplyTo(null)} className="ml-auto hover:text-[#f0ebe4]">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        )}
+        <div className="flex gap-2 items-end">
+          {currentUser && getAvatar(currentUser.name, currentUser.image, 24)}
+          <textarea
+            ref={commentTextareaRef}
             value={commentInput}
             onChange={e => setCommentInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendComment(); } }}
-            placeholder="Viết bình luận..."
-            className="flex-1 bg-[#1a1612] border border-white/[0.08] rounded-lg px-3 py-2 text-[11px] text-[#f0ebe4] placeholder:text-[#8a7e72] outline-none focus:border-[#e8580a]/50"
+            onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) handleSendComment(); }}
+            placeholder={currentUser ? (replyTo ? `Trả lời ${replyTo.name}...` : 'Chia sẻ cảm nhận...') : 'Đăng nhập để bình luận...'}
+            rows={2}
+            disabled={!currentUser}
+            className="flex-1 bg-[#1a1612] border border-white/[0.08] rounded-lg px-3 py-2 text-[11px] text-[#f0ebe4] placeholder:text-[#8a7e72] outline-none focus:border-[#e8580a]/50 resize-none disabled:opacity-50"
           />
           <button
             onClick={handleSendComment}
             disabled={commentSending || !commentInput.trim()}
-            className="px-3 py-2 bg-[#e8580a] rounded-lg text-white text-[10px] font-bold disabled:opacity-40 hover:bg-[#d4500a] transition-colors shrink-0"
+            className="px-2.5 py-2 bg-[#e8580a] rounded-lg text-white disabled:opacity-40 hover:bg-[#d4500a] transition-colors shrink-0"
           >
-            Gửi
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </button>
         </div>
+        {currentUser && <p className="text-[9px] text-[#8a7e72] mt-1 text-right">Ctrl+Enter để gửi</p>}
       </div>
     </div>
   );

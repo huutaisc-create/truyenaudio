@@ -1,6 +1,7 @@
 import { getStoryBySlug, getChaptersByStoryId, getChapterBySlugAndIndex } from '@/actions/stories';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
+import { auth } from '@/auth';
 import ListeningClient from './ListeningClient';
 import ListeningMobileAndroid from './ListeningMobileAndroid';
 
@@ -29,7 +30,8 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
   const ua = (await headers()).get('user-agent') ?? '';
   const isAndroid = /Android/i.test(ua);
 
-  const [storyData, chapterData] = await Promise.all([
+  const [session, storyData, chapterData] = await Promise.all([
+    auth(),
     getStoryBySlug(params.slug),
     getChapterBySlugAndIndex(params.slug, chapterIndex),
   ]);
@@ -72,6 +74,12 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
       likeCount: storyData.likeCount ?? 0,
       followCount: storyData.followCount ?? 0,
     },
+    currentUser: session?.user ? {
+      id: session.user.id as string,
+      name: session.user.name ?? 'Người dùng',
+      image: session.user.image ?? null,
+      role: (session.user as any).role ?? 'USER',
+    } : null,
   };
 
   if (isAndroid) return <ListeningMobileAndroid {...props} />;
