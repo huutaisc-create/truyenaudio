@@ -2094,7 +2094,7 @@ export default function ListeningClient({
       {/* ── Version Badge ── */}
       <div className="fixed bottom-16 right-3 z-50 pointer-events-none">
         <div className="bg-[#1a1612]/90 border border-white/[0.07] rounded-lg px-2 py-1">
-          <span className="text-[10px] font-black text-[#e8580a]">v5.5</span>
+          <span className="text-[10px] font-black text-[#e8580a]">v5.6</span>
         </div>
       </div>
 
@@ -2306,7 +2306,7 @@ export default function ListeningClient({
         <div className="lg:hidden fixed inset-0 z-50 flex flex-col bg-[#0f0d0a]/96 backdrop-blur-sm">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.07] flex-shrink-0">
             <span className="text-[13px] font-black text-[#f0ebe4] uppercase tracking-[.08em]">
-              Bình luận {commentTotal > 0 ? `(${commentTotal})` : ''}
+              Bình luận {comments.length > 0 ? `(${comments.length})` : ''}
             </span>
             <button onClick={() => setMobileDrawer(null)}
               className="w-8 h-8 rounded-lg bg-white/[0.07] flex items-center justify-center text-[#8a7e72]">
