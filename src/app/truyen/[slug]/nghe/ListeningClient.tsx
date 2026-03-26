@@ -93,11 +93,11 @@ const SPEED_STEP = 0.05;
 const PAGE_SIZE = 20;
 
 // ─── Wave Icon ─────────────────────────────────────────────
-function WaveIcon() {
+function WaveIcon({ color = '#e8580a' }: { color?: string } = {}) {
   return (
-    <div className="flex items-center gap-[2px] h-3 shrink-0">
+    <div className="flex items-center gap-[2px] h-3 shrink-0" style={{ color }}>
       {[0, 150, 300, 450].map((delay, i) => (
-        <span key={i} className="w-[2px] rounded-sm bg-[#e8580a] animate-bounce"
+        <span key={i} className="w-[2px] rounded-sm bg-current animate-bounce"
           style={{ animationDelay: `${delay}ms`, height: i % 2 === 0 ? '6px' : '12px' }} />
       ))}
     </div>
@@ -114,7 +114,7 @@ function LoadingOverlay({ chapterTitle, sentenceGenerated, sentenceTotal }: {
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0f0d0a]/90 backdrop-blur-md">
       {/* Sóng âm */}
       <div className="flex items-center gap-[5px] mb-8" style={{ height: 60 }}>
-        {[20,40,55,35,50,60,45,55,30,50,40,22].map((h, i) => (
+        {[20, 40, 55, 35, 50, 60, 45, 55, 30, 50, 40, 22].map((h, i) => (
           <span key={i} className="w-[4px] rounded-full bg-gradient-to-t from-[#e8580a] to-[#ff9f5a]"
             style={{
               height: h,
@@ -172,17 +172,17 @@ export default function ListeningClient({
   storyInfo, currentUser,
 }: Props) {
   const [allChapters, setAllChapters] = useState<ChapterMeta[]>(initialChapters);
-  const chapPageRef    = useRef<number>(1);
+  const chapPageRef = useRef<number>(1);
   const chapLoadingRef = useRef<boolean>(false);
   const noMoreChapsRef = useRef<boolean>(false);
-  const hasMoreChaps   = allChapters.length < totalChapters && !noMoreChapsRef.current;
+  const hasMoreChaps = allChapters.length < totalChapters && !noMoreChapsRef.current;
 
   const loadMoreChapters = useCallback(async () => {
     if (chapLoadingRef.current || noMoreChapsRef.current || allChapters.length >= totalChapters) return;
     chapLoadingRef.current = true;
     const nextPage = chapPageRef.current + 1;
     try {
-      const res  = await fetch(`/api/chapters/toc?storyId=${storyId}&page=${nextPage}`);
+      const res = await fetch(`/api/chapters/toc?storyId=${storyId}&page=${nextPage}`);
       const json = await res.json();
       const newChaps: ChapterMeta[] = (json.data?.chapters ?? []).map((c: any) => ({
         id: c.id,
@@ -208,73 +208,73 @@ export default function ListeningClient({
   const router = useRouter();
 
   // ── Audio engine refs ──
-  const actxRef      = useRef<AudioContext | null>(null);
+  const actxRef = useRef<AudioContext | null>(null);
   const nextStartRef = useRef<number>(0);
-  const stopFlagRef  = useRef<boolean>(false);
-  const speedRef     = useRef<number>(1);
+  const stopFlagRef = useRef<boolean>(false);
+  const speedRef = useRef<number>(1);
 
   // ── Player state ──
-  const [isPlaying,         setIsPlaying]         = useState(false);
-  const [speed,             setSpeed]              = useState(1.0);
-  const [isGenerating,      setIsGenerating]       = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [speed, setSpeed] = useState(1.0);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // ── Debug state ──
-  const [sentencePlayed,    setSentencePlayed]    = useState(0);
+  const [sentencePlayed, setSentencePlayed] = useState(0);
   const [sentenceGenerated, setSentenceGenerated] = useState(0);
-  const [sentenceTotal,     setSentenceTotal]     = useState(0);
-  const [ramMB,             setRamMB]             = useState<number | null>(null);
+  const [sentenceTotal, setSentenceTotal] = useState(0);
+  const [ramMB, setRamMB] = useState<number | null>(null);
 
   // ── Chapter state ──
-  const [currentChapter,    setCurrentChapter]    = useState<Chapter>(initialChapter);
-  const [loadedChapters,    setLoadedChapters]    = useState<Record<number, Chapter>>({
+  const [currentChapter, setCurrentChapter] = useState<Chapter>(initialChapter);
+  const [loadedChapters, setLoadedChapters] = useState<Record<number, Chapter>>({
     [initialChapter.index]: initialChapter,
   });
   const [completedChapters, setCompletedChapters] = useState<Set<number>>(new Set());
 
   // ── Voice state ──
-  const [voices,        setVoices]       = useState<{ id: string; name: string; path?: string }[]>([]);
+  const [voices, setVoices] = useState<{ id: string; name: string; path?: string }[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<string>('');
   const [showVoiceMenu, setShowVoiceMenu] = useState(false);
 
   // ── Worker settings ──
   const [showWorkerPanel, setShowWorkerPanel] = useState(false);
-  const [workerCount,     setWorkerCount]     = useState(2); // mặc định 2
+  const [workerCount, setWorkerCount] = useState(2); // mặc định 2
   const [hwInfo, setHwInfo] = useState<{ cores: number; ram: number; isMT: boolean } | null>(null);
 
   // ── Chapter list UI ──
-  const [showChapterList,   setShowChapterList]   = useState(false);
-  const [mobileVisible,     setMobileVisible]     = useState(PAGE_SIZE);
-  const [desktopVisible,    setDesktopVisible]    = useState(PAGE_SIZE);
-  const chapListRef        = useRef<HTMLDivElement>(null);
-  const activeChapRef      = useRef<HTMLDivElement>(null);
-  const mobileSentinelRef  = useRef<HTMLDivElement>(null);
+  const [showChapterList, setShowChapterList] = useState(false);
+  const [mobileVisible, setMobileVisible] = useState(PAGE_SIZE);
+  const [desktopVisible, setDesktopVisible] = useState(PAGE_SIZE);
+  const chapListRef = useRef<HTMLDivElement>(null);
+  const activeChapRef = useRef<HTMLDivElement>(null);
+  const mobileSentinelRef = useRef<HTMLDivElement>(null);
   const desktopSentinelRef = useRef<HTMLDivElement>(null);
 
   // ── Tab & Info/Comment UI ──
-  const [desktopTab,       setDesktopTab]        = useState<DrawerTab>('chapters');
-  const [mobileDrawer,     setMobileDrawer]      = useState<DrawerTab | null>(null);
+  const [desktopTab, setDesktopTab] = useState<DrawerTab>('chapters');
+  const [mobileDrawer, setMobileDrawer] = useState<DrawerTab | null>(null);
 
   // ── Comments state ──
-  const [comments,         setComments]          = useState<Comment[]>([]);
-  const [commentHasMore,   setCommentHasMore]    = useState(false);
-  const [commentNextCursor,setCommentNextCursor] = useState<string | null>(null);
-  const [commentLoading,   setCommentLoading]    = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentHasMore, setCommentHasMore] = useState(false);
+  const [commentNextCursor, setCommentNextCursor] = useState<string | null>(null);
+  const [commentLoading, setCommentLoading] = useState(false);
   const [commentLoadingMore, setCommentLoadingMore] = useState(false);
-  const [commentLoaded,    setCommentLoaded]     = useState(false);
-  const [commentInput,     setCommentInput]      = useState('');
-  const [commentSending,   setCommentSending]    = useState(false);
-  const [replyTo,          setReplyTo]           = useState<{ id: string; name: string } | null>(null);
-  const [infoLoaded,       setInfoLoaded]        = useState(false);
+  const [commentLoaded, setCommentLoaded] = useState(false);
+  const [commentInput, setCommentInput] = useState('');
+  const [commentSending, setCommentSending] = useState(false);
+  const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
+  const [infoLoaded, setInfoLoaded] = useState(false);
   const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // ── Interaction state (like / follow / nominate) ──
   const [interactStats, setInteractStats] = useState({
-    likeCount:       storyInfo.likeCount,
-    followCount:     storyInfo.followCount,
+    likeCount: storyInfo.likeCount,
+    followCount: storyInfo.followCount,
     nominationCount: storyInfo.nominationCount,
   });
   const [userStatus, setUserStatus] = useState({
-    isLiked:    false,
+    isLiked: false,
     isFollowed: false,
     isNominated: false,
   });
@@ -286,33 +286,33 @@ export default function ListeningClient({
     getStoryInteractions(storyId).then(({ stats, userStatus: us }) => {
       if (stats) {
         setInteractStats({
-          likeCount:       stats.likeCount,
-          followCount:     stats.followCount,
+          likeCount: stats.likeCount,
+          followCount: stats.followCount,
           nominationCount: stats.nominationCount,
         });
       }
       setUserStatus({
-        isLiked:     us.isLiked,
-        isFollowed:  us.isFollowed,
+        isLiked: us.isLiked,
+        isFollowed: us.isFollowed,
         isNominated: false, // nominations là 1 chiều, không toggle
       });
     });
   }, [storyId]);
 
 
-  const currentIdx     = currentChapter.index;
+  const currentIdx = currentChapter.index;
   const sortedChapters = [...allChapters].sort((a, b) => a.index - b.index);
-  const hasPrev        = sortedChapters.some(c => c.index < currentIdx);
-  const hasNext        = sortedChapters.some(c => c.index > currentIdx);
+  const hasPrev = sortedChapters.some(c => c.index < currentIdx);
+  const hasNext = sortedChapters.some(c => c.index > currentIdx);
 
   // ── Detect hardware info khi mount ──
   useEffect(() => {
     const cores = navigator.hardwareConcurrency ?? 2;
-    const ram   = (navigator as any).deviceMemory ?? 4;
-    const isMT  = typeof self !== 'undefined' && (self as any).crossOriginIsolated === true;
-    const maxByRam  = Math.max(1, Math.floor((ram * 1024 * 0.3) / 70));
+    const ram = (navigator as any).deviceMemory ?? 4;
+    const isMT = typeof self !== 'undefined' && (self as any).crossOriginIsolated === true;
+    const maxByRam = Math.max(1, Math.floor((ram * 1024 * 0.3) / 70));
     const maxByCore = Math.max(1, Math.floor(cores / 2));
-    const autoMax   = Math.min(maxByRam, maxByCore, 4);
+    const autoMax = Math.min(maxByRam, maxByCore, 4);
     setHwInfo({ cores, ram, isMT });
     // Auto set về max nếu mặc định 2 vượt quá giới hạn
     setWorkerCount(w => Math.max(2, Math.min(w, Math.max(2, autoMax))));
@@ -344,7 +344,7 @@ export default function ListeningClient({
       artwork: storyCover ? [{ src: storyCover, sizes: '512x512', type: 'image/jpeg' }] : [],
     });
     navigator.mediaSession.setActionHandler('previoustrack', () => goChapter('prev'));
-    navigator.mediaSession.setActionHandler('nexttrack',     () => goChapter('next'));
+    navigator.mediaSession.setActionHandler('nexttrack', () => goChapter('next'));
   }, [currentChapter]);
 
   // ── Scroll active chapter vào view ──
@@ -531,14 +531,11 @@ export default function ListeningClient({
   // ── Nominate handler ──
   const handleNominate = useCallback(async () => {
     if (!checkAuth()) return;
-    if (!confirm('Bạn muốn đề cử cho truyện này?')) return;
     setInteractStats(s => ({ ...s, nominationCount: s.nominationCount + 1 }));
     const res = await nominateStory(storyId);
     if (res.error) {
       setInteractStats(s => ({ ...s, nominationCount: s.nominationCount - 1 }));
       alert(res.error);
-    } else {
-      alert('Đề cử thành công!');
     }
   }, [checkAuth, storyId]);
 
@@ -650,17 +647,17 @@ export default function ListeningClient({
     setIsGenerating(false);
     // Terminate toàn bộ worker pool
     for (const w of workerPoolRef.current) {
-      try { w?.terminate(); } catch {}
+      try { w?.terminate(); } catch { }
     }
     workerPoolRef.current = [];
     piperRef.current = null;
     // Dọn prefetch state — tránh rác khi chuyển chương bất ngờ
-    prefetchedPCMRef.current  = [];
-    prefetchDoneRef.current   = false;
+    prefetchedPCMRef.current = [];
+    prefetchDoneRef.current = false;
     prefetchedChapRef.current = null;
-    prefetchingIdRef.current  = null;
-    prefetchStopRef.current   = true;
-    prefetchTotalRef.current  = 0;
+    prefetchingIdRef.current = null;
+    prefetchStopRef.current = true;
+    prefetchTotalRef.current = 0;
   }, []);
 
   // trimSilence: cắt bỏ silence ở đầu/cuối PCM
@@ -670,13 +667,13 @@ export default function ListeningClient({
     const threshold = Math.pow(10, thresholdDb / 20); // -45dB ≈ 0.006
     const marginSamples = Math.floor(sampleRate * 0.003); // 3ms margin
     let start = 0;
-    let end   = pcm.length - 1;
+    let end = pcm.length - 1;
     while (start < pcm.length && Math.abs(pcm[start]) < threshold) start++;
     while (end > start && Math.abs(pcm[end]) < threshold) end--;
     start = Math.max(0, start - marginSamples);
-    end   = Math.min(pcm.length - 1, end + marginSamples);
+    end = Math.min(pcm.length - 1, end + marginSamples);
     const trimmedMs = ((pcm.length - (end - start + 1)) / sampleRate * 1000).toFixed(0);
-    if (Number(trimmedMs) > 50) console.log(`[Trim] removed=${trimmedMs}ms original=${(pcm.length/sampleRate*1000).toFixed(0)}ms`);
+    if (Number(trimmedMs) > 50) console.log(`[Trim] removed=${trimmedMs}ms original=${(pcm.length / sampleRate * 1000).toFixed(0)}ms`);
     return pcm.slice(start, end + 1);
   }, []);
 
@@ -695,11 +692,11 @@ export default function ListeningClient({
       const channel = audioBuffer.getChannelData(0);
       channel.set(pcm);
 
-      const s       = speedRef.current;
+      const s = speedRef.current;
       const startAt = Math.max(actx.currentTime, nextStartRef.current);
 
       // Fade-in 10ms đầu chunk + fade-out 10ms cuối chunk — giảm click/pop
-      const endAt    = startAt + audioBuffer.duration / s;
+      const endAt = startAt + audioBuffer.duration / s;
       const gainNode = actx.createGain();
       gainNode.connect(actx.destination);
       // Fade-in: luôn apply để tránh click khi chunk bắt đầu
@@ -710,7 +707,7 @@ export default function ListeningClient({
       gainNode.gain.linearRampToValueAtTime(0, endAt);
 
       const source = actx.createBufferSource();
-      source.buffer             = audioBuffer;
+      source.buffer = audioBuffer;
       source.playbackRate.value = s;
       source.connect(gainNode);
       source.start(startAt);
@@ -732,9 +729,9 @@ export default function ListeningClient({
     try {
       const arrayBuffer = await wavBlob.arrayBuffer();
       const audioBuffer = await actx.decodeAudioData(arrayBuffer);
-      const s           = speedRef.current;
-      const source      = actx.createBufferSource();
-      source.buffer             = audioBuffer;
+      const s = speedRef.current;
+      const source = actx.createBufferSource();
+      source.buffer = audioBuffer;
       source.playbackRate.value = s;
       source.connect(actx.destination);
       const startAt = Math.max(actx.currentTime, nextStartRef.current);
@@ -747,27 +744,27 @@ export default function ListeningClient({
   }, []);
 
   // ── Pipeline refs ──
-  const endTimesRef      = useRef<number[]>([]);
-  const generatedRef     = useRef<number>(0);
-  const pipelineDone     = useRef<boolean>(false);
-  const audioHandledGlobalRef  = useRef<boolean>(false); // guard chung cho pollPlayed + pollFromBuffer — tránh double auto-next
-  const activeChapIndexRef     = useRef<number>(-1);     // index chương đang active — pollPlayed/pollFromBuffer stale tự dừng
-  const streamChapterRef            = useRef<((ch: Chapter) => Promise<void>) | null>(null);
-  const playFromPrefetchBufferRef   = useRef<((ch: Chapter) => void) | null>(null);
-  const piperRef         = useRef<any>(null); // giữ worker sống → không load lại model mỗi chương
-  const workerPoolRef    = useRef<any[]>([]);  // pool nhiều worker theo phần cứng
-  const workerCountRef   = useRef<number>(1);  // số worker thực tế dùng
+  const endTimesRef = useRef<number[]>([]);
+  const generatedRef = useRef<number>(0);
+  const pipelineDone = useRef<boolean>(false);
+  const audioHandledGlobalRef = useRef<boolean>(false); // guard chung cho pollPlayed + pollFromBuffer — tránh double auto-next
+  const activeChapIndexRef = useRef<number>(-1);     // index chương đang active — pollPlayed/pollFromBuffer stale tự dừng
+  const streamChapterRef = useRef<((ch: Chapter) => Promise<void>) | null>(null);
+  const playFromPrefetchBufferRef = useRef<((ch: Chapter) => void) | null>(null);
+  const piperRef = useRef<any>(null); // giữ worker sống → không load lại model mỗi chương
+  const workerPoolRef = useRef<any[]>([]);  // pool nhiều worker theo phần cứng
+  const workerCountRef = useRef<number>(1);  // số worker thực tế dùng
 
   const BUFFER_AHEAD = 4;
 
   // ── Prefetch chương tiếp theo ──
-  const prefetchedChapRef    = useRef<Chapter | null>(null);      // chapter metadata
-  const prefetchedPCMRef     = useRef<Array<{ pcm: Float32Array; sampleRate: number; isClause: boolean; pauseMs: number }>>([]);
-  const prefetchDoneRef      = useRef<boolean>(false);
-  const prefetchingIdRef     = useRef<string | null>(null);
+  const prefetchedChapRef = useRef<Chapter | null>(null);      // chapter metadata
+  const prefetchedPCMRef = useRef<Array<{ pcm: Float32Array; sampleRate: number; isClause: boolean; pauseMs: number }>>([]);
+  const prefetchDoneRef = useRef<boolean>(false);
+  const prefetchingIdRef = useRef<string | null>(null);
   const prefetchNextChapterRef = useRef<((meta: { id: string; index: number; title: string }) => void) | null>(null);
-  const prefetchStopRef      = useRef<boolean>(false);
-  const prefetchTotalRef     = useRef<number>(0);  // tổng chunks của chương đang prefetch — biết ngay sau splitChunks
+  const prefetchStopRef = useRef<boolean>(false);
+  const prefetchTotalRef = useRef<number>(0);  // tổng chunks của chương đang prefetch — biết ngay sau splitChunks
 
   // detectWorkerCount đọc từ state workerCount (do user chọn)
   const detectWorkerCount = useCallback(() => workerCount, [workerCount]);
@@ -798,9 +795,9 @@ export default function ListeningClient({
         if (!sent) continue;
 
         const isLastSentenceInPara = si === sentences.length - 1;
-        const isLastPara           = pi === paragraphs.length - 1;
-        const hasEllipsis          = /\.{3}|…/.test(sent);
-        const hasDash              = /[\u2014\u2013]/.test(sent);
+        const isLastPara = pi === paragraphs.length - 1;
+        const hasEllipsis = /\.{3}|…/.test(sent);
+        const hasDash = /[\u2014\u2013]/.test(sent);
 
         // Câu ngắn ≤ 15 từ → không tách thêm
         if (countWords(sent) <= 15) {
@@ -832,11 +829,11 @@ export default function ListeningClient({
         const validParts = parts.filter(p => p.trim());
 
         for (let k = 0; k < validParts.length; k++) {
-          const p               = validParts[k];
-          const isClause        = k < validParts.length - 1;
-          const nextText        = k + 1 < validParts.length ? validParts[k + 1] : '';
+          const p = validParts[k];
+          const isClause = k < validParts.length - 1;
+          const nextText = k + 1 < validParts.length ? validParts[k + 1] : '';
           const isBeforeConnector = CONNECTORS.test(nextText.trimStart());
-          const partHasDash     = /[\u2014\u2013]/.test(p);
+          const partHasDash = /[\u2014\u2013]/.test(p);
           const partHasEllipsis = /\.{3}|…/.test(p);
 
           let pauseMs: number;
@@ -845,10 +842,10 @@ export default function ListeningClient({
             else if (partHasEllipsis || partHasDash) pauseMs = 288;
             else pauseMs = 400;
           } else {
-            if (isBeforeConnector)               pauseMs = 320;
-            else if (countWords(p) > 10)         pauseMs = 240;
+            if (isBeforeConnector) pauseMs = 320;
+            else if (countWords(p) > 10) pauseMs = 240;
             else if (partHasDash || partHasEllipsis) pauseMs = 288;
-            else                                 pauseMs = 192;
+            else pauseMs = 192;
           }
           raw.push({ text: p, isClause, pauseMs });
         }
@@ -879,9 +876,9 @@ export default function ListeningClient({
     // ── Resume case: goToChapter đã restore buffer partial + spawn workers mới ──
     // Nhận ra bằng: cùng id + chưa done + đã có chap + đã có chunks trong buffer
     const isResume = prefetchingIdRef.current === nextMeta.id
-                  && !prefetchDoneRef.current
-                  && prefetchedChapRef.current?.id === nextMeta.id
-                  && prefetchedPCMRef.current.length > 0;
+      && !prefetchDoneRef.current
+      && prefetchedChapRef.current?.id === nextMeta.id
+      && prefetchedPCMRef.current.length > 0;
 
     let chap: Chapter;
     let resumeFromIndex = 0;
@@ -900,14 +897,14 @@ export default function ListeningClient({
       // Reset
       prefetchStopRef.current = true;
       await new Promise(r => setTimeout(r, 50));
-      prefetchStopRef.current   = false;
-      prefetchedPCMRef.current  = [];
-      prefetchDoneRef.current   = false;
+      prefetchStopRef.current = false;
+      prefetchedPCMRef.current = [];
+      prefetchDoneRef.current = false;
       prefetchedChapRef.current = null;
 
       // Fetch content
       console.log(`[W:Prefetch] Fetching content: /api/chapters/${nextMeta.id}`);
-      const res  = await fetch(`/api/chapters/${nextMeta.id}`).then(r => r.json());
+      const res = await fetch(`/api/chapters/${nextMeta.id}`).then(r => r.json());
       chap = res.data ?? res;
       console.log(`[W:Prefetch] Content OK: id=${chap.id} title="${chap.title}" contentLen=${chap.content?.length ?? 0}`);
       if (prefetchStopRef.current) { console.log(`[W:Prefetch] STOPPED after fetch`); return; }
@@ -920,18 +917,18 @@ export default function ListeningClient({
     const voiceMeta = voices.find((v: any) => v.id === selectedVoice);
     const modelBase = `${R2_BASE}/models/custom/${voiceMeta?.path ?? selectedVoice}`;
     const workerBase = {
-      modelUrl:              `${modelBase}.onnx`,
-      modelConfigUrl:        `${modelBase}.onnx.json`,
-      onnxruntimeUrl:        `${R2_BASE}/piper-wasm`,
-      piperPhonemizeJsUrl:   `${R2_BASE}/piper-wasm/piper_phonemize.js`,
+      modelUrl: `${modelBase}.onnx`,
+      modelConfigUrl: `${modelBase}.onnx.json`,
+      onnxruntimeUrl: `${R2_BASE}/piper-wasm`,
+      piperPhonemizeJsUrl: `${R2_BASE}/piper-wasm/piper_phonemize.js`,
       piperPhonemizeWasmUrl: `${R2_BASE}/piper-wasm/piper_phonemize.wasm`,
       piperPhonemizeDataUrl: `${R2_BASE}/piper-wasm/piper_phonemize.data`,
       blobs: {},
     };
 
-    const text   = stripHtml((chap.title ? `Chương ${chap.index}. ${cleanTitle(chap.title, chap.index)}. ` : '') + chap.content);
+    const text = stripHtml((chap.title ? `Chương ${chap.index}. ${cleanTitle(chap.title, chap.index)}. ` : '') + chap.content);
     const chunks = splitChunks(text);
-    const total  = chunks.length;
+    const total = chunks.length;
     prefetchTotalRef.current = total; // biết tổng ngay sau splitChunks → playFromPrefetchBuffer dùng được
 
     // ── Song song như streamChapter ──
@@ -967,7 +964,7 @@ export default function ListeningClient({
           };
           phonemizeWorker.addEventListener('message', h);
           phonemizeWorker.postMessage({ kind: 'phonemize_only', jobId, input: chunks[i].text, ...workerBase });
-        }).catch(() => {});
+        }).catch(() => { });
       }
     })();
 
@@ -1009,7 +1006,7 @@ export default function ListeningClient({
               pcmBuffer[i] = { ...pcmResult, isClause, pauseMs };
               // Push ngay vào prefetchedPCMRef để pollNewChunks schedule được
               prefetchedPCMRef.current[i] = { ...pcmResult, isClause, pauseMs };
-              console.log(`[Prefetch:W${wIdx}] chunk ${i}/${total-1} done`);
+              console.log(`[Prefetch:W${wIdx}] chunk ${i}/${total - 1} done`);
             }
           } catch { continue; }
         }
@@ -1020,7 +1017,7 @@ export default function ListeningClient({
 
     if (!prefetchStopRef.current) {
       prefetchedPCMRef.current = pcmBuffer.filter(Boolean) as typeof prefetchedPCMRef.current;
-      prefetchDoneRef.current  = true;
+      prefetchDoneRef.current = true;
       console.log(`[W:Prefetch] Done: ${chap.title} id=${chap.id} — ${prefetchedPCMRef.current.length} chunks`);
     }
   }, [voices, selectedVoice, splitChunks]);
@@ -1029,9 +1026,9 @@ export default function ListeningClient({
     console.log(`[W:Stream] streamChapter called: ${chapter.title} selectedVoice=${selectedVoice}`);
     if (!selectedVoice) { console.log('[W:Stream] ABORT: no selectedVoice'); return; }
 
-    stopFlagRef.current  = false;
+    stopFlagRef.current = false;
     pipelineDone.current = false;
-    endTimesRef.current  = [];
+    endTimesRef.current = [];
     generatedRef.current = 0;
     audioHandledGlobalRef.current = false;
     activeChapIndexRef.current = chapter.index;
@@ -1049,7 +1046,7 @@ export default function ListeningClient({
     const makeWorker = () => new Worker(`/workers/tts-worker.js?v=pcm1`, { type: 'module' });
     while (workerPoolRef.current.length < workerCount) workerPoolRef.current.push(makeWorker());
     while (workerPoolRef.current.length > workerCount) {
-      try { workerPoolRef.current.pop()?.terminate(); } catch {}
+      try { workerPoolRef.current.pop()?.terminate(); } catch { }
     }
     console.log(`[TTS] Worker pool: ${workerPoolRef.current.length} workers — phonemize=worker[0], infer=worker[1..${workerPoolRef.current.length - 1}]`);
     console.log(`[TTS] Chapter: ${chapter.title} — chunks will be split from text`);
@@ -1057,16 +1054,16 @@ export default function ListeningClient({
     const voiceMeta = voices.find(v => v.id === selectedVoice);
     const modelBase = `${R2_BASE}/models/custom/${voiceMeta?.path ?? selectedVoice}`;
     const workerBase = {
-      modelUrl:              `${modelBase}.onnx`,
-      modelConfigUrl:        `${modelBase}.onnx.json`,
-      onnxruntimeUrl:        `${R2_BASE}/piper-wasm`,
-      piperPhonemizeJsUrl:   `${R2_BASE}/piper-wasm/piper_phonemize.js`,
+      modelUrl: `${modelBase}.onnx`,
+      modelConfigUrl: `${modelBase}.onnx.json`,
+      onnxruntimeUrl: `${R2_BASE}/piper-wasm`,
+      piperPhonemizeJsUrl: `${R2_BASE}/piper-wasm/piper_phonemize.js`,
       piperPhonemizeWasmUrl: `${R2_BASE}/piper-wasm/piper_phonemize.wasm`,
       piperPhonemizeDataUrl: `${R2_BASE}/piper-wasm/piper_phonemize.data`,
       blobs: {},
     };
 
-    const text   = stripHtml((chapter.title ? chapter.title + '. ' : '') + chapter.content);
+    const text = stripHtml((chapter.title ? chapter.title + '. ' : '') + chapter.content);
     const chunks = splitChunks(text);
     setSentenceTotal(chunks.length);
 
@@ -1106,7 +1103,7 @@ export default function ListeningClient({
       }
     })();
 
-    
+
 
     const pollPlayed = () => {
       if (stopFlagRef.current) { console.log('[W:Poll] stopped by stopFlag'); return; }
@@ -1147,7 +1144,7 @@ export default function ListeningClient({
       // Dùng endTimesRef.current cuối cùng thay vì nextStartRef
       // vì nextStartRef = thời điểm tương lai, không biết khi nào "hết"
       const lastEndTime = endTimesRef.current[endTimesRef.current.length - 1] ?? 0;
-      const audioEmpty  = pipelineDone.current && lastEndTime > 0 && now >= lastEndTime - 0.3;
+      const audioEmpty = pipelineDone.current && lastEndTime > 0 && now >= lastEndTime - 0.3;
       if (audioEmpty) {
         if (audioHandledGlobalRef.current) return; // đã bị cái khác xử lý rồi
         audioHandledGlobalRef.current = true; // claim ngay — atomic trong JS single-thread
@@ -1156,14 +1153,14 @@ export default function ListeningClient({
         setCompletedChapters(prev => new Set(prev).add(chapIndex));
 
         // Auto next — dùng prefetch buffer nếu có, không fetch lại
-        const sorted2  = [...allChapters].sort((a, b) => a.index - b.index);
+        const sorted2 = [...allChapters].sort((a, b) => a.index - b.index);
         const nextMeta = sorted2.find(c => c.index > chapIndex);
         console.log(`[W:AutoNext] nextMeta=${nextMeta?.id ?? 'null'} prefetchId=${prefetchingIdRef.current} prefetchDone=${prefetchDoneRef.current} prefetchChap=${prefetchedChapRef.current?.id ?? 'null'}`);
         if (!nextMeta) { console.log('[W:AutoNext] Không có chương tiếp — dừng'); return; }
 
         // Có prefetch (đủ hoặc đang chạy) → play ngay, pollNewChunks sẽ schedule tiếp
         const hasPrefetch = prefetchedChapRef.current?.id === nextMeta.id &&
-                            (prefetchDoneRef.current || prefetchingIdRef.current === nextMeta.id);
+          (prefetchDoneRef.current || prefetchingIdRef.current === nextMeta.id);
         console.log(`[W:AutoNext] hasPrefetch=${hasPrefetch} prefetchDone=${prefetchDoneRef.current}`);
         if (hasPrefetch) {
           const nextChap = prefetchedChapRef.current!;
@@ -1197,10 +1194,10 @@ export default function ListeningClient({
       // Stage 2: N workers lấy phonemeIds → ONNX infer → raw PCM → schedulePCM
       // Thứ tự audio: slotPromise chain
 
-      const pool  = workerPoolRef.current;
+      const pool = workerPoolRef.current;
       const total = chunks.length;
 
-      const slotReady:   Array<() => void>    = new Array(total);
+      const slotReady: Array<() => void> = new Array(total);
       const slotPromise: Array<Promise<void>> = Array.from({ length: total }, (_, i) =>
         new Promise<void>(res => { slotReady[i] = res; })
       );
@@ -1260,7 +1257,7 @@ export default function ListeningClient({
             endTimesRef.current.push(endTime);
             generatedRef.current++;
             setSentenceGenerated(generatedRef.current);
-            console.log(`[Worker:${wIdx}] chunk ${i}/${total-1} infer done — generated=${generatedRef.current}`);
+            console.log(`[Worker:${wIdx}] chunk ${i}/${total - 1} infer done — generated=${generatedRef.current}`);
             slotReady[i]();
 
             if (generatedRef.current === BUFFER_AHEAD) {
@@ -1286,7 +1283,7 @@ export default function ListeningClient({
       stopFlagRef.current = false;
 
       // Trigger prefetch nếu chưa được trigger từ BUFFER_AHEAD
-      const sortedP   = [...allChapters].sort((a, b) => a.index - b.index);
+      const sortedP = [...allChapters].sort((a, b) => a.index - b.index);
       const nextMetaP = sortedP.find(c => c.index > chapIndex);
       console.log(`[W:Finally] pipelineDone — chapIndex=${chapIndex} nextMeta=${nextMetaP?.id ?? 'null'} prefetchingId=${prefetchingIdRef.current} prefetchDone=${prefetchDoneRef.current}`);
       if (nextMetaP && prefetchingIdRef.current !== nextMetaP.id && !prefetchDoneRef.current) {
@@ -1304,8 +1301,8 @@ export default function ListeningClient({
 
   // ── playFromPrefetchBuffer: play ngay chunks đã có, poll schedule chunks mới từ prefetch ──
   const playFromPrefetchBuffer = useCallback((chapter: Chapter) => {
-    const chapIdx  = chapter.index;
-    const isDone   = prefetchDoneRef.current;
+    const chapIdx = chapter.index;
+    const isDone = prefetchDoneRef.current;
     // Snapshot total NGAY LẬP TỨC — trước khi pollFromBuffer trigger prefetch chương tiếp
     // và prefetchNextChapter ghi đè prefetchTotalRef bằng total của chương sau
     const snapshotTotal = prefetchTotalRef.current;
@@ -1313,9 +1310,9 @@ export default function ListeningClient({
     // KHÔNG snapshot buffer — đọc trực tiếp prefetchedPCMRef để thấy chunks mới
     console.log(`[W:PlayBuffer] START: "${chapter.title}" chunks có sẵn=${prefetchedPCMRef.current.length} prefetchDone=${isDone}`);
 
-    stopFlagRef.current  = false;
+    stopFlagRef.current = false;
     pipelineDone.current = false;
-    endTimesRef.current  = [];
+    endTimesRef.current = [];
     generatedRef.current = 0;
     audioHandledGlobalRef.current = false;
     activeChapIndexRef.current = chapter.index;
@@ -1336,7 +1333,7 @@ export default function ListeningClient({
       const allChunks = prefetchedPCMRef.current;
       while (scheduledCount < allChunks.length && allChunks[scheduledCount] != null) {
         if (stopFlagRef.current) break;
-        const item    = allChunks[scheduledCount];
+        const item = allChunks[scheduledCount];
         const endTime = schedulePCM(actx, item.pcm, item.sampleRate, item.isClause, item.pauseMs);
         endTimesRef.current.push(endTime);
         generatedRef.current++;
@@ -1349,11 +1346,11 @@ export default function ListeningClient({
 
     if (isDone) {
       // Prefetch đã xong hoàn toàn — clear buffer, set pipelineDone
-      prefetchedPCMRef.current  = [];
-      prefetchDoneRef.current   = false;
+      prefetchedPCMRef.current = [];
+      prefetchDoneRef.current = false;
       prefetchedChapRef.current = null;
-      prefetchingIdRef.current  = null;
-      pipelineDone.current      = true;
+      prefetchingIdRef.current = null;
+      pipelineDone.current = true;
       setIsGenerating(false);
       setSentenceTotal(generatedRef.current);
       console.log(`[W:PlayBuffer] prefetchDone=true — pipelineDone=true total=${generatedRef.current}`);
@@ -1367,7 +1364,7 @@ export default function ListeningClient({
         // Schedule các chunks mới theo thứ tự liên tục — bỏ qua nếu chunk chưa có
         const allChunks = prefetchedPCMRef.current;
         while (scheduledCount < allChunks.length && allChunks[scheduledCount] != null) {
-          const item    = allChunks[scheduledCount];
+          const item = allChunks[scheduledCount];
           const endTime = schedulePCM(actx, item.pcm, item.sampleRate, item.isClause, item.pauseMs);
           endTimesRef.current.push(endTime);
           generatedRef.current++;
@@ -1378,11 +1375,11 @@ export default function ListeningClient({
 
         if (prefetchDoneRef.current) {
           // Prefetch xong — clear buffer, set pipelineDone
-          prefetchedPCMRef.current  = [];
-          prefetchDoneRef.current   = false;
+          prefetchedPCMRef.current = [];
+          prefetchDoneRef.current = false;
           prefetchedChapRef.current = null;
-          prefetchingIdRef.current  = null;
-          pipelineDone.current      = true;
+          prefetchingIdRef.current = null;
+          pipelineDone.current = true;
           setIsGenerating(false);
           setSentenceTotal(generatedRef.current);
           console.log(`[W:PlayBuffer] Prefetch Done — tổng ${generatedRef.current} chunks, pipelineDone=true`);
@@ -1401,13 +1398,13 @@ export default function ListeningClient({
       if (activeChapIndexRef.current !== chapIdx) { console.log(`[W:PlayBuffer] stale — chapIdx=${chapIdx} active=${activeChapIndexRef.current} — dừng`); return; }
       const actxNow = actxRef.current;
       if (!actxNow) return;
-      const now    = actxNow.currentTime;
+      const now = actxNow.currentTime;
       const played = endTimesRef.current.filter(t => t <= now).length;
       setSentencePlayed(played);
 
       // Trigger prefetch chương tiếp khi pipelineDone
       if (pipelineDone.current && prefetchingIdRef.current === null && !prefetchDoneRef.current) {
-        const sortedB  = [...allChapters].sort((a, b) => a.index - b.index);
+        const sortedB = [...allChapters].sort((a, b) => a.index - b.index);
         const nextMeta = sortedB.find(c => c.index > chapIdx);
         if (nextMeta) {
           console.log(`[W:Prefetch] Trigger từ pollFromBuffer: id=${nextMeta.id}`);
@@ -1416,7 +1413,7 @@ export default function ListeningClient({
       }
 
       const lastEndTime = endTimesRef.current[endTimesRef.current.length - 1] ?? 0;
-      const audioEmpty  = pipelineDone.current && lastEndTime > 0 && now >= lastEndTime - 0.3;
+      const audioEmpty = pipelineDone.current && lastEndTime > 0 && now >= lastEndTime - 0.3;
       if (audioEmpty) {
         if (audioHandledGlobalRef.current) return; // đã bị pollPlayed xử lý rồi
         audioHandledGlobalRef.current = true; // claim ngay
@@ -1424,14 +1421,14 @@ export default function ListeningClient({
         setIsPlaying(false);
         setCompletedChapters(prev => new Set(prev).add(chapIdx));
 
-        const sortedB  = [...allChapters].sort((a, b) => a.index - b.index);
+        const sortedB = [...allChapters].sort((a, b) => a.index - b.index);
         const nextMeta = sortedB.find(c => c.index > chapIdx);
         console.log(`[W:AutoNext] audioEmpty (buffer) — nextMeta=${nextMeta?.id ?? 'null'} prefetchDone=${prefetchDoneRef.current}`);
         if (!nextMeta) return;
 
         // Có prefetch (done hay chưa done) → play ngay
         const hasPrefetch = prefetchedChapRef.current?.id === nextMeta.id &&
-                            (prefetchDoneRef.current || prefetchingIdRef.current === nextMeta.id);
+          (prefetchDoneRef.current || prefetchingIdRef.current === nextMeta.id);
         console.log(`[W:AutoNext] hasPrefetch=${hasPrefetch} prefetchDone=${prefetchDoneRef.current}`);
         if (hasPrefetch) {
           const nextChap = prefetchedChapRef.current!;
@@ -1461,9 +1458,9 @@ export default function ListeningClient({
 
   // ── Sync refs để tránh circular dependency ──
   useEffect(() => {
-    streamChapterRef.current          = streamChapter;
+    streamChapterRef.current = streamChapter;
     playFromPrefetchBufferRef.current = playFromPrefetchBuffer;
-    prefetchNextChapterRef.current    = prefetchNextChapter;
+    prefetchNextChapterRef.current = prefetchNextChapter;
   }, [streamChapter, playFromPrefetchBuffer, prefetchNextChapter]);
 
   // ── Play / Pause / Toggle ──
@@ -1483,7 +1480,7 @@ export default function ListeningClient({
   }, []);
 
   const togglePlay = () => isPlaying ? handlePause() : handlePlay();
-  const skip       = (_secs: number) => {}; // seek không support với sentence streaming
+  const skip = (_secs: number) => { }; // seek không support với sentence streaming
 
   // ── goToChapter: chuyển chương + phát luôn ──
   const goToChapter = useCallback(async (meta: ChapterMeta) => {
@@ -1494,13 +1491,13 @@ export default function ListeningClient({
     // ── Snapshot prefetch state TRƯỚC stopAll ──
     // stopAll() sẽ terminate workers + xóa sạch tất cả prefetch refs
     // nên phải snapshot trước để còn dùng được sau
-    const isPrefetching  = prefetchingIdRef.current === meta.id && !prefetchDoneRef.current;
+    const isPrefetching = prefetchingIdRef.current === meta.id && !prefetchDoneRef.current;
     const isPrefetchDone = prefetchedChapRef.current?.id === meta.id && prefetchDoneRef.current;
-    const hasPrefetch    = isPrefetchDone || isPrefetching;
+    const hasPrefetch = isPrefetchDone || isPrefetching;
 
-    const snapshotChap   = hasPrefetch ? prefetchedChapRef.current : null;
-    const snapshotPCM    = hasPrefetch ? [...prefetchedPCMRef.current] : [];
-    const snapshotDone   = isPrefetchDone;
+    const snapshotChap = hasPrefetch ? prefetchedChapRef.current : null;
+    const snapshotPCM = hasPrefetch ? [...prefetchedPCMRef.current] : [];
+    const snapshotDone = isPrefetchDone;
 
     // Stop audio hiện tại + terminate workers + xóa refs
     stopAll();
@@ -1514,9 +1511,9 @@ export default function ListeningClient({
 
       // Restore PCM buffer và metadata
       prefetchedChapRef.current = snapshotChap;
-      prefetchedPCMRef.current  = snapshotPCM;
-      prefetchDoneRef.current   = snapshotDone;
-      prefetchStopRef.current   = false;
+      prefetchedPCMRef.current = snapshotPCM;
+      prefetchDoneRef.current = snapshotDone;
+      prefetchStopRef.current = false;
 
       if (!snapshotDone) {
         // Partial: cần spawn lại workers để generate tiếp phần còn thiếu
@@ -1554,9 +1551,9 @@ export default function ListeningClient({
 
       let chap = loadedChapters[meta.index];
       if (!chap) {
-        const res  = await fetch(`/api/chapters/${meta.id}`);
+        const res = await fetch(`/api/chapters/${meta.id}`);
         const json = await res.json();
-        chap       = json.data ?? json;
+        chap = json.data ?? json;
         setLoadedChapters(prev => ({ ...prev, [meta.index]: chap }));
       }
       setCurrentChapter(chap);
@@ -1626,7 +1623,7 @@ export default function ListeningClient({
         className="w-14 h-14 rounded-full bg-gradient-to-br from-[#e8580a] to-[#ff7c35] flex items-center justify-center text-white shadow-[0_4px_20px_rgba(232,88,10,0.5)] hover:shadow-[0_6px_28px_rgba(232,88,10,0.65)] transition-all active:scale-95 disabled:opacity-60">
         {isPlaying
           ? <Pause size={22} fill="white" />
-          : <Play  size={22} fill="white" className="translate-x-0.5" />}
+          : <Play size={22} fill="white" className="translate-x-0.5" />}
       </button>
       <button onClick={() => skip(15)}
         className="w-9 h-9 rounded-full bg-[#2a2520] border border-white/[0.20] flex items-center justify-center text-white hover:border-white/40 transition-colors">
@@ -1655,9 +1652,8 @@ export default function ListeningClient({
           <div className="absolute bottom-full left-0 right-0 mb-1 bg-[#1a1612] border border-white/[0.09] rounded-xl overflow-hidden shadow-xl z-20 max-h-48 overflow-y-auto">
             {voices.map(v => (
               <button key={v.id} onClick={() => { setSelectedVoice(v.id); setShowVoiceMenu(false); }}
-                className={`w-full text-left px-3 py-2.5 text-[11px] font-medium transition-colors ${
-                  v.id === selectedVoice ? 'bg-[#e8580a]/15 text-[#ff7c35]' : 'text-[#f0ebe4] hover:bg-white/[0.05]'
-                }`}>
+                className={`w-full text-left px-3 py-2.5 text-[11px] font-medium transition-colors ${v.id === selectedVoice ? 'bg-[#e8580a]/15 text-[#ff7c35]' : 'text-[#f0ebe4] hover:bg-white/[0.05]'
+                  }`}>
                 {v.name}
               </button>
             ))}
@@ -1678,7 +1674,7 @@ export default function ListeningClient({
             setWorkerCount(next);
             const makeWorker = () => new Worker(`/workers/tts-worker.js?v=pcm1`, { type: 'module' });
             while (workerPoolRef.current.length < next) workerPoolRef.current.push(makeWorker());
-            while (workerPoolRef.current.length > next) { try { workerPoolRef.current.pop()?.terminate(); } catch {} }
+            while (workerPoolRef.current.length > next) { try { workerPoolRef.current.pop()?.terminate(); } catch { } }
             console.log(`[Worker] Pool resized → ${workerPoolRef.current.length} workers`);
           }}
           disabled={workerCount <= 2}
@@ -1690,7 +1686,7 @@ export default function ListeningClient({
             setWorkerCount(next);
             const makeWorker = () => new Worker(`/workers/tts-worker.js?v=pcm1`, { type: 'module' });
             while (workerPoolRef.current.length < next) workerPoolRef.current.push(makeWorker());
-            while (workerPoolRef.current.length > next) { try { workerPoolRef.current.pop()?.terminate(); } catch {} }
+            while (workerPoolRef.current.length > next) { try { workerPoolRef.current.pop()?.terminate(); } catch { } }
             console.log(`[Worker] Pool resized → ${workerPoolRef.current.length} workers`);
           }}
           disabled={workerCount >= 4}
@@ -1702,7 +1698,7 @@ export default function ListeningClient({
   // ── Worker Panel UI ──
   const maxWorker = (() => {
     if (!hwInfo) return 4;
-    const maxByRam  = Math.max(1, Math.floor((hwInfo.ram * 1024 * 0.3) / 70));
+    const maxByRam = Math.max(1, Math.floor((hwInfo.ram * 1024 * 0.3) / 70));
     const maxByCore = Math.max(1, Math.floor(hwInfo.cores / 2));
     return Math.max(2, Math.min(maxByRam, maxByCore, 4));
   })();
@@ -1736,7 +1732,7 @@ export default function ListeningClient({
               setWorkerCount(next);
               const makeWorker = () => new Worker(`/workers/tts-worker.js?v=pcm1`, { type: 'module' });
               while (workerPoolRef.current.length < next) workerPoolRef.current.push(makeWorker());
-              while (workerPoolRef.current.length > next) { try { workerPoolRef.current.pop()?.terminate(); } catch {} }
+              while (workerPoolRef.current.length > next) { try { workerPoolRef.current.pop()?.terminate(); } catch { } }
             }}
             disabled={workerCount <= 2}
             className="w-7 h-7 rounded-lg bg-[#231f1a] border border-white/[0.07] text-white font-black text-sm disabled:opacity-30 hover:border-[#e8580a]/50 transition-colors">−</button>
@@ -1747,7 +1743,7 @@ export default function ListeningClient({
               setWorkerCount(next);
               const makeWorker = () => new Worker(`/workers/tts-worker.js?v=pcm1`, { type: 'module' });
               while (workerPoolRef.current.length < next) workerPoolRef.current.push(makeWorker());
-              while (workerPoolRef.current.length > next) { try { workerPoolRef.current.pop()?.terminate(); } catch {} }
+              while (workerPoolRef.current.length > next) { try { workerPoolRef.current.pop()?.terminate(); } catch { } }
             }}
             disabled={workerCount >= maxWorker}
             className="w-7 h-7 rounded-lg bg-[#231f1a] border border-white/[0.07] text-white font-black text-sm disabled:opacity-30 hover:border-[#e8580a]/50 transition-colors">+</button>
@@ -1757,11 +1753,10 @@ export default function ListeningClient({
       {/* Per-worker estimate */}
       <div className="flex gap-1.5">
         {Array.from({ length: maxWorker }).map((_, i) => (
-          <div key={i} className={`flex-1 h-6 rounded flex items-center justify-center text-[9px] font-bold transition-all ${
-            i < workerCount
+          <div key={i} className={`flex-1 h-6 rounded flex items-center justify-center text-[9px] font-bold transition-all ${i < workerCount
               ? 'bg-[#e8580a]/20 border border-[#e8580a]/40 text-[#e8580a]'
               : 'bg-white/[0.03] border border-white/[0.05] text-[#3a3530]'
-          }`}>
+            }`}>
             W{i + 1}
           </div>
         ))}
@@ -1782,7 +1777,7 @@ export default function ListeningClient({
   // useCallback + deps đúng để không bị stale closure với currentIdx / completedChapters
   const renderChapRow = useCallback((chap: ChapterMeta) => {
     const isActive = chap.index === currentIdx;
-    const isDone   = completedChapters.has(chap.index);
+    const isDone = completedChapters.has(chap.index);
     return (
       <div
         key={chap.id}
@@ -1791,23 +1786,22 @@ export default function ListeningClient({
           setShowChapterList(false);
           goToChapter(chap); // không await — tránh block UI
         }}
-        className={`flex items-center gap-3 h-[52px] px-4 cursor-pointer border-l-[3px] transition-all ${
-          isActive
-            ? 'bg-[#e8580a]/10 border-l-[#e8580a]'
+        className={`flex items-center gap-3 h-[52px] px-4 cursor-pointer border-l-[3px] transition-all ${isActive
+            ? 'bg-[#e8580a] border-l-[#d4500a]'
             : 'border-l-transparent hover:bg-white/[0.04]'
-        }`}
+          }`}
       >
-        <span className={`text-[10px] font-black w-7 text-center shrink-0 ${isActive ? 'text-[#e8580a]' : 'text-[#8a7e72]'}`}>
+        <span className={`text-[12px] font-black w-7 text-center shrink-0 ${isActive ? 'text-white' : 'text-[#998d80]'}`}>
           {chap.index}
         </span>
         <div className="flex-1 min-w-0">
-          <p className={`text-[12px] ${isActive ? 'text-[#ff7c35] font-bold' : 'text-[#f0ebe4]'}`}>
+          <p className={`text-[15px] ${isActive ? 'text-white font-bold' : 'text-[#1a1a1a]'}`}>
             {chap.title}
           </p>
-          {isActive && <p className="text-[9px] text-[#8a7e72] mt-0.5">Đang nghe</p>}
+          {isActive && <p className="text-[9px] text-white/80 mt-0.5">Đang nghe</p>}
         </div>
         {isActive
-          ? <WaveIcon />
+          ? <WaveIcon color="#ffffff" />
           : isDone
             ? <CheckCircle2 size={13} className="text-green-500 shrink-0" />
             : <div className="w-[13px]" />}
@@ -1833,14 +1827,14 @@ export default function ListeningClient({
       {storyInfo.ratingScore > 0 && (
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-0.5">
-            {[1,2,3,4,5].map(i => (
+            {[1, 2, 3, 4, 5].map(i => (
               <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill={i <= Math.round(storyInfo.ratingScore) ? '#e8580a' : 'none'} stroke="#e8580a" strokeWidth="2">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
               </svg>
             ))}
           </div>
-          <span className="text-[12px] font-bold text-[#f0ebe4]">{storyInfo.ratingScore.toFixed(1)}</span>
-          <span className="text-[10px] text-[#8a7e72]">({storyInfo.ratingCount} đánh giá)</span>
+          <span className="text-[13px] font-bold text-[#f0ebe4]">{storyInfo.ratingScore.toFixed(1)}</span>
+          <span className="text-[11px] text-[#8a7e72]">({storyInfo.ratingCount} đánh giá)</span>
         </div>
       )}
 
@@ -1852,16 +1846,14 @@ export default function ListeningClient({
           onClick={handleLike}
           aria-pressed={userStatus.isLiked}
           aria-label={userStatus.isLiked ? 'Bỏ yêu thích' : 'Yêu thích'}
-          className={`flex-1 flex flex-col items-center cursor-pointer transition-all active:scale-95 ${
-            userStatus.isLiked ? 'bg-red-500/10' : 'bg-[#1a1612] hover:bg-red-500/10'
-          }`}
+          className={`flex-1 flex flex-col items-center cursor-pointer transition-all active:scale-95 ${userStatus.isLiked ? 'bg-red-500/10' : 'bg-[#1a1612] hover:bg-red-500/10'
+            }`}
         >
-          <div className={`w-full text-center px-2 py-1 text-[9px] font-semibold border-b border-white/[0.08] ${
-            userStatus.isLiked ? 'text-red-400 bg-red-500/10' : 'text-[#8a7e72] bg-[#1a1612]'
-          }`}>+ Yêu thích</div>
+          <div className={`w-full text-center px-2 py-1 text-[9px] font-semibold border-b border-white/[0.08] ${userStatus.isLiked ? 'text-red-400 bg-red-500/10' : 'text-[#8a7e72] bg-[#1a1612]'
+            }`}>+ Yêu thích</div>
           <div className="flex items-center justify-center gap-1.5 py-2.5">
             <Heart size={14} className={`transition-all ${userStatus.isLiked ? 'fill-current text-red-500 scale-110' : 'text-red-400'}`} />
-            <span className={`text-[12px] font-bold ${userStatus.isLiked ? 'text-red-500' : 'text-[#f0ebe4]'}`}>{interactStats.likeCount}</span>
+            <span className={`text-[16px] font-bold ${userStatus.isLiked ? 'text-red-500' : 'text-[#f0ebe4]'}`}>{interactStats.likeCount}</span>
           </div>
         </button>
 
@@ -1872,16 +1864,14 @@ export default function ListeningClient({
           onClick={handleFollow}
           aria-pressed={userStatus.isFollowed}
           aria-label={userStatus.isFollowed ? 'Bỏ theo dõi' : 'Theo dõi'}
-          className={`flex-1 flex flex-col items-center cursor-pointer transition-all active:scale-95 ${
-            userStatus.isFollowed ? 'bg-blue-500/10' : 'bg-[#1a1612] hover:bg-blue-500/10'
-          }`}
+          className={`flex-1 flex flex-col items-center cursor-pointer transition-all active:scale-95 ${userStatus.isFollowed ? 'bg-blue-500/10' : 'bg-[#1a1612] hover:bg-blue-500/10'
+            }`}
         >
-          <div className={`w-full text-center px-2 py-1 text-[9px] font-semibold border-b border-white/[0.08] ${
-            userStatus.isFollowed ? 'text-blue-400 bg-blue-500/10' : 'text-[#8a7e72] bg-[#1a1612]'
-          }`}>+ Theo dõi</div>
+          <div className={`w-full text-center px-2 py-1 text-[9px] font-semibold border-b border-white/[0.08] ${userStatus.isFollowed ? 'text-blue-400 bg-blue-500/10' : 'text-[#8a7e72] bg-[#1a1612]'
+            }`}>+ Theo dõi</div>
           <div className="flex items-center justify-center gap-1.5 py-2.5">
             <Bookmark size={14} className={`transition-all ${userStatus.isFollowed ? 'fill-current text-blue-500 scale-110' : 'text-blue-400'}`} />
-            <span className={`text-[12px] font-bold ${userStatus.isFollowed ? 'text-blue-500' : 'text-[#f0ebe4]'}`}>{interactStats.followCount}</span>
+            <span className={`text-[16px] font-bold ${userStatus.isFollowed ? 'text-blue-500' : 'text-[#f0ebe4]'}`}>{interactStats.followCount}</span>
           </div>
         </button>
 
@@ -1896,29 +1886,29 @@ export default function ListeningClient({
           <div className="w-full text-center px-2 py-1 text-[9px] font-semibold border-b border-white/[0.08] text-[#8a7e72] bg-[#1a1612]">+ Đề cử</div>
           <div className="flex items-center justify-center gap-1.5 py-2.5">
             <Trophy size={14} className="text-amber-400" />
-            <span className="text-[12px] font-bold text-[#f0ebe4]">{interactStats.nominationCount}</span>
+            <span className="text-[16px] font-bold text-[#f0ebe4]">{interactStats.nominationCount}</span>
           </div>
         </button>
       </div>
 
       {/* Status + Genres */}
-      <div className="flex flex-wrap gap-1.5">
-        <span className="text-[9px] font-bold px-2 py-1 rounded-full bg-[#e8580a]/20 text-[#e8580a] border border-[#e8580a]/30">
+      <div className="flex flex-wrap gap-2">
+        <span className="text-[11px] font-bold px-3 py-1.5 rounded-full bg-transparent text-[#e8580a] border border-[#e8580a]/40">
           {statusLabel(storyInfo.status)}
         </span>
-        <span className="text-[9px] px-2 py-1 rounded-full bg-white/[0.06] text-[#8a7e72] border border-white/[0.08]">
+        <span className="text-[11px] px-3 py-1.5 rounded-full bg-white/[0.04] text-[#8a7e72] border border-white/[0.08]">
           {totalChapters} chương
         </span>
-        {storyInfo.genres.slice(0, 4).map(g => (
-          <span key={g} className="text-[9px] px-2 py-1 rounded-full bg-white/[0.06] text-[#8a7e72] border border-white/[0.08]">{g}</span>
+        {storyInfo.genres.map(g => (
+          <span key={g} className="text-[11px] px-3 py-1.5 rounded-full bg-white/[0.04] text-[#8a7e72] border border-white/[0.08]">{g}</span>
         ))}
       </div>
 
       {/* Description */}
       {storyInfo.description && (
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[.1em] text-[#8a7e72] mb-2">Giới thiệu</p>
-          <p className="text-[12px] text-[#c8bfb5] leading-relaxed line-clamp-6">{storyInfo.description}</p>
+          <p className="text-[12px] font-black uppercase tracking-[.1em] text-[#8a7e72] mb-3">Giới thiệu</p>
+          <p className="text-[14px] text-[#c8bfb5] leading-relaxed line-clamp-6">{storyInfo.description}</p>
         </div>
       )}
     </div>
@@ -1960,20 +1950,20 @@ export default function ListeningClient({
                 {getAvatar(cmt.user.name, cmt.user.image, 28)}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                    <span className="text-[11px] font-bold text-[#f0ebe4]">{cmt.user.name}</span>
+                    <span className="text-[14px] font-bold text-[#000000]">{cmt.user.name}</span>
                     {cmt.user.role === 'ADMIN' && (
                       <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-[#e8580a] text-white uppercase tracking-wider">Admin</span>
                     )}
-                    <time dateTime={cmt.createdAt} className="text-[9px] text-[#8a7e72]">{timeAgo(cmt.createdAt)}</time>
+                    <time dateTime={cmt.createdAt} className="text-[12px] text-[#a19589]">{timeAgo(cmt.createdAt)}</time>
                   </div>
-                  <p className="text-[11px] text-[#c8bfb5] leading-relaxed mb-1.5 whitespace-pre-wrap">{cmt.content}</p>
+                  <p className="text-[14px] text-[#2d2621] leading-relaxed mb-1.5 whitespace-pre-wrap">{cmt.content}</p>
                   <div className="flex items-center gap-3">
                     {/* Like */}
                     <button
                       onClick={() => handleLikeComment(cmt.id)}
                       aria-label={`${cmt.isLiked ? 'Bỏ thích' : 'Thích'} bình luận của ${cmt.user.name}. ${cmt.likeCount} lượt thích`}
                       aria-pressed={cmt.isLiked}
-                      className={`flex items-center gap-1 text-[10px] transition-colors ${cmt.isLiked ? 'text-rose-400' : 'text-[#8a7e72] hover:text-rose-400'}`}
+                      className={`flex items-center gap-1 text-[13px] font-semibold transition-colors ${cmt.isLiked ? 'text-[#e8580a]' : 'text-[#e8580a] hover:opacity-80'}`}
                     >
                       <Heart size={11} className={cmt.isLiked ? 'fill-current' : ''} />
                       <span>{cmt.likeCount > 0 ? cmt.likeCount : 'Thích'}</span>
@@ -1982,7 +1972,7 @@ export default function ListeningClient({
                     <button
                       onClick={() => handleReplyComment(cmt)}
                       aria-label={`Trả lời bình luận của ${cmt.user.name}`}
-                      className="flex items-center gap-1 text-[10px] text-[#8a7e72] hover:text-[#e8580a] transition-colors"
+                      className="flex items-center gap-1 text-[13px] font-semibold text-[#e8580a] transition-colors"
                     >
                       <CornerDownRight size={11} />
                       Trả lời
@@ -2056,7 +2046,7 @@ export default function ListeningClient({
       {/* ── Version Badge ── */}
       <div className="fixed bottom-16 right-3 z-50 pointer-events-none">
         <div className="bg-[#1a1612]/90 border border-white/[0.07] rounded-lg px-2 py-1">
-          <span className="text-[10px] font-black text-[#e8580a]">v5.7</span>
+          <span className="text-[10px] font-black text-[#e8580a]">v5.8</span>
         </div>
       </div>
 
@@ -2104,13 +2094,13 @@ export default function ListeningClient({
         <div className="absolute inset-0">
           {storyCover
             ? <>
-                <div className="absolute inset-0 bg-cover bg-center opacity-20 blur-xl scale-110"
-                  style={{ backgroundImage: `url(${storyCover})` }} />
-                <div className="absolute inset-0 flex items-center justify-center" style={{ top: '60px', bottom: '320px' }}>
-                  <img src={storyCover} alt={storyTitle}
-                    className="max-h-full max-w-[75%] object-contain drop-shadow-2xl rounded-lg" />
-                </div>
-              </>
+              <div className="absolute inset-0 bg-cover bg-center opacity-20 blur-xl scale-110"
+                style={{ backgroundImage: `url(${storyCover})` }} />
+              <div className="absolute inset-0 flex items-center justify-center" style={{ top: '60px', bottom: '320px' }}>
+                <img src={storyCover} alt={storyTitle}
+                  className="max-h-full max-w-[75%] object-contain drop-shadow-2xl rounded-lg" />
+              </div>
+            </>
             : <div className="absolute inset-0 bg-gradient-to-br from-[#3d1f08] to-[#0f0d0a]" />}
           <div className="absolute bottom-0 left-0 right-0 h-[480px] bg-gradient-to-t from-[#0f0d0a] via-[#0f0d0a]/80 to-transparent" />
         </div>
@@ -2162,8 +2152,8 @@ export default function ListeningClient({
             {storyCover
               ? <img src={storyCover} alt={storyTitle} className="relative z-10 object-contain drop-shadow-2xl" style={{ maxHeight: '65%', maxWidth: '55%' }} />
               : <div className="absolute inset-0 bg-gradient-to-br from-[#4a2f10] to-[#1a0e06] flex items-center justify-center">
-                  <Headphones size={80} className="text-[#e8580a]/20" />
-                </div>}
+                <Headphones size={80} className="text-[#e8580a]/20" />
+              </div>}
             <div className="absolute inset-0 bg-gradient-to-t from-[#0f0d0a] via-[#0f0d0a]/30 to-transparent" />
           </div>
 
@@ -2192,17 +2182,16 @@ export default function ListeningClient({
           <div className="flex border-b border-white/[0.06] flex-shrink-0">
             {([
               { id: 'chapters', icon: <List size={11} />, label: 'Chương' },
-              { id: 'info',     icon: <Info size={11} />, label: 'Thông tin' },
+              { id: 'info', icon: <Info size={11} />, label: 'Thông tin' },
               { id: 'comments', icon: <MessageSquare size={11} />, label: 'Bình luận' },
             ] as { id: DrawerTab; icon: React.ReactNode; label: string }[]).map(tab => (
               <button
                 key={tab.id}
                 onClick={() => handleDesktopTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-1 py-2.5 text-[9px] font-black uppercase tracking-[.08em] transition-colors border-b-[1.5px] ${
-                  desktopTab === tab.id
+                className={`flex-1 flex items-center justify-center gap-1 py-2.5 text-[9px] font-black uppercase tracking-[.08em] transition-colors border-b-[1.5px] ${desktopTab === tab.id
                     ? 'text-[#e8580a] border-[#e8580a]'
                     : 'text-[#8a7e72] border-transparent hover:text-[#f0ebe4]'
-                }`}
+                  }`}
               >
                 {tab.icon}{tab.label}
               </button>
@@ -2231,7 +2220,7 @@ export default function ListeningClient({
       {showChapterList && (
         <div className="lg:hidden fixed inset-0 z-50 flex flex-col bg-[#0f0d0a]/96 backdrop-blur-sm">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.07] flex-shrink-0">
-            <span className="text-[13px] font-black text-[#f0ebe4] uppercase tracking-[.08em]">Tất cả chương</span>
+            <span className="text-[15px] font-black text-[#ffffff] uppercase tracking-[.08em]">Tất cả chương</span>
             <button onClick={() => setShowChapterList(false)}
               className="w-8 h-8 rounded-lg bg-white/[0.07] flex items-center justify-center text-[#8a7e72]">
               ✕
@@ -2252,7 +2241,7 @@ export default function ListeningClient({
       {mobileDrawer === 'info' && (
         <div className="lg:hidden fixed inset-0 z-50 flex flex-col bg-[#0f0d0a]/96 backdrop-blur-sm">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.07] flex-shrink-0">
-            <span className="text-[13px] font-black text-[#f0ebe4] uppercase tracking-[.08em]">Thông tin truyện</span>
+            <span className="text-[15px] font-black text-[#ffffff] uppercase tracking-[.08em]">Thông tin truyện</span>
             <button onClick={() => setMobileDrawer(null)}
               className="w-8 h-8 rounded-lg bg-white/[0.07] flex items-center justify-center text-[#8a7e72]">
               ✕
@@ -2268,7 +2257,7 @@ export default function ListeningClient({
       {mobileDrawer === 'comments' && (
         <div className="lg:hidden fixed inset-0 z-50 flex flex-col bg-[#0f0d0a]/96 backdrop-blur-sm">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.07] flex-shrink-0">
-            <span className="text-[13px] font-black text-[#f0ebe4] uppercase tracking-[.08em]">
+            <span className="text-[15px] font-black text-[#ffffff] uppercase tracking-[.08em]">
               Bình luận {comments.length > 0 ? `(${comments.length})` : ''}
             </span>
             <button onClick={() => setMobileDrawer(null)}
