@@ -87,6 +87,18 @@ const Header = () => {
               <Link href="/" className={navPill('/')}>Trang chủ</Link>
               <Link href="/tim-kiem" className={navPill('/tim-kiem')}>Thể loại</Link>
               <Link href="/xep-hang" className={navPill('/xep-hang')}>Xếp hạng</Link>
+              {session && (
+                <Link
+                  href="/tai-khoan/credits"
+                  className={
+                    isActive('/tai-khoan/credits')
+                      ? "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border border-amber-400 text-amber-500 bg-amber-50 shadow-[0_0_0_3px_rgba(245,166,35,0.1)] transition-all"
+                      : "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border border-transparent text-amber-500 hover:bg-amber-50 hover:border-amber-200 transition-all"
+                  }
+                >
+                  <span aria-hidden="true">⚡</span> Credits
+                </Link>
+              )}
             </nav>
 
             <div className="h-6 w-[1px] bg-zinc-200 hidden lg:block" aria-hidden="true"></div>
@@ -169,6 +181,9 @@ const Header = () => {
                       </div>
                       <Link role="menuitem" href="/tai-khoan" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors">
                         <User className="h-4 w-4" aria-hidden="true" /> Trang cá nhân
+                      </Link>
+                      <Link role="menuitem" href="/tai-khoan/credits" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-4 py-3 text-sm text-amber-500 hover:bg-amber-50 transition-colors border-t border-zinc-50">
+                        <span className="text-base leading-none" aria-hidden="true">⚡</span> Credits của tôi
                       </Link>
                       <Link role="menuitem" href="/tai-khoan/cai-dat" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors border-t border-zinc-50">
                         <Settings className="h-4 w-4" aria-hidden="true" /> Đổi ảnh đại diện
@@ -264,6 +279,7 @@ const Header = () => {
                     </div>
                   </div>
                   <Link href="/tai-khoan" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-4 p-4 rounded-xl font-bold text-zinc-700 hover:bg-orange-50 hover:text-brand-primary transition-all"><User className="h-5 w-5" aria-hidden="true" /> Trang cá nhân</Link>
+                  <Link href="/tai-khoan/credits" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-4 p-4 rounded-xl font-bold text-amber-500 hover:bg-amber-50 transition-all"><span className="text-lg leading-none" aria-hidden="true">⚡</span> Credits của tôi</Link>
                   <Link href="/tai-khoan/cai-dat" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-4 p-4 rounded-xl font-bold text-zinc-700 hover:bg-orange-50 hover:text-brand-primary transition-all"><Settings className="h-5 w-5" aria-hidden="true" /> Đổi ảnh đại diện</Link>
                   <button aria-label="Đăng xuất" onClick={() => { setIsMenuOpen(false); signOut(); }} className="w-full flex items-center gap-4 p-4 rounded-xl font-bold text-zinc-700 hover:bg-red-50 hover:text-red-500 transition-all text-left"><LogOut className="h-5 w-5" aria-hidden="true" /> Đăng xuất</button>
                 </>
