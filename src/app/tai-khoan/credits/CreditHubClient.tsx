@@ -14,6 +14,8 @@ interface UserData {
   commentsCount: number
   reviewsCount: number
   nominationsCount: number
+  lastCheckIn:   string | null   // ISO string hoặc null
+  currentStreak: number
 }
 
 interface Transaction {
@@ -168,11 +170,52 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
     }
   }
 
-  // ── CHECKIN (mock — tao làm API checkin ở bước sau) ──
-  function doCheckIn() {
-    setCheckedIn(true)
-    showToast('✓ Điểm danh thành công! +0.5 credit', true)
-    // TODO: gọi POST /api/credits/checkin
+  // ── CHECKIN STATE ──
+  // Kiểm tra xem hôm nay (VN) đã điểm danh chưa
+  function alreadyCheckedInToday(lastCheckIn: string | null): boolean {
+    if (!lastCheckIn) return false
+    const nowVN   = new Date(Date.now() + 7 * 60 * 60 * 1000)
+    const todayVN = new Date(Date.UTC(nowVN.getUTCFullYear(), nowVN.getUTCMonth(), nowVN.getUTCDate()))
+    const lastVN  = new Date(new Date(lastCheckIn).getTime() + 7 * 60 * 60 * 1000)
+    const lastDay = new Date(Date.UTC(lastVN.getUTCFullYear(), lastVN.getUTCMonth(), lastVN.getUTCDate()))
+    return todayVN.getTime() === lastDay.getTime()
+  }
+
+  const [checkedIn, setCheckedIn]     = useState(() => alreadyCheckedInToday(user.lastCheckIn))
+  const [streak, setStreak]           = useState(user.currentStreak)
+  const [checkInLoading, setCheckInLoading] = useState(false)
+
+  // ── CHECKIN API ──
+  async function doCheckIn() {
+    if (checkedIn || checkInLoading) return
+    setCheckInLoading(true)
+    try {
+      const res  = await fetch('/api/credits/checkin', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+
+      setCredits(data.downloadCredits)
+      setStreak(data.currentStreak)
+      setCheckedIn(true)
+
+      // Prepend tx
+      const newTx: Transaction = {
+        id:           crypto.randomUUID(),
+        type:         'ADD_WEB',
+        amount:       data.earned,
+        balanceAfter: data.downloadCredits,
+        note:         data.isBonus
+          ? `Điểm danh hằng ngày 🔥 Streak ${data.currentStreak} — Bonus x7!`
+          : `Điểm danh hằng ngày 🔥 Streak ${data.currentStreak}`,
+        createdAt:    new Date().toISOString(),
+      }
+      setTxList(prev => [newTx, ...prev])
+      showToast(data.message, true)
+    } catch (e: any) {
+      showToast(e.message || 'Lỗi kết nối', false)
+    } finally {
+      setCheckInLoading(false)
+    }
   }
 
   // ── FILTERED TX ──
@@ -501,28 +544,44 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
             <div className="ch-ci-header">
               <div>
                 <h3>Điểm danh 7 ngày nhận thưởng</h3>
-                <p>Streak 7 ngày liên tiếp → bonus +1 lượt</p>
+                <p>Streak 7 ngày liên tiếp → bonus +3 credit</p>
               </div>
-              <div className="ch-streak">🔥 Streak đang chạy</div>
+              <div className="ch-streak">🔥 Streak {streak} ngày</div>
             </div>
+
+            {/* Streak dots — 7 ô, tô theo streak thực tế */}
             <div className="ch-days">
-              {['T2','T3','T4','T5','T6','T7','CN'].map((d, i) => (
-                <div key={d} className="ch-day">
-                  <div className="ch-day-lbl">{d}</div>
-                  <div className={`ch-day-dot ${i < 5 ? 'done' : i === 5 ? 'today' : 'locked'}`}>
-                    {i < 5 ? '✓' : i === 5 ? '★' : '○'}
+              {Array.from({ length: 7 }).map((_, i) => {
+                const dayNum  = i + 1
+                const isDone  = dayNum < streak || (dayNum === streak && checkedIn)
+                const isToday = dayNum === streak && !checkedIn
+                const isBonus = dayNum === 7
+                return (
+                  <div key={i} className="ch-day">
+                    <div className="ch-day-lbl">{['T2','T3','T4','T5','T6','T7','CN'][i]}</div>
+                    <div
+                      className={`ch-day-dot ${isDone ? 'done' : isToday ? 'today' : 'locked'}`}
+                      title={isBonus ? 'Ngày 7 — nhận bonus!' : undefined}
+                      style={isBonus && isDone ? { border:'2px solid var(--gold)', color:'var(--gold)' } : undefined}
+                    >
+                      {isDone ? '✓' : isToday ? '★' : isBonus ? '🎁' : '○'}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
+
             <div className="ch-ci-cta">
-              <p>Còn <b>2 ngày</b> nữa để nhận bonus streak!</p>
+              {streak < 7
+                ? <p>Còn <b>{7 - streak} ngày</b> nữa để nhận bonus +3 credit!</p>
+                : <p>🎉 Bạn đang ở <b>Streak {streak}</b> — tiếp tục giữ chuỗi nhé!</p>
+              }
               <button
                 className="ch-btn gold"
-                disabled={checkedIn}
+                disabled={checkedIn || checkInLoading}
                 onClick={doCheckIn}
               >
-                {checkedIn ? '✓ Đã điểm danh' : '★ Điểm danh hôm nay'}
+                {checkInLoading ? '⏳ Đang xử lý...' : checkedIn ? '✓ Đã điểm danh hôm nay' : '★ Điểm danh hôm nay (+0.5)'}
               </button>
             </div>
           </div>

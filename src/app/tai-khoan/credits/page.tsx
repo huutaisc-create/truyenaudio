@@ -20,6 +20,8 @@ export default async function CreditsPage() {
         image:           true,
         chaptersRead:    true,
         downloadCredits: true,
+        lastCheckIn:     true,
+        currentStreak:   true,
         createdAt:       true,
         _count: {
           select: {
@@ -59,6 +61,8 @@ export default async function CreditsPage() {
         image:           user.image ?? null,
         chaptersRead:    user.chaptersRead,
         downloadCredits: user.downloadCredits,
+        lastCheckIn:     user.lastCheckIn ? user.lastCheckIn.toISOString() : null,
+        currentStreak:   user.currentStreak,
         createdAt:       user.createdAt.toISOString(),
         commentsCount:   user._count.comments,
         reviewsCount:    user._count.reviews,

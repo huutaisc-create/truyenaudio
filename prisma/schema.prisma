@@ -22,6 +22,8 @@ model User {
   role            String    @default("USER")
   chaptersRead    Int       @default(0)
   downloadCredits Float     @default(0)      // Cộng dồn float, dùng khi >= 1.0
+  lastCheckIn     DateTime? // Ngày điểm danh gần nhất (UTC midnight)
+  currentStreak   Int       @default(0)      // Chuỗi ngày liên tiếp hiện tại
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
