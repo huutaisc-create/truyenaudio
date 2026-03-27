@@ -2139,22 +2139,26 @@ export default function ListeningClient({
       </div>
 
       {/* ════ DESKTOP (≥ lg) — 9/3 ════ */}
-      <div className="hidden lg:grid lg:grid-cols-12 h-screen">
+      <div className="hidden lg:grid lg:grid-cols-12 h-screen relative bg-[#0a0806] overflow-hidden">
+        {/* Shared Desktop Background */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          {storyCover ? (
+            <div className="absolute inset-0 bg-cover bg-center opacity-20 blur-xl scale-110"
+              style={{ backgroundImage: `url(${storyCover})` }} />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-[#4a2f10] to-[#1a0e06]" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0f0d0a] via-[#0f0d0a]/30 to-transparent" />
+        </div>
 
         {/* LEFT 9 cols — cover full + controls căn bottom */}
-        <div className="col-span-9 relative overflow-hidden">
+        <div className="col-span-9 relative z-10 overflow-hidden">
           {/* Cover full */}
-          <div className="absolute inset-0 flex items-center justify-center bg-[#0a0806]">
-            {storyCover && (
-              <div className="absolute inset-0 bg-cover bg-center opacity-20 blur-xl scale-110"
-                style={{ backgroundImage: `url(${storyCover})` }} />
-            )}
+          <div className="absolute inset-0 flex items-center justify-center">
             {storyCover
               ? <img src={storyCover} alt={storyTitle} className="relative z-10 object-contain drop-shadow-2xl" style={{ maxHeight: '65%', maxWidth: '55%' }} />
-              : <div className="absolute inset-0 bg-gradient-to-br from-[#4a2f10] to-[#1a0e06] flex items-center justify-center">
-                <Headphones size={80} className="text-[#e8580a]/20" />
-              </div>}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0f0d0a] via-[#0f0d0a]/30 to-transparent" />
+              : <Headphones size={80} className="text-[#e8580a]/20" />
+            }
           </div>
 
           {/* Controls căn bottom */}
@@ -2177,7 +2181,7 @@ export default function ListeningClient({
         </div>
 
         {/* RIGHT 3 cols — tabbed panel */}
-        <div className="col-span-3 flex flex-col bg-[#0a0806] border-l border-white/[0.06] h-screen">
+        <div className="col-span-3 relative z-10 flex flex-col bg-black/20 backdrop-blur-md border-l border-white/[0.06] h-screen">
           {/* Tab bar */}
           <div className="flex border-b border-white/[0.06] flex-shrink-0">
             {([
