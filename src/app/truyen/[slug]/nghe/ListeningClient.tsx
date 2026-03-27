@@ -1786,19 +1786,19 @@ export default function ListeningClient({
           setShowChapterList(false);
           goToChapter(chap); // không await — tránh block UI
         }}
-        className={`flex items-center gap-3 h-[52px] px-4 cursor-pointer border-l-[3px] transition-all ${isActive
+        className={`group flex items-center gap-3 h-[52px] px-4 cursor-pointer border-l-[3px] transition-all ${isActive
           ? 'bg-[#e8580a] border-l-[#d4500a]'
-          : 'border-l-transparent hover:bg-white/[0.04]'
+          : 'border-l-transparent hover:bg-white/[0.08]'
           }`}
       >
-        <span className={`text-[12px] font-black w-7 text-center shrink-0 ${isActive ? 'text-white' : 'text-white/40'}`}>
+        <span className="text-[12px] font-black w-7 text-center shrink-0 text-white">
           {chap.index}
         </span>
         <div className="flex-1 min-w-0">
-          <p className={`text-[15px] ${isActive ? 'text-white font-bold' : 'text-white/70 hover:text-white'}`}>
+          <p className={`text-[15px] ${isActive ? 'text-white font-bold' : 'text-white group-hover:text-[#e8580a]'}`}>
             {chap.title}
           </p>
-          {isActive && <p className="text-[9px] text-white/80 mt-0.5">Đang nghe</p>}
+          {isActive && <p className="text-[9px] text-white mt-0.5">Đang nghe</p>}
         </div>
         {isActive
           ? <WaveIcon color="#ffffff" />
@@ -1849,7 +1849,7 @@ export default function ListeningClient({
           className={`flex-1 flex flex-col items-center cursor-pointer transition-all active:scale-95 ${userStatus.isLiked ? 'bg-red-500/10' : 'bg-transparent hover:bg-white/[0.03]'
             }`}
         >
-          <div className={`w-full text-center px-2 py-1 text-[9px] font-semibold border-b border-white/[0.08] ${userStatus.isLiked ? 'text-red-400 bg-red-500/10' : 'text-white/60 bg-white/[0.03]'
+          <div className={`w-full text-center px-2 py-1 text-[9px] font-semibold border-b border-white/[0.08] ${userStatus.isLiked ? 'text-red-400 bg-red-500/10' : 'text-white bg-white/[0.03]'
             }`}>+ Yêu thích</div>
           <div className="flex items-center justify-center gap-1.5 py-2.5">
             <Heart size={14} className={`transition-all ${userStatus.isLiked ? 'fill-current text-red-500 scale-110' : 'text-red-400'}`} />
@@ -1867,7 +1867,7 @@ export default function ListeningClient({
           className={`flex-1 flex flex-col items-center cursor-pointer transition-all active:scale-95 ${userStatus.isFollowed ? 'bg-blue-500/10' : 'bg-transparent hover:bg-white/[0.03]'
             }`}
         >
-          <div className={`w-full text-center px-2 py-1 text-[9px] font-semibold border-b border-white/[0.08] ${userStatus.isFollowed ? 'text-blue-400 bg-blue-500/10' : 'text-white/60 bg-white/[0.03]'
+          <div className={`w-full text-center px-2 py-1 text-[9px] font-semibold border-b border-white/[0.08] ${userStatus.isFollowed ? 'text-blue-400 bg-blue-500/10' : 'text-white bg-white/[0.03]'
             }`}>+ Theo dõi</div>
           <div className="flex items-center justify-center gap-1.5 py-2.5">
             <Bookmark size={14} className={`transition-all ${userStatus.isFollowed ? 'fill-current text-blue-500 scale-110' : 'text-blue-400'}`} />
@@ -1883,7 +1883,7 @@ export default function ListeningClient({
           aria-label="Đề cử"
           className="flex-1 flex flex-col items-center cursor-pointer bg-transparent hover:bg-white/[0.03] transition-all active:scale-95"
         >
-          <div className="w-full text-center px-2 py-1 text-[9px] font-semibold border-b border-white/[0.08] text-white/60 bg-white/[0.03]">+ Đề cử</div>
+          <div className="w-full text-center px-2 py-1 text-[9px] font-semibold border-b border-white/[0.08] text-white bg-white/[0.03]">+ Đề cử</div>
           <div className="flex items-center justify-center gap-1.5 py-2.5">
             <Trophy size={14} className="text-amber-400" />
             <span className="text-[16px] font-bold text-[#f0ebe4]">{interactStats.nominationCount}</span>
@@ -1896,19 +1896,19 @@ export default function ListeningClient({
         <span className="text-[11px] font-bold px-3 py-1.5 rounded-full bg-transparent text-[#e8580a] border border-[#e8580a]/40">
           {statusLabel(storyInfo.status)}
         </span>
-        <span className="text-[11px] px-3 py-1.5 rounded-full bg-white/[0.04] text-white/70 border border-white/[0.08]">
+        <span className="text-[11px] px-3 py-1.5 rounded-full bg-white/[0.04] text-white border border-white/[0.08]">
           {totalChapters} chương
         </span>
         {storyInfo.genres.map(g => (
-          <span key={g} className="text-[11px] px-3 py-1.5 rounded-full bg-white/[0.04] text-white/70 border border-white/[0.08]">{g}</span>
+          <span key={g} className="text-[11px] px-3 py-1.5 rounded-full bg-white/[0.04] text-white border border-white/[0.08]">{g}</span>
         ))}
       </div>
 
       {/* Description */}
       {storyInfo.description && (
         <div>
-          <p className="text-[12px] font-black uppercase tracking-[.1em] text-white/50 mb-3">Giới thiệu</p>
-          <p className="text-[14px] text-[#c8bfb5] leading-relaxed line-clamp-6">{storyInfo.description}</p>
+          <p className="text-[12px] font-black uppercase tracking-[.1em] text-white mb-3">Giới thiệu</p>
+          <p className="text-[14px] text-white leading-relaxed line-clamp-6">{storyInfo.description}</p>
         </div>
       )}
     </div>
@@ -1950,13 +1950,13 @@ export default function ListeningClient({
                 {getAvatar(cmt.user.name, cmt.user.image, 28)}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                    <span className="text-[14px] font-bold text-white/90">{cmt.user.name}</span>
+                    <span className="text-[14px] font-bold text-white">{cmt.user.name}</span>
                     {cmt.user.role === 'ADMIN' && (
                       <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-[#e8580a] text-white uppercase tracking-wider">Admin</span>
                     )}
-                    <time dateTime={cmt.createdAt} className="text-[12px] text-white/40">{timeAgo(cmt.createdAt)}</time>
+                    <time dateTime={cmt.createdAt} className="text-[12px] text-white/80">{timeAgo(cmt.createdAt)}</time>
                   </div>
-                  <p className="text-[14px] text-white/80 leading-relaxed mb-1.5 whitespace-pre-wrap">{cmt.content}</p>
+                  <p className="text-[14px] text-white leading-relaxed mb-1.5 whitespace-pre-wrap">{cmt.content}</p>
                   <div className="flex items-center gap-3">
                     {/* Like */}
                     <button
@@ -2046,7 +2046,7 @@ export default function ListeningClient({
       {/* ── Version Badge ── */}
       <div className="fixed bottom-16 right-3 z-50 pointer-events-none">
         <div className="bg-[#1a1612]/90 border border-white/[0.07] rounded-lg px-2 py-1">
-          <span className="text-[10px] font-black text-[#e8580a]">v5.9</span>
+          <span className="text-[10px] font-black text-[#e8580a]">v 6.0</span>
         </div>
       </div>
 
@@ -2177,7 +2177,7 @@ export default function ListeningClient({
         </div>
 
         {/* RIGHT 3 cols — tabbed panel */}
-        <div className="col-span-3 flex flex-col bg-[#0f0d0a] border-l border-white/[0.06] h-screen">
+        <div className="col-span-3 flex flex-col bg-[#0a0806] border-l border-white/[0.06] h-screen">
           {/* Tab bar */}
           <div className="flex border-b border-white/[0.06] flex-shrink-0">
             {([
@@ -2190,7 +2190,7 @@ export default function ListeningClient({
                 onClick={() => handleDesktopTab(tab.id)}
                 className={`flex-1 flex items-center justify-center gap-1 py-2.5 text-[9px] font-black uppercase tracking-[.08em] transition-colors border-b-[1.5px] ${desktopTab === tab.id
                   ? 'text-[#e8580a] border-[#e8580a]'
-                  : 'text-white/50 border-transparent hover:text-white'
+                  : 'text-white border-transparent hover:text-[#e8580a]'
                   }`}
               >
                 {tab.icon}{tab.label}
