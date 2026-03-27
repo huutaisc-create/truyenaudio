@@ -93,20 +93,20 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
   const timerRef                    = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Toast
-  const [toast, setToast]           = useState<{ msg: string; ok: boolean } | null>(null)
+  const [toast, setToast]           = useState<{ msg: string; ok: boolean; isBonus?: boolean } | null>(null)
   const toastTimer                  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Checkin
-  //const [checkedIn, setCheckedIn]   = useState(false)
+  const [checkedIn, setCheckedIn]   = useState(false)
 
   const usable  = Math.floor(credits)
   const pending = Math.round((credits - usable) * 10) / 10
 
   // ── TOAST ──
-  const showToast = useCallback((msg: string, ok: boolean) => {
-    setToast({ msg, ok })
+  const showToast = useCallback((msg: string, ok: boolean, isBonus?: boolean) => {
+    setToast({ msg, ok, isBonus })
     if (toastTimer.current) clearTimeout(toastTimer.current)
-    toastTimer.current = setTimeout(() => setToast(null), 3000)
+    toastTimer.current = setTimeout(() => setToast(null), isBonus ? 5000 : 3000)
   }, [])
 
   // ── AD OPEN ──
@@ -210,7 +210,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         createdAt:    new Date().toISOString(),
       }
       setTxList(prev => [newTx, ...prev])
-      showToast(data.message, true)
+      showToast(data.message, true, data.isBonus)
     } catch (e: any) {
       showToast(e.message || 'Lỗi kết nối', false)
     } finally {
@@ -286,11 +286,14 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         .ch-days{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px}
         .ch-day{display:flex;flex-direction:column;align-items:center;gap:6px}
         .ch-day-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-        .ch-day-dot{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;border:1.5px solid var(--border);background:var(--surface2)}
-        .ch-day-dot.done{background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.4)}
-        .ch-day-dot.today{background:rgba(96,165,250,.15);border-color:rgba(96,165,250,.5);animation:todayGlow 2s infinite}
-        @keyframes todayGlow{0%,100%{box-shadow:0 0 12px rgba(96,165,250,.2)}50%{box-shadow:0 0 20px rgba(96,165,250,.4)}}
-        .ch-day-dot.locked{opacity:.3}
+        .ch-day-dot{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;border:1.5px solid var(--border);background:var(--surface2);color:var(--muted)}
+        .ch-day-dot.done{background:rgba(34,197,94,.25);border-color:rgba(34,197,94,.7);color:#4ade80;font-weight:800;font-size:17px}
+        .ch-day-dot.done.bonus{background:linear-gradient(135deg,rgba(245,166,35,.4),rgba(255,210,60,.18));border-color:var(--gold);border-width:2px;color:var(--gold);font-size:18px;animation:bonusGlow 1.8s ease-in-out infinite}
+        @keyframes bonusGlow{0%,100%{box-shadow:0 0 10px rgba(245,166,35,.4)}50%{box-shadow:0 0 26px rgba(245,166,35,.75)}}
+        .ch-day-dot.today{background:rgba(96,165,250,.18);border-color:rgba(96,165,250,.6);color:#93c5fd;animation:todayGlow 2s infinite}
+        @keyframes todayGlow{0%,100%{box-shadow:0 0 12px rgba(96,165,250,.2)}50%{box-shadow:0 0 22px rgba(96,165,250,.5)}}
+        .ch-day-dot.locked{opacity:.28}
+        .ch-day-lbl.bonus-lbl{color:var(--gold);font-weight:700}
         .ch-ci-cta{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
         .ch-ci-cta p{font-size:12px;color:var(--muted)}
         .ch-ci-cta p b{color:var(--blue)}
@@ -405,8 +408,12 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         .ch-claim-btn:hover{opacity:.9;transform:translateY(-1px)}
 
         /* TOAST */
-        .ch-toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);background:#1c1c22;border-radius:12px;padding:14px 24px;display:flex;align-items:center;gap:12px;font-size:14px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:all .35s cubic-bezier(.22,1,.36,1);z-index:20000;white-space:nowrap;font-family:'Sora',sans-serif}
-        .ch-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+        .ch-toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.88);background:#1c1c22;border-radius:16px;padding:18px 28px;display:flex;align-items:center;gap:14px;font-size:14px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:all .35s cubic-bezier(.22,1,.36,1);z-index:20000;white-space:nowrap;font-family:'Sora',sans-serif;max-width:calc(100vw - 32px)}
+        .ch-toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+        .ch-toast.ok{background:linear-gradient(135deg,#0a2010,#051508);border:2px solid rgba(34,197,94,.8);color:var(--green);box-shadow:0 0 0 4px rgba(34,197,94,.12),0 16px 48px rgba(34,197,94,.2),0 8px 24px rgba(0,0,0,.6)}
+        .ch-toast.warn{background:linear-gradient(135deg,#2a0a0a,#1a0505);border:2px solid rgba(239,68,68,.8);color:var(--red);box-shadow:0 0 0 4px rgba(239,68,68,.12),0 16px 48px rgba(239,68,68,.2),0 8px 24px rgba(0,0,0,.6)}
+        .ch-toast.bonus{background:linear-gradient(135deg,#2a1800,#1a0f00);border:2px solid var(--gold);color:var(--gold);padding:18px 28px;border-radius:16px;box-shadow:0 0 0 4px rgba(245,166,35,.15),0 16px 48px rgba(245,166,35,.25),0 8px 24px rgba(0,0,0,.6);animation:bonusToastPop .5s cubic-bezier(.22,1,.36,1) both}
+        @keyframes bonusToastPop{from{transform:translate(-50%,-50%) scale(.88);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
 
         /* RESPONSIVE */
         @media(max-width:580px){
@@ -481,14 +488,33 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
       {/* ── TOAST ── */}
       {toast && (
         <div
-          className={`ch-toast show`}
-          style={{
-            color:       toast.ok ? 'var(--green)' : 'var(--gold)',
-            border:      `1px solid ${toast.ok ? 'rgba(34,197,94,.3)' : 'rgba(245,166,35,.3)'}`,
-          }}
+          className={`ch-toast show${toast.isBonus ? ' bonus' : toast.ok ? ' ok' : ' warn'}`}
         >
-          <span>{toast.ok ? '✓' : '⚠'}</span>
-          <span>{toast.msg}</span>
+          {toast.isBonus ? (
+            <>
+              <span style={{ fontSize: 28 }}>🎉</span>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--gold)', marginBottom: 3 }}>
+                  STREAK 7 NGÀY — BONUS ĐẠT!
+                </div>
+                <div style={{ fontSize: 12, color: 'rgba(245,166,35,.8)', fontWeight: 600 }}>
+                  {toast.msg}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <span style={{ fontSize: 24 }}>{toast.ok ? '✅' : '⚠️'}</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 2 }}>
+                  {toast.ok ? 'ĐIỂM DANH THÀNH CÔNG!' : 'CÓ LỖI XẢY RA'}
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.8 }}>
+                  {toast.msg}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -535,47 +561,44 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
                 <div className="ch-stat-lbl">Cấp độ</div>
               </div>
             </div>
-          </div>
 
-          {/* CHECKIN */}
-          <div className="ch-sec">Điểm danh hằng ngày</div>
-          <div className="ch-card">
-            <div className="ch-card-top" style={{ background:'linear-gradient(90deg,var(--blue),transparent)' }} />
+            {/* ── CHECKIN INLINE TRONG HERO ── */}
+            <div className="ch-divider" />
             <div className="ch-ci-header">
               <div>
-                <h3>Điểm danh 7 ngày nhận thưởng</h3>
-                <p>Streak 7 ngày liên tiếp → bonus +3 credit</p>
+                <h3 style={{ fontSize:14, fontWeight:700, marginBottom:3 }}>🔥 Điểm danh hằng ngày</h3>
+                <p style={{ fontSize:11, color:'var(--muted)' }}>Streak 7 ngày → bonus +3 credit</p>
               </div>
               <div className="ch-streak">🔥 Streak {streak} ngày</div>
             </div>
 
-            {/* Streak dots — 7 ô, tô theo streak thực tế */}
-            <div className="ch-days">
+            <div className="ch-days" style={{ marginBottom:14 }}>
               {Array.from({ length: 7 }).map((_, i) => {
                 const dayNum  = i + 1
                 const isDone  = dayNum < streak || (dayNum === streak && checkedIn)
                 const isToday = dayNum === streak && !checkedIn
                 const isBonus = dayNum === 7
+                const dotCls  = `ch-day-dot ${isDone ? 'done' : isToday ? 'today' : 'locked'}${isBonus && isDone ? ' bonus' : ''}`
                 return (
                   <div key={i} className="ch-day">
-                    <div className="ch-day-lbl">{['T2','T3','T4','T5','T6','T7','CN'][i]}</div>
-                    <div
-                      className={`ch-day-dot ${isDone ? 'done' : isToday ? 'today' : 'locked'}`}
-                      title={isBonus ? 'Ngày 7 — nhận bonus!' : undefined}
-                      style={isBonus && isDone ? { border:'2px solid var(--gold)', color:'var(--gold)' } : undefined}
-                    >
-                      {isDone ? '✓' : isToday ? '★' : isBonus ? '🎁' : '○'}
+                    <div className={`ch-day-lbl${isBonus ? ' bonus-lbl' : ''}`}>
+                      {`Ngày ${dayNum}`}
+                    </div>
+                    <div className={dotCls} title={isBonus ? 'Ngày 7 — nhận bonus +3 credit!' : undefined}>
+                      {isDone ? (isBonus ? '★' : '✓') : isToday ? '★' : isBonus ? '🎁' : '○'}
                     </div>
                   </div>
                 )
               })}
             </div>
 
-            <div className="ch-ci-cta">
-              {streak < 7
-                ? <p>Còn <b>{7 - streak} ngày</b> nữa để nhận bonus +3 credit!</p>
-                : <p>🎉 Bạn đang ở <b>Streak {streak}</b> — tiếp tục giữ chuỗi nhé!</p>
-              }
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
+              <p style={{ fontSize:12, color:'var(--muted)' }}>
+                {streak < 7
+                  ? <>Còn <b style={{ color:'var(--blue)' }}>{7 - streak} ngày</b> nữa để nhận bonus +3 credit!</>
+                  : <>🎉 Bạn đang ở <b style={{ color:'var(--gold)' }}>Streak {streak}</b> — tiếp tục giữ chuỗi nhé!</>
+                }
+              </p>
               <button
                 className="ch-btn gold"
                 disabled={checkedIn || checkInLoading}
