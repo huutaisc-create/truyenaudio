@@ -13,27 +13,47 @@ datasource db {
 // --- USER MANAGEMENT ---
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  name          String?
-  image         String?
-  password      String?   // Nullable: Google users won't have a password
-  googleId      String?   @unique
-  role          String    @default("USER") // USER, ADMIN, AUTHOR
-  chaptersRead  Int       @default(0)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(uuid())
+  email           String    @unique
+  name            String?
+  image           String?
+  password        String?
+  googleId        String?   @unique
+  role            String    @default("USER")
+  chaptersRead    Int       @default(0)
+  downloadCredits Float     @default(0)      // Cộng dồn float, dùng khi >= 1.0
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   // Relations
-  readingHistory ReadingHistory[]
-  library        Library[]
-  reviews        Review[]
-  comments       Comment[]
-  commentLikes   CommentLike[]
-  likes          Like[]
-  nominations    Nomination[]
-  chatMessages   ChatMessage[]
-  storyRequests  StoryRequest[]
+  readingHistory     ReadingHistory[]
+  library            Library[]
+  reviews            Review[]
+  comments           Comment[]
+  commentLikes       CommentLike[]
+  likes              Like[]
+  nominations        Nomination[]
+  chatMessages       ChatMessage[]
+  storyRequests      StoryRequest[]
+  creditTransactions CreditTransaction[]
+}
+
+// --- CREDIT TRANSACTIONS (audit log) ---
+
+model CreditTransaction {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type         String   // 'ADD_APP' | 'ADD_WEB' | 'SPEND'
+  amount       Float    // +1.0 / +0.5 / -1.0
+  balanceAfter Float    // snapshot số dư sau giao dịch, dễ đối soát
+
+  note         String?  // vd: "Xem video rewarded", "Tải chương xyz"
+
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 // --- STORY MANAGEMENT ---
@@ -56,7 +76,6 @@ model Story {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  // Relations
   chapters        Chapter[]
   genres          Genre[]
   reviews         Review[]
@@ -72,12 +91,11 @@ model Chapter {
   id          String   @id @default(uuid())
   index       Int
   title       String
-  contentUrl  String?  // URL trỏ tới file txt trên Cloudflare R2
+  contentUrl  String?
   viewCount   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Relations
   storyId     String
   story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
   
@@ -92,7 +110,6 @@ model Genre {
   type        String   @default("GENRE")
   description String?
 
-  // Relations
   stories     Story[]
 
   @@unique([name, type])
@@ -201,14 +218,13 @@ model StoryRequest {
   title       String
   link        String?
   note        String?
-  status      String   @default("PENDING") // PENDING, DONE, REJECTED
+  status      String   @default("PENDING")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Khi admin làm xong → link tới truyện trong app
   storyId     String?
   story       Story?   @relation(fields: [storyId], references: [id])
 
