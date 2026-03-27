@@ -97,7 +97,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
   const toastTimer                  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Checkin
-  const [checkedIn, setCheckedIn]   = useState(false)
+  //const [checkedIn, setCheckedIn]   = useState(false)
 
   const usable  = Math.floor(credits)
   const pending = Math.round((credits - usable) * 10) / 10
