@@ -1843,7 +1843,7 @@ export default function ListeningClient({
         <ReviewButton
           storyId={storyInfo.id}
           text="Đánh giá"
-          currentUser={undefined}
+          currentUser={currentUser}
           className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#e8580a]/10 text-[#e8580a] border border-[#e8580a]/30 hover:bg-[#e8580a]/20 transition-all active:scale-95"
         />
       </div>

@@ -1,5 +1,5 @@
 import { getStoryBySlug, getChaptersByStoryId, getChapterBySlugAndIndex } from '@/actions/stories';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { auth } from '@/auth';
 import ListeningClient from './ListeningClient';
@@ -37,6 +37,12 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
   ]);
 
   if (!storyData || !chapterData) notFound();
+
+  // Yêu cầu đăng nhập để nghe truyện
+  if (!session?.user) {
+    const callbackUrl = `/truyen/${params.slug}/nghe${sp.chuong ? `?chuong=${sp.chuong}` : ''}`;
+    redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+  }
 
   const [chaptersResult, content] = await Promise.all([
     getChaptersByStoryId(storyData.id, 1),
