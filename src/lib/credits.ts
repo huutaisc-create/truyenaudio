@@ -158,13 +158,14 @@ export async function rewardCredit(
     })
 
     // Extract storyId từ note pattern "[story:xxx] ..."
+    // NẾU note null hoặc không match pattern → tính là 1 entry riêng (an toàn hơn,
+    // tránh bypass giới hạn do DB row cũ / note format khác)
     const distinctStoryIds = new Set(
-      txsToday
-        .map(tx => {
-          const match = tx.note?.match(/^\[story:([^\]]+)\]/)
-          return match ? match[1] : null
-        })
-        .filter(Boolean)
+      txsToday.map((tx, idx) => {
+        const match = tx.note?.match(/^\[story:([^\]]+)\]/)
+        // match thành công → dùng storyId; không match → dùng fallback key duy nhất
+        return match ? match[1] : `__unknown_${idx}`
+      })
     )
 
     if (distinctStoryIds.size >= maxPerDay) {

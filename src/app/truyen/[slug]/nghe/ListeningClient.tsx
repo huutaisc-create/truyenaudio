@@ -584,12 +584,19 @@ export default function ListeningClient({
   // ── Nominate handler ──
   const handleNominate = useCallback(async () => {
     if (!checkAuth()) return;
+    // Optimistic: tăng count trước
     setInteractStats(s => ({ ...s, nominationCount: s.nominationCount + 1 }));
     const res = await nominateStory(storyId);
     if (res.error) {
+      // Lỗi hệ thống — rollback
       setInteractStats(s => ({ ...s, nominationCount: s.nominationCount - 1 }));
       alert(res.error);
+    } else if (res.success === false) {
+      // Đã đề cử hôm nay hoặc bị block — rollback, chỉ toast thông báo
+      setInteractStats(s => ({ ...s, nominationCount: s.nominationCount - 1 }));
+      if (res.creditMessage) showCreditToast(res.creditMessage);
     } else if (res.creditMessage) {
+      // Đề cử thành công
       showCreditToast(res.creditMessage);
     }
   }, [checkAuth, storyId, showCreditToast]);
@@ -1882,20 +1889,6 @@ export default function ListeningClient({
   const InfoPanel = (
     <div className="flex flex-col gap-4 px-4 py-4">
 
-      {/* Credit toast — like / nominate */}
-      {creditToast && (
-        <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-medium border animate-in fade-in slide-in-from-top-1 duration-300 ${
-          creditToast.startsWith('✅')
-            ? 'bg-green-900/30 border-green-700/40 text-green-300'
-            : 'bg-amber-900/30 border-amber-700/40 text-amber-300'
-        }`} role="status">
-          <span className="flex-1">{creditToast}</span>
-          <button onClick={() => setCreditToast(null)} className="shrink-0 opacity-60 hover:opacity-100">
-            <X size={11} />
-          </button>
-        </div>
-      )}
-
       {/* Rating stars + nút đánh giá */}
       <div className="flex items-center gap-2 flex-wrap">
         {storyInfo.ratingScore > 0 && (
@@ -2244,17 +2237,6 @@ export default function ListeningClient({
 
       {/* Input box */}
       <div className="px-3 py-3 border-t border-white/[0.06] shrink-0">
-        {/* Credit toast */}
-        {creditToast && (
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-medium border mb-2 animate-in fade-in duration-300 ${
-            creditToast.startsWith('✅')
-              ? 'bg-green-900/30 border-green-700/40 text-green-300'
-              : 'bg-amber-900/30 border-amber-700/40 text-amber-300'
-          }`} role="status">
-            <span className="flex-1">{creditToast}</span>
-            <button onClick={() => setCreditToast(null)} className="shrink-0 opacity-60 hover:opacity-100"><X size={11} /></button>
-          </div>
-        )}
         {/* Reply badge */}
         {replyTo && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[10px] text-[#8a7e72] mb-2">
@@ -2315,6 +2297,22 @@ export default function ListeningClient({
   // ─────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#0f0d0a] relative">
+      {/* ── Credit Toast — fixed overlay, dùng chung cho like / nominate / comment ── */}
+      {creditToast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[9999] pointer-events-auto max-w-[340px] w-[calc(100vw-32px)] animate-in fade-in slide-in-from-bottom-3 duration-300">
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-[12px] font-semibold border shadow-2xl backdrop-blur-md ${
+            creditToast.startsWith('✅')
+              ? 'bg-green-900/80 border-green-600/50 text-green-200'
+              : 'bg-amber-900/80 border-amber-600/50 text-amber-200'
+          }`} role="status" aria-live="polite">
+            <span className="flex-1 leading-snug">{creditToast}</span>
+            <button onClick={() => setCreditToast(null)} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity" aria-label="Đóng thông báo">
+              <X size={13} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Version Badge ── */}
       <div className="fixed bottom-16 right-3 z-50 pointer-events-none">
         <div className="bg-[#1a1612]/90 border border-white/[0.07] rounded-lg px-2 py-1">

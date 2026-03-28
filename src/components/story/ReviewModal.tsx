@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Star, X } from "lucide-react";
+import { Star, X, CheckCircle2 } from "lucide-react";
 import { submitReview } from "@/actions/stories";
 import { useRouter } from "next/navigation";
 
@@ -16,9 +16,15 @@ export default function ReviewModal({ isOpen, onClose, storyId }: ReviewModalPro
     const [content, setContent] = useState("");
     const [hovered, setHovered] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
     const router = useRouter();
 
     if (!isOpen) return null;
+
+    const showToast = (msg: string, ok: boolean) => {
+        setToast({ msg, ok });
+        setTimeout(() => setToast(null), ok ? 4000 : 3000);
+    };
 
     const handleSubmit = async () => {
         setIsSubmitting(true);
@@ -27,13 +33,14 @@ export default function ReviewModal({ isOpen, onClose, storyId }: ReviewModalPro
 
         if (result.success) {
             const msg = result.creditMessage
-                ? `Cảm ơn bạn đã đánh giá!\n\n${result.creditMessage}`
+                ? `Cảm ơn bạn đã đánh giá! · ${result.creditMessage}`
                 : "Cảm ơn bạn đã đánh giá!";
-            alert(msg);
+            showToast(msg, true);
             router.refresh();
-            onClose();
+            // Đóng modal sau 1.8s để user thấy toast
+            setTimeout(() => onClose(), 1800);
         } else {
-            alert(result.error || "Gửi đánh giá thất bại.");
+            showToast(result.error || "Gửi đánh giá thất bại.", false);
         }
     };
 
@@ -46,6 +53,21 @@ export default function ReviewModal({ isOpen, onClose, storyId }: ReviewModalPro
                         <X className="h-5 w-5" />
                     </button>
                 </div>
+
+                {/* Toast inline trong modal */}
+                {toast && (
+                    <div className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium border mb-4 animate-in fade-in slide-in-from-top-2 duration-300 ${
+                        toast.ok
+                            ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/30 dark:border-green-700/50 dark:text-green-300'
+                            : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/30 dark:border-red-700/50 dark:text-red-300'
+                    }`} role="status" aria-live="polite">
+                        {toast.ok && <CheckCircle2 className="h-4 w-4 shrink-0" />}
+                        <span className="flex-1">{toast.msg}</span>
+                        <button onClick={() => setToast(null)} className="shrink-0 opacity-60 hover:opacity-100">
+                            <X className="h-3.5 w-3.5" />
+                        </button>
+                    </div>
+                )}
 
                 <div className="space-y-6">
                     <div className="flex flex-col items-center gap-2">
@@ -101,3 +123,5 @@ export default function ReviewModal({ isOpen, onClose, storyId }: ReviewModalPro
         </div>
     );
 }
+
+

@@ -44,19 +44,21 @@ export async function toggleLike(storyId: string) {
         });
 
         if (existing) {
-            // Bỏ like — không trừ credit
-            await db.like.delete({ where: { id: existing.id } });
-            await db.story.update({ where: { id: storyId }, data: { likeCount: { decrement: 1 } } });
+            // Bỏ like — không trừ credit, atomic
+            await db.$transaction([
+                db.like.delete({ where: { id: existing.id } }),
+                db.story.update({ where: { id: storyId }, data: { likeCount: { decrement: 1 } } }),
+            ]);
             return { liked: false, creditMessage: null };
         } else {
-            // Like mới
-            await db.like.create({ data: { userId, storyId } });
-            await db.story.update({ where: { id: storyId }, data: { likeCount: { increment: 1 } } });
-
-            const story = await db.story.findUnique({
-                where: { id: storyId },
-                select: { title: true },
-            });
+            // Like mới — atomic: like record + likeCount phải đi cùng nhau
+            const [, story] = await Promise.all([
+                db.$transaction([
+                    db.like.create({ data: { userId, storyId } }),
+                    db.story.update({ where: { id: storyId }, data: { likeCount: { increment: 1 } } }),
+                ]),
+                db.story.findUnique({ where: { id: storyId }, select: { title: true } }),
+            ]);
 
             // +0.5 credit, tối đa 1 truyện/ngày, note thân thiện (không có storyId raw)
             const rewardResult = await rewardCredit(
@@ -116,12 +118,16 @@ export async function nominateStory(storyId: string) {
             }
         }
 
-        // Tạo nomination record và tăng counter
-        await db.nomination.create({ data: { userId, storyId } });
-        await db.story.update({
-            where: { id: storyId },
-            data: { nominationCount: { increment: 1 } }
-        });
+        // Tạo nomination record và tăng counter trong 1 transaction — atomic
+        // Nếu rewardCredit fail sau đó, nominationCount vẫn đã tăng (acceptable)
+        // nhưng nomination create + count increment phải luôn đi cùng nhau
+        await db.$transaction([
+            db.nomination.create({ data: { userId, storyId } }),
+            db.story.update({
+                where: { id: storyId },
+                data: { nominationCount: { increment: 1 } }
+            }),
+        ]);
 
         // +0.5 credit, tối đa 1 truyện/ngày, note thân thiện
         const rewardResult = await rewardCredit(
