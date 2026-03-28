@@ -281,7 +281,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         /* CHECKIN */
         .ch-ci-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
         .ch-ci-header h3{font-size:15px;font-weight:700;margin-bottom:4px}
-        .ch-ci-header p{font-size:12px;color:var(--muted)}
+        .ch-ci-header p{font-size:12px;color:#ffffff}
         .ch-streak{display:flex;align-items:center;gap:6px;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.25);border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap}
         .ch-days{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px}
         .ch-day{display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -295,7 +295,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         .ch-day-dot.locked{opacity:.55;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.12);color:rgba(255,255,255,.3)}
         .ch-day-lbl.bonus-lbl{color:var(--gold);font-weight:700}
         .ch-ci-cta{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
-        .ch-ci-cta p{font-size:12px;color:var(--muted)}
+        .ch-ci-cta p{font-size:12px;color:#ffffff}
         .ch-ci-cta p b{color:var(--blue)}
 
         /* EARN */
@@ -306,7 +306,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         .ch-earn-icon.blue{background:rgba(96,165,250,.12)}
         .ch-earn-reward{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--gold);margin-bottom:2px}
         .ch-earn-card h3{font-size:15px;font-weight:700;margin-bottom:4px}
-        .ch-earn-card p{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:16px}
+        .ch-earn-card p{font-size:12px;color:#ffffff;line-height:1.5;margin-bottom:16px}
         .ch-badge{position:absolute;top:16px;right:16px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:var(--green);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.06em;text-transform:uppercase}
 
         /* BUTTONS */
@@ -368,7 +368,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         .ch-tx-amt{font-family:var(--mono);font-size:14px;font-weight:700;white-space:nowrap}
         .ch-tx-amt.pos{color:var(--green)}
         .ch-tx-amt.neg{color:var(--red)}
-        .ch-tx-bal{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right;white-space:nowrap}
+        .ch-tx-bal{font-family:var(--mono);font-size:16px;font-weight:800;color:#ffffff;text-align:right;white-space:nowrap;letter-spacing:-.02em}
         .ch-empty{text-align:center;padding:32px 0;color:var(--muted);font-size:13px}
 
         /* AD OVERLAY */
@@ -393,23 +393,23 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         .ch-ad-reward{display:flex;align-items:center;gap:10px}
         .ch-ad-r-icon{width:38px;height:38px;border-radius:10px;background:var(--gold-glow);border:1px solid rgba(245,166,35,.3);display:flex;align-items:center;justify-content:center;font-size:18px}
         .ch-ad-r-text h4{font-size:14px;font-weight:700}
-        .ch-ad-r-text p{font-size:11px;color:var(--muted);margin-top:1px}
+        .ch-ad-r-text p{font-size:11px;color:#ffffff;margin-top:1px}
         .ch-ad-timer{font-family:var(--mono);font-size:13px;color:var(--muted)}
         .ch-ad-timer b{color:var(--gold)}
-        .ch-ad-hint{font-size:12px;color:var(--muted);text-align:center;padding:10px 0 0;line-height:1.6}
+        .ch-ad-hint{font-size:12px;color:#ffffff;text-align:center;padding:10px 0 0;line-height:1.6}
         .ch-ad-done{text-align:center}
         .ch-ad-done-icon{font-size:52px;display:block;margin-bottom:12px;animation:popIn .5s cubic-bezier(.22,1,.36,1) both}
         @keyframes popIn{from{transform:scale(0) rotate(-10deg);opacity:0}to{transform:scale(1);opacity:1}}
         .ch-ad-done h3{font-size:20px;font-weight:800;margin-bottom:6px}
-        .ch-ad-done p{font-size:13px;color:var(--muted);margin-bottom:20px}
+        .ch-ad-done p{font-size:13px;color:#ffffff;margin-bottom:20px}
         .ch-credit-pill{display:inline-flex;align-items:center;gap:8px;background:var(--gold-glow);border:1px solid rgba(245,166,35,.35);border-radius:99px;padding:8px 20px;font-family:var(--mono);font-size:22px;font-weight:800;color:var(--gold);margin-bottom:20px;animation:glowPulse 1.5s ease infinite}
         @keyframes glowPulse{0%,100%{box-shadow:0 0 0 rgba(245,166,35,0)}50%{box-shadow:0 0 20px rgba(245,166,35,.25)}}
         .ch-claim-btn{width:100%;padding:14px;border-radius:12px;background:linear-gradient(135deg,#f5a623,#c47f10);color:#0d0d0f;font-size:15px;font-weight:800;letter-spacing:.04em;border:none;cursor:pointer;font-family:'Sora',sans-serif;transition:transform .15s,opacity .15s}
         .ch-claim-btn:hover{opacity:.9;transform:translateY(-1px)}
 
         /* TOAST */
-        .ch-toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(16px);background:#18181f;border:2px solid rgba(255,255,255,.15);border-radius:16px;padding:18px 28px;display:flex;align-items:center;gap:14px;font-size:14px;font-weight:600;color:#ffffff;box-shadow:0 12px 40px rgba(0,0,0,.8),0 4px 12px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .3s ease,transform .3s cubic-bezier(.22,1,.36,1);z-index:99999;white-space:nowrap;font-family:'Sora',sans-serif;max-width:calc(100vw - 32px)}
-        .ch-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+        .ch-toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.92);background:#18181f;border:2px solid rgba(255,255,255,.15);border-radius:16px;padding:18px 28px;display:flex;align-items:center;gap:14px;font-size:14px;font-weight:600;color:#ffffff;box-shadow:0 12px 40px rgba(0,0,0,.8),0 4px 12px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .3s ease,transform .3s cubic-bezier(.22,1,.36,1);z-index:99999;white-space:nowrap;font-family:'Sora',sans-serif;max-width:calc(100vw - 32px)}
+        .ch-toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
         .ch-toast.ok{background:#0d2118;border-color:rgba(34,197,94,.7);box-shadow:0 12px 40px rgba(0,0,0,.8),0 0 0 4px rgba(34,197,94,.1)}
         .ch-toast.warn{background:#200d0d;border-color:rgba(239,68,68,.7);box-shadow:0 12px 40px rgba(0,0,0,.8),0 0 0 4px rgba(239,68,68,.1)}
         .ch-toast.bonus{background:#1e1200;border-color:rgba(245,166,35,.9);box-shadow:0 12px 40px rgba(0,0,0,.8),0 0 0 4px rgba(245,166,35,.15),0 0 32px rgba(245,166,35,.2)}
@@ -529,16 +529,11 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
       <div className="ch-root">
         <div className="ch-page">
 
-          {/* TOPBAR */}
-          <div className="ch-topbar">
-            <div className="ch-logo">Web<span>Truyen</span> · Credit Hub</div>
-            <div className="ch-user">
-              {user.image
-                ? <img src={user.image} alt="" className="ch-avatar" />
-                : <div className="ch-avatar">{user.name.charAt(0)}</div>
-              }
-              <span>{user.name}</span>
-            </div>
+          {/* BACK BUTTON */}
+          <div style={{ marginBottom:28 }}>
+            <a href="/" style={{ display:'inline-flex', alignItems:'center', gap:10, padding:'11px 22px', borderRadius:12, background:'linear-gradient(135deg,#f5a623,#c47f10)', color:'#0d0d0f', fontFamily:"'Sora',sans-serif", fontSize:13, fontWeight:800, letterSpacing:'.06em', textTransform:'uppercase', textDecoration:'none', boxShadow:'0 4px 16px rgba(245,166,35,.35)' }}>
+              ← Về trang chủ
+            </a>
           </div>
 
           {/* HERO */}
@@ -600,7 +595,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
             <div className="ch-ci-header">
               <div>
                 <h3 style={{ fontSize:14, fontWeight:700, marginBottom:3 }}>🔥 Điểm danh hằng ngày</h3>
-                <p style={{ fontSize:11, color:'var(--muted)' }}>Streak 7 ngày → bonus +3 credit</p>
+                <p style={{ fontSize:11, color:'#ffffff' }}>Streak 7 ngày → bonus +3 credit</p>
               </div>
               <div className="ch-streak">🔥 Streak {streak} ngày</div>
             </div>
@@ -626,7 +621,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
             </div>
 
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
-              <p style={{ fontSize:12, color:'var(--muted)' }}>
+              <p style={{ fontSize:12, color:'#ffffff' }}>
                 {streak < 7
                   ? <>Còn <b style={{ color:'var(--blue)' }}>{7 - streak} ngày</b> nữa để nhận bonus +3 credit!</>
                   : <>🎉 Bạn đang ở <b style={{ color:'var(--gold)' }}>Streak {streak}</b> — tiếp tục giữ chuỗi nhé!</>
@@ -677,7 +672,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
 
             <div className="ch-app">
               <h3 style={{ fontSize:15, fontWeight:700, marginBottom:4 }}>Đặc quyền App</h3>
-              <p style={{ fontSize:12, color:'var(--muted)' }}>So sánh tốc độ kiếm credit</p>
+              <p style={{ fontSize:12, color:'#ffffff' }}>So sánh tốc độ kiếm credit</p>
               <table className="ch-cmp">
                 <thead>
                   <tr><th>Hành động</th><th></th><th>Credit</th></tr>
@@ -784,15 +779,11 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
                     <div className={`ch-tx-amt ${isAdd ? 'pos' : 'neg'}`}>
                       {isAdd ? '+' : ''}{t.amount.toFixed(1)}
                     </div>
-                    <div className="ch-tx-bal">Dư: {t.balanceAfter.toFixed(1)}</div>
+                    <div className="ch-tx-bal"><span style={{fontSize:10,fontWeight:500,color:'var(--muted)',letterSpacing:'.05em'}}>DƯ </span>{t.balanceAfter.toFixed(1)}</div>
                   </div>
                 )
               })
             )}
-          </div>
-
-          <div style={{ textAlign:'center', fontSize:11, color:'var(--muted)', letterSpacing:'.04em' }}>
-            Credit <span style={{ color:'rgba(245,166,35,.5)' }}>không hết hạn</span> · Mọi giao dịch được lưu trữ an toàn
           </div>
 
         </div>
