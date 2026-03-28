@@ -409,10 +409,10 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         .ch-ad-timer{font-family:var(--mono);font-size:13px;color:var(--muted)}
         .ch-ad-timer b{color:var(--gold)}
         .ch-ad-hint{font-size:12px;color:#ffffff;text-align:center;padding:10px 0 0;line-height:1.6}
-        .ch-ad-done{text-align:center}
+        .ch-ad-done{text-align:center;-webkit-text-fill-color:initial}
         .ch-ad-done-icon{font-size:52px;display:block;margin-bottom:12px;animation:popIn .5s cubic-bezier(.22,1,.36,1) both}
         @keyframes popIn{from{transform:scale(0) rotate(-10deg);opacity:0}to{transform:scale(1);opacity:1}}
-        .ch-ad-done h3{font-size:20px;font-weight:800;margin-bottom:6px}
+        .ch-ad-done h3{font-size:20px;font-weight:800;margin-bottom:6px;color:#ffffff;-webkit-text-fill-color:#ffffff}
         .ch-ad-done p{font-size:13px;color:#ffffff;margin-bottom:20px}
         .ch-credit-pill{display:inline-flex;align-items:center;gap:8px;background:var(--gold-glow);border:1px solid rgba(245,166,35,.35);border-radius:99px;padding:8px 20px;font-family:var(--mono);font-size:22px;font-weight:800;color:var(--gold);margin-bottom:20px;animation:glowPulse 1.5s ease infinite}
         @keyframes glowPulse{0%,100%{box-shadow:0 0 0 rgba(245,166,35,0)}50%{box-shadow:0 0 20px rgba(245,166,35,.25)}}
@@ -748,7 +748,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
                 <>Cần ít nhất <b style={{color:'var(--gold)'}}>1.0 credit</b> để tải 1 chương. Số lẻ (vd 0.5) được giữ và cộng dồn tự động.</>,
                 <>Credit <b style={{color:'var(--gold)'}}>không hết hạn</b> — tích lũy thoải mái, dùng khi nào cũng được.</>,
                 <>Web: xem 2 video = 1 lượt tải. App: xem 1 video = 1 lượt (nhanh gấp đôi).</>,
-                <>Điểm danh 7 ngày liên tiếp nhận <b style={{color:'var(--blue)'}}>bonus +1 lượt</b>.</>,
+                <>Điểm danh 7 ngày liên tiếp nhận <b style={{color:'var(--blue)'}}>bonus +3 credits</b>.</>,
                 <>Mọi giao dịch ghi log minh bạch trong bảng Lịch Sử — không lo bị móc túi.</>,
               ].map((rule, i) => (
                 <div key={i} className="ch-rule">
