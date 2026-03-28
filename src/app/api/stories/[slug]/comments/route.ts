@@ -75,7 +75,53 @@ export async function POST(
     });
     if (!story) return NextResponse.json({ error: 'Story not found' }, { status: 404 });
 
-    // Lưu bình luận trước — luôn thành công bất kể có tính credit hay không
+    // ── Check hết lượt 5 truyện/ngày TRƯỚC khi lưu (chống spam) ──
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+
+    const txsToday = await db.creditTransaction.findMany({
+      where: {
+        userId: authUser.id,
+        type: 'REWARD_COMMENT',
+        note: { startsWith: '[story:' },
+        createdAt: { gte: todayStart },
+      },
+      select: { note: true },
+    });
+
+    const distinctStoryIds = new Set(
+      txsToday.map((tx, idx) => {
+        const match = tx.note?.match(/^\[story:([^\]]+)\]/);
+        return match ? match[1] : `__unknown_${idx}`;
+      })
+    );
+
+    // Đã bình luận truyện này hôm nay → không lưu, trả về thông báo
+    const alreadyThisStory = distinctStoryIds.has(story.id);
+    if (alreadyThisStory) {
+      // Tính giây còn lại tới 0h UTC hôm sau
+      const tomorrow = new Date(todayStart);
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      const secsUntilMidnight = Math.ceil((tomorrow.getTime() - Date.now()) / 1000);
+
+      return NextResponse.json({
+        success: false,
+        blocked: true,
+        cooldownSeconds: secsUntilMidnight,
+        creditMessage: `🔒 Bạn đã bình luận truyện này hôm nay rồi. Quay lại sau 0h nhé!`,
+      }, { status: 429 });
+    }
+
+    // Đã đủ 5 truyện khác nhau → không lưu
+    if (distinctStoryIds.size >= 5) {
+      return NextResponse.json({
+        success: false,
+        blocked: true,
+        creditMessage: `🎉 Bạn đã hết lượt bình luận hưởng credit hôm nay rồi, ngày mai quay lại bạn nhé!`,
+      }, { status: 429 });
+    }
+
+    // ── Lưu bình luận ──
     const comment = await db.comment.create({
       data: {
         content: content.trim(),
@@ -87,42 +133,40 @@ export async function POST(
       },
     });
 
-    // Tính credit
-    // Note hiển thị cho user: KHÔNG có storyId raw
+    // ── Tính credit ──
     const rewardResult = await rewardCredit(
       authUser.id,
       'REWARD_COMMENT',
-      `Bình luận truyện: ${story.title}`,  // note thân thiện, storyId sẽ được prefix bởi rewardCredit
+      `Bình luận truyện: ${story.title}`,
       {
         content: content.trim(),
         amount: 0.2,
         maxPerDay: 5,
         minLength: 20,
         storyId: story.id,
-        cooldownSeconds: 60,
+        cooldownSeconds: 0, // daily lock xử lý ở trên rồi
       }
     );
 
-    // Toast message đầy đủ thông tin
-    let creditMessage: string
-    let cooldownSeconds: number | undefined
+    // Tính giây tới 0h UTC hôm sau (cho frontend lock truyện này)
+    const tomorrow = new Date(todayStart);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const secsUntilMidnight = Math.ceil((tomorrow.getTime() - Date.now()) / 1000);
 
+    let creditMessage: string;
     if (rewardResult.rewarded) {
-      const usable  = rewardResult.usable
-      creditMessage = `✅ Bạn vừa cộng được +0.2 credit · Còn ${usable} lượt tải`
+      const remainingSlots = 5 - (distinctStoryIds.size + 1); // +1 vì vừa dùng 1 slot
+      creditMessage = remainingSlots > 0
+        ? `✅ Bạn nhận được +0.2 credit · Còn ${remainingSlots} lượt bình luận cho truyện khác hôm nay`
+        : `✅ Bạn nhận được +0.2 credit · Đã dùng hết 5 lượt hôm nay 🎉`;
     } else {
-      if ('cooldownSeconds' in rewardResult && rewardResult.cooldownSeconds) {
-        cooldownSeconds = rewardResult.cooldownSeconds
-        creditMessage = `⏳ Vui lòng chờ ${rewardResult.cooldownSeconds} giây trước khi bình luận tiếp`
-      } else {
-        creditMessage = `ℹ️ ${rewardResult.reason}`
-      }
+      creditMessage = `ℹ️ ${rewardResult.reason}`;
     }
 
     return NextResponse.json({
       success: true,
       creditMessage,
-      cooldownSeconds,
+      cooldownSeconds: secsUntilMidnight, // frontend lock bình luận truyện này tới 0h
       data: {
         id: comment.id,
         content: comment.content,

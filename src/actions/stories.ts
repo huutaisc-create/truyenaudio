@@ -424,21 +424,65 @@ export async function submitReview(storyId: string, rating: number, content: str
         return { success: false, error: "Bạn cần đăng nhập để đánh giá." };
     }
 
+    const userId = session.user.id;
+
     try {
-        // Lấy tên truyện để ghi note
         const story = await db.story.findUnique({
             where: { id: storyId },
             select: { title: true, ratingScore: true, ratingCount: true }
         });
 
+        // ── Check hết lượt 5 truyện/ngày TRƯỚC khi lưu (chống spam) ──
+        const todayStart = new Date();
+        todayStart.setUTCHours(0, 0, 0, 0);
+
+        const txsToday = await db.creditTransaction.findMany({
+            where: {
+                userId,
+                type: 'REWARD_REVIEW',
+                note: { startsWith: '[story:' },
+                createdAt: { gte: todayStart },
+            },
+            select: { note: true },
+        });
+
+        const distinctStoryIds = new Set(
+            txsToday.map((tx, idx) => {
+                const match = tx.note?.match(/^\[story:([^\]]+)\]/);
+                return match ? match[1] : `__unknown_${idx}`;
+            })
+        );
+
+        const tomorrow = new Date(todayStart);
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+        const secsUntilMidnight = Math.ceil((tomorrow.getTime() - Date.now()) / 1000);
+
+        // Đã đánh giá truyện này hôm nay → không lưu
+        if (distinctStoryIds.has(storyId)) {
+            return {
+                success: false,
+                blocked: true,
+                cooldownSeconds: secsUntilMidnight,
+                error: `🔒 Bạn đã đánh giá truyện này hôm nay rồi. Quay lại sau 0h nhé!`,
+            };
+        }
+
+        // Đã đủ 5 truyện → không lưu
+        if (distinctStoryIds.size >= 5) {
+            return {
+                success: false,
+                blocked: true,
+                error: `🎉 Bạn đã hết lượt đánh giá hưởng credit hôm nay rồi, ngày mai quay lại bạn nhé!`,
+            };
+        }
+
+        // Nội dung không đủ 20 ký tự → vẫn cho lưu đánh giá nhưng không credit
+        // (rating vẫn có giá trị dù không có nội dung)
+
+        // ── Lưu review + cập nhật rating score ──
         await db.$transaction(async (tx) => {
             await tx.review.create({
-                data: {
-                    userId: session.user.id,
-                    storyId,
-                    rating,
-                    content
-                }
+                data: { userId, storyId, rating, content }
             });
 
             if (story) {
@@ -446,7 +490,6 @@ export async function submitReview(storyId: string, rating: number, content: str
                 const currentCount = story.ratingCount || 0;
                 const newCount = currentCount + 1;
                 const newScore = ((currentScore * currentCount) + rating) / newCount;
-
                 await tx.story.update({
                     where: { id: storyId },
                     data: {
@@ -457,10 +500,9 @@ export async function submitReview(storyId: string, rating: number, content: str
             }
         });
 
-        // Tính credit — phải ở 5 truyện khác nhau, nội dung >= 20 ký tự
-        // Note thân thiện: KHÔNG có storyId raw hiển thị cho user
+        // ── Tính credit ──
         const rewardResult = await rewardCredit(
-            session.user.id,
+            userId,
             'REWARD_REVIEW',
             `Đánh giá truyện: ${story?.title ?? 'Unknown'}`,
             {
@@ -469,18 +511,24 @@ export async function submitReview(storyId: string, rating: number, content: str
                 maxPerDay: 5,
                 minLength: 20,
                 storyId,
+                cooldownSeconds: 0, // daily lock xử lý ở trên
             }
         );
 
         let creditMessage: string;
         if (rewardResult.rewarded) {
-            const usable = rewardResult.usable
-            creditMessage = `✅ Bạn vừa cộng được +0.2 credit · Còn ${usable} lượt tải`;
+            const remainingSlots = 5 - (distinctStoryIds.size + 1);
+            creditMessage = remainingSlots > 0
+                ? `✅ Bạn nhận được +0.2 credit · Còn ${remainingSlots} lượt đánh giá cho truyện khác hôm nay`
+                : `✅ Bạn nhận được +0.2 credit · Đã dùng hết 5 lượt hôm nay 🎉`;
         } else {
-            creditMessage = `ℹ️ ${rewardResult.reason}`;
+            // Không đủ 20 ký tự hoặc lý do khác — review đã lưu nhưng không có credit
+            creditMessage = content.trim().length < 20
+                ? `ℹ️ Đánh giá đã lưu · Cần ≥20 ký tự để nhận credit`
+                : `ℹ️ ${rewardResult.reason}`;
         }
 
-        return { success: true, creditMessage };
+        return { success: true, creditMessage, cooldownSeconds: secsUntilMidnight };
     } catch (error) {
         console.error("Submit Review Error:", error);
         return { success: false, error: "Lỗi hệ thống, vui lòng thử lại sau." };
