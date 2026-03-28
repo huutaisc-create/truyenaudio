@@ -277,6 +277,12 @@ export default function ListeningClient({
   const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
   const [commentPage, setCommentPage] = useState(1);
   const COMMENTS_PER_PAGE = 20;
+  // ── Cooldown bình luận (sync backend 60s) ──
+  const [commentCooldown, setCommentCooldown] = useState(0);
+  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // ── Credit toast (like / nominate / comment) ──
+  const [creditToast, setCreditToast] = useState<string | null>(null);
+  const creditToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [infoLoaded, setInfoLoaded] = useState(false);
   const [reviewPage, setReviewPage] = useState(1);
   const REVIEWS_PER_PAGE = 20;
@@ -518,6 +524,33 @@ export default function ListeningClient({
     return true;
   }, [currentUser, router]);
 
+  // ── Credit toast helper ──
+  const showCreditToast = useCallback((msg: string) => {
+    setCreditToast(msg);
+    if (creditToastTimerRef.current) clearTimeout(creditToastTimerRef.current);
+    creditToastTimerRef.current = setTimeout(() => setCreditToast(null), 4000);
+  }, []);
+
+  // ── Cooldown timer helper ──
+  const startCooldown = useCallback((seconds: number) => {
+    if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+    setCommentCooldown(seconds);
+    cooldownTimerRef.current = setInterval(() => {
+      setCommentCooldown(prev => {
+        if (prev <= 1) { clearInterval(cooldownTimerRef.current!); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  // ── Cleanup timers on unmount ──
+  useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+      if (creditToastTimerRef.current) clearTimeout(creditToastTimerRef.current);
+    };
+  }, []);
+
   // ── Like handler ──
   const handleLike = useCallback(async () => {
     if (!checkAuth()) return;
@@ -529,8 +562,10 @@ export default function ListeningClient({
       setUserStatus(s => ({ ...s, isLiked: !newLiked }));
       setInteractStats(s => ({ ...s, likeCount: s.likeCount + (newLiked ? -1 : 1) }));
       alert(res.error);
+    } else if (newLiked && res.creditMessage) {
+      showCreditToast(res.creditMessage);
     }
-  }, [checkAuth, userStatus.isLiked, storyId]);
+  }, [checkAuth, userStatus.isLiked, storyId, showCreditToast]);
 
   // ── Follow handler ──
   const handleFollow = useCallback(async () => {
@@ -554,12 +589,14 @@ export default function ListeningClient({
     if (res.error) {
       setInteractStats(s => ({ ...s, nominationCount: s.nominationCount - 1 }));
       alert(res.error);
+    } else if (res.creditMessage) {
+      showCreditToast(res.creditMessage);
     }
-  }, [checkAuth, storyId]);
+  }, [checkAuth, storyId, showCreditToast]);
 
   // ── Gửi comment ──
   const handleSendComment = useCallback(async () => {
-    if (!commentInput.trim() || commentSending) return;
+    if (!commentInput.trim() || commentSending || commentCooldown > 0) return;
     if (!currentUser) { window.location.href = '/login?callbackUrl=' + window.location.pathname; return; }
     const body = replyTo ? `@${replyTo.name} ${commentInput.trim()}` : commentInput.trim();
     setCommentSending(true);
@@ -576,6 +613,10 @@ export default function ListeningClient({
           setCommentInput('');
           setReplyTo(null);
           commentTextareaRef.current?.focus();
+          // Toast credit
+          if (json.creditMessage) showCreditToast(json.creditMessage);
+          // Cooldown: dùng giá trị server trả về, fallback 60s
+          startCooldown(json.cooldownSeconds && json.cooldownSeconds > 0 ? json.cooldownSeconds : 60);
         }
       } else {
         const err = await res.json();
@@ -583,7 +624,7 @@ export default function ListeningClient({
       }
     } catch { alert('Lỗi kết nối'); }
     finally { setCommentSending(false); }
-  }, [commentInput, commentSending, slug, replyTo, currentUser]);
+  }, [commentInput, commentSending, commentCooldown, slug, replyTo, currentUser, showCreditToast, startCooldown]);
 
   // ── Khi user mở tab info/comments lần đầu ──
   const handleOpenTab = useCallback((tab: DrawerTab) => {
@@ -1841,6 +1882,20 @@ export default function ListeningClient({
   const InfoPanel = (
     <div className="flex flex-col gap-4 px-4 py-4">
 
+      {/* Credit toast — like / nominate */}
+      {creditToast && (
+        <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-medium border animate-in fade-in slide-in-from-top-1 duration-300 ${
+          creditToast.startsWith('✅')
+            ? 'bg-green-900/30 border-green-700/40 text-green-300'
+            : 'bg-amber-900/30 border-amber-700/40 text-amber-300'
+        }`} role="status">
+          <span className="flex-1">{creditToast}</span>
+          <button onClick={() => setCreditToast(null)} className="shrink-0 opacity-60 hover:opacity-100">
+            <X size={11} />
+          </button>
+        </div>
+      )}
+
       {/* Rating stars + nút đánh giá */}
       <div className="flex items-center gap-2 flex-wrap">
         {storyInfo.ratingScore > 0 && (
@@ -1971,7 +2026,7 @@ export default function ListeningClient({
           </div>
 
           {/* Scrollable review list */}
-          <div className="overflow-y-auto max-h-[420px] pr-1 space-y-2.5 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+          <div className="space-y-2.5">
             {storyInfo.reviews
               .slice((reviewPage - 1) * REVIEWS_PER_PAGE, reviewPage * REVIEWS_PER_PAGE)
               .map(r => (
@@ -2189,6 +2244,17 @@ export default function ListeningClient({
 
       {/* Input box */}
       <div className="px-3 py-3 border-t border-white/[0.06] shrink-0">
+        {/* Credit toast */}
+        {creditToast && (
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-medium border mb-2 animate-in fade-in duration-300 ${
+            creditToast.startsWith('✅')
+              ? 'bg-green-900/30 border-green-700/40 text-green-300'
+              : 'bg-amber-900/30 border-amber-700/40 text-amber-300'
+          }`} role="status">
+            <span className="flex-1">{creditToast}</span>
+            <button onClick={() => setCreditToast(null)} className="shrink-0 opacity-60 hover:opacity-100"><X size={11} /></button>
+          </div>
+        )}
         {/* Reply badge */}
         {replyTo && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[10px] text-[#8a7e72] mb-2">
@@ -2206,24 +2272,40 @@ export default function ListeningClient({
             value={commentInput}
             onChange={e => setCommentInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) handleSendComment(); }}
-            placeholder={currentUser ? (replyTo ? `Trả lời ${replyTo.name}...` : 'Chia sẻ cảm nhận...') : 'Đăng nhập để bình luận...'}
+            placeholder={
+              currentUser
+                ? replyTo
+                  ? `Trả lời ${replyTo.name}...`
+                  : 'Chia sẻ cảm nhận... (≥20 ký tự để nhận +0.2 credit)'
+                : 'Đăng nhập để bình luận...'
+            }
             rows={2}
             aria-label="Nội dung bình luận"
-            disabled={!currentUser}
+            disabled={!currentUser || commentCooldown > 0}
             className="flex-1 bg-[#1a1612] border border-white/[0.08] rounded-lg px-3 py-2 text-[11px] text-[#f0ebe4] placeholder:text-[#8a7e72] outline-none focus:border-[#e8580a]/50 resize-none disabled:opacity-50"
           />
           <button
             onClick={handleSendComment}
-            disabled={commentSending || !commentInput.trim()}
-            aria-label={commentSending ? 'Đang gửi...' : replyTo ? 'Gửi trả lời' : 'Gửi bình luận'}
-            className="px-2.5 py-2 bg-[#e8580a] rounded-lg text-white disabled:opacity-40 hover:bg-[#d4500a] transition-colors shrink-0"
+            disabled={commentSending || !commentInput.trim() || commentCooldown > 0}
+            aria-label={
+              commentCooldown > 0
+                ? `Chờ ${commentCooldown}s`
+                : commentSending ? 'Đang gửi...' : replyTo ? 'Gửi trả lời' : 'Gửi bình luận'
+            }
+            className="px-2.5 py-2 bg-[#e8580a] rounded-lg text-white disabled:opacity-40 hover:bg-[#d4500a] transition-colors shrink-0 min-w-[36px] flex items-center justify-center"
           >
             {commentSending
               ? <Loader2 size={13} className="animate-spin" />
+              : commentCooldown > 0
+              ? <span className="text-[10px] font-mono font-black">{commentCooldown}s</span>
               : <Send size={13} />}
           </button>
         </div>
-        {currentUser && <p className="text-[9px] text-[#8a7e72] mt-1 text-right">Ctrl+Enter để gửi</p>}
+        {currentUser && (
+          <p className="text-[9px] text-[#8a7e72] mt-1 text-right">
+            {commentCooldown > 0 ? `Chờ ${commentCooldown}s trước khi gửi tiếp` : 'Ctrl+Enter để gửi'}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -2236,7 +2318,7 @@ export default function ListeningClient({
       {/* ── Version Badge ── */}
       <div className="fixed bottom-16 right-3 z-50 pointer-events-none">
         <div className="bg-[#1a1612]/90 border border-white/[0.07] rounded-lg px-2 py-1">
-          <span className="text-[10px] font-black text-[#e8580a]">v 6.2</span>
+          <span className="text-[10px] font-black text-[#e8580a]">v 6.1</span>
         </div>
       </div>
 
