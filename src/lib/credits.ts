@@ -161,7 +161,7 @@ export async function rewardCredit(
     const distinctStoryIds = new Set(
       txsToday
         .map(tx => {
-          const match = tx.note.match(/^\[story:([^\]]+)\]/)
+          const match = tx.note?.match(/^\[story:([^\]]+)\]/)
           return match ? match[1] : null
         })
         .filter(Boolean)
