@@ -289,7 +289,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         @keyframes bonusGlow{0%,100%{box-shadow:0 0 10px rgba(245,166,35,.4)}50%{box-shadow:0 0 26px rgba(245,166,35,.75)}}
         .ch-day-dot.today{background:rgba(96,165,250,.18);border-color:rgba(96,165,250,.6);color:#93c5fd;animation:todayGlow 2s infinite}
         @keyframes todayGlow{0%,100%{box-shadow:0 0 12px rgba(96,165,250,.2)}50%{box-shadow:0 0 22px rgba(96,165,250,.5)}}
-        .ch-day-dot.locked{opacity:.28}
+        .ch-day-dot.locked{opacity:.55;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.12);color:rgba(255,255,255,.3)}
         .ch-day-lbl.bonus-lbl{color:var(--gold);font-weight:700}
         .ch-ci-cta{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
         .ch-ci-cta p{font-size:12px;color:var(--muted)}
@@ -405,12 +405,11 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         .ch-claim-btn:hover{opacity:.9;transform:translateY(-1px)}
 
         /* TOAST */
-        .ch-toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.88);background:#1c1c22;border-radius:16px;padding:18px 28px;display:flex;align-items:center;gap:14px;font-size:14px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:all .35s cubic-bezier(.22,1,.36,1);z-index:20000;white-space:nowrap;font-family:'Sora',sans-serif;max-width:calc(100vw - 32px)}
-        .ch-toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
-        .ch-toast.ok{background:linear-gradient(135deg,#0a2010,#051508);border:2px solid rgba(34,197,94,.8);color:var(--green);box-shadow:0 0 0 4px rgba(34,197,94,.12),0 16px 48px rgba(34,197,94,.2),0 8px 24px rgba(0,0,0,.6)}
-        .ch-toast.warn{background:linear-gradient(135deg,#2a0a0a,#1a0505);border:2px solid rgba(239,68,68,.8);color:var(--red);box-shadow:0 0 0 4px rgba(239,68,68,.12),0 16px 48px rgba(239,68,68,.2),0 8px 24px rgba(0,0,0,.6)}
-        .ch-toast.bonus{background:linear-gradient(135deg,#2a1800,#1a0f00);border:2px solid var(--gold);color:var(--gold);padding:18px 28px;border-radius:16px;box-shadow:0 0 0 4px rgba(245,166,35,.15),0 16px 48px rgba(245,166,35,.25),0 8px 24px rgba(0,0,0,.6);animation:bonusToastPop .5s cubic-bezier(.22,1,.36,1) both}
-        @keyframes bonusToastPop{from{transform:translate(-50%,-50%) scale(.88);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+        .ch-toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(16px);background:#18181f;border:2px solid rgba(255,255,255,.15);border-radius:16px;padding:18px 28px;display:flex;align-items:center;gap:14px;font-size:14px;font-weight:600;color:#ffffff;box-shadow:0 12px 40px rgba(0,0,0,.8),0 4px 12px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .3s ease,transform .3s cubic-bezier(.22,1,.36,1);z-index:99999;white-space:nowrap;font-family:'Sora',sans-serif;max-width:calc(100vw - 32px)}
+        .ch-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+        .ch-toast.ok{background:#0d2118;border-color:rgba(34,197,94,.7);box-shadow:0 12px 40px rgba(0,0,0,.8),0 0 0 4px rgba(34,197,94,.1)}
+        .ch-toast.warn{background:#200d0d;border-color:rgba(239,68,68,.7);box-shadow:0 12px 40px rgba(0,0,0,.8),0 0 0 4px rgba(239,68,68,.1)}
+        .ch-toast.bonus{background:#1e1200;border-color:rgba(245,166,35,.9);box-shadow:0 12px 40px rgba(0,0,0,.8),0 0 0 4px rgba(245,166,35,.15),0 0 32px rgba(245,166,35,.2)}
 
         /* RESPONSIVE */
         @media(max-width:580px){
@@ -484,29 +483,27 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
 
       {/* ── TOAST ── */}
       {toast && (
-        <div
-          className={`ch-toast show${toast.isBonus ? ' bonus' : toast.ok ? ' ok' : ' warn'}`}
-        >
+        <div className={`ch-toast show${toast.isBonus ? ' bonus' : toast.ok ? ' ok' : ' warn'}`}>
           {toast.isBonus ? (
             <>
-              <span style={{ fontSize: 28 }}>🎉</span>
+              <span style={{ fontSize: 28, flexShrink:0 }}>🎉</span>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--gold)', marginBottom: 3 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#ffd166', marginBottom: 3, textShadow:'0 1px 4px rgba(0,0,0,.8)' }}>
                   STREAK 7 NGÀY — BONUS ĐẠT!
                 </div>
-                <div style={{ fontSize: 12, color: 'rgba(245,166,35,.8)', fontWeight: 600 }}>
+                <div style={{ fontSize: 13, color: '#ffe49a', fontWeight: 600 }}>
                   {toast.msg}
                 </div>
               </div>
             </>
           ) : (
             <>
-              <span style={{ fontSize: 24 }}>{toast.ok ? '✅' : '⚠️'}</span>
+              <span style={{ fontSize: 24, flexShrink:0 }}>{toast.ok ? '✅' : '⚠️'}</span>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 2 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#ffffff', marginBottom: 2, textShadow:'0 1px 4px rgba(0,0,0,.8)' }}>
                   {toast.ok ? 'ĐIỂM DANH THÀNH CÔNG!' : 'CÓ LỖI XẢY RA'}
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.8 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,.85)' }}>
                   {toast.msg}
                 </div>
               </div>
