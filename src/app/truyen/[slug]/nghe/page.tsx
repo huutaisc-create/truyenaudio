@@ -81,6 +81,13 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
       likeCount: storyData.likeCount ?? 0,
       followCount: storyData.followCount ?? 0,
       nominationCount: (storyData as any).nominationCount ?? 0,
+      reviews: (storyData.reviews ?? []).map((r: any) => ({
+        id: r.id,
+        rating: r.rating,
+        content: r.content,
+        createdAt: r.createdAt,
+        user: { name: r.user.name, image: r.user.image },
+      })),
     },
     currentUser: session?.user ? {
       id: session.user.id as string,

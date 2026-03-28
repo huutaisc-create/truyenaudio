@@ -28,6 +28,14 @@ interface ChapterMeta {
   index: number;
   title: string;
 }
+interface StoryReview {
+  id: string;
+  rating: number;
+  content: string;
+  createdAt: string;
+  user: { name: string; image: string | null };
+}
+
 interface StoryInfo {
   id: string;
   description: string;
@@ -39,6 +47,7 @@ interface StoryInfo {
   likeCount: number;
   followCount: number;
   nominationCount: number;
+  reviews: StoryReview[];
 }
 
 interface CommentUser {
@@ -1831,20 +1840,20 @@ export default function ListeningClient({
           <>
             <div className="flex items-center gap-0.5">
               {[1, 2, 3, 4, 5].map(i => (
-                <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill={i <= Math.round(storyInfo.ratingScore) ? '#e8580a' : 'none'} stroke="#e8580a" strokeWidth="2">
+                <svg key={i} width="14" height="14" viewBox="0 0 24 24" fill={i <= Math.round(storyInfo.ratingScore) ? '#f59e0b' : '#f59e0b'} stroke="#f59e0b" strokeWidth="1.5" opacity={i <= Math.round(storyInfo.ratingScore) ? 1 : 0.3}>
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
               ))}
             </div>
             <span className="text-[13px] font-bold text-[#f0ebe4]">{storyInfo.ratingScore.toFixed(1)}</span>
-            <span className="text-[11px] text-[#8a7e72]">({storyInfo.ratingCount} đánh giá)</span>
+            <span className="text-[11px] text-[#8a7e72]">({storyInfo.ratingCount})</span>
           </>
         )}
         <ReviewButton
           storyId={storyInfo.id}
           text="Đánh giá"
           currentUser={currentUser}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#e8580a]/10 text-[#e8580a] border border-[#e8580a]/30 hover:bg-[#e8580a]/20 transition-all active:scale-95"
+          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-white/[0.06] text-[#f0ebe4] border border-white/[0.15] hover:bg-white/[0.1] transition-all active:scale-95"
         />
       </div>
 
@@ -1919,6 +1928,35 @@ export default function ListeningClient({
         <div>
           <p className="text-[12px] font-black uppercase tracking-[.1em] text-white mb-3">Giới thiệu</p>
           <p className="text-[14px] text-white leading-relaxed line-clamp-6">{storyInfo.description}</p>
+        </div>
+      )}
+
+      {/* Reviews */}
+      {storyInfo.reviews?.length > 0 && (
+        <div>
+          <p className="text-[12px] font-black uppercase tracking-[.1em] text-white mb-3">Đánh giá</p>
+          <div className="flex flex-col gap-3">
+            {storyInfo.reviews.map(r => (
+              <div key={r.id} className="bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 py-3">
+                <div className="flex items-center gap-2 mb-2">
+                  {r.user.image
+                    ? <img src={r.user.image} alt={r.user.name} className="w-7 h-7 rounded-full object-cover" />
+                    : <div className="w-7 h-7 rounded-full bg-white/[0.1] flex items-center justify-center text-[11px] font-bold text-white">{r.user.name?.[0]?.toUpperCase()}</div>
+                  }
+                  <span className="text-[12px] font-bold text-[#f0ebe4]">{r.user.name}</span>
+                  <div className="flex items-center gap-0.5 ml-auto">
+                    {[1,2,3,4,5].map(i => (
+                      <svg key={i} width="10" height="10" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1.5" opacity={i <= r.rating ? 1 : 0.25}>
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                      </svg>
+                    ))}
+                  </div>
+                </div>
+                {r.content && <p className="text-[12px] text-[#c0b9b0] leading-relaxed">{r.content}</p>}
+                <p className="text-[10px] text-[#8a7e72] mt-1.5">{new Date(r.createdAt).toLocaleDateString('vi-VN')}</p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
