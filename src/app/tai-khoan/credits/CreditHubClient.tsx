@@ -87,6 +87,8 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
   )
   const [txList, setTxList]         = useState<Transaction[]>(initTx)
   const [filter, setFilter]         = useState<'all' | 'add' | 'spend'>('all')
+  const [txPage, setTxPage]         = useState(1)
+  const TX_PER_PAGE = 10
 
   // Ad state
   const [adOpen, setAdOpen]         = useState(false)
@@ -225,6 +227,8 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
     if (filter === 'spend') return t.type === 'SPEND'
     return true
   })
+  const totalPages  = Math.max(1, Math.ceil(filteredTx.length / TX_PER_PAGE))
+  const pagedTx     = filteredTx.slice((txPage - 1) * TX_PER_PAGE, txPage * TX_PER_PAGE)
 
   const pct = (AD_SEC - adSec) / AD_SEC * 100
 
@@ -356,7 +360,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
 
         /* AUDIT */
         .ch-filter{display:flex;gap:8px;margin-bottom:16px}
-        .ch-fbtn{padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'Sora',sans-serif;transition:all .15s}
+        .ch-fbtn{padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:#ffffff;font-family:'Sora',sans-serif;transition:all .15s}
         .ch-fbtn.on{background:var(--gold-glow);color:var(--gold);border-color:rgba(245,166,35,.3)}
         .ch-tx-row{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--border)}
         .ch-tx-row:last-child{border-bottom:none}
@@ -370,6 +374,14 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         .ch-tx-amt.neg{color:var(--red)}
         .ch-tx-bal{font-family:var(--mono);font-size:16px;font-weight:800;color:#ffffff;text-align:right;white-space:nowrap;letter-spacing:-.02em}
         .ch-empty{text-align:center;padding:32px 0;color:var(--muted);font-size:13px}
+
+        /* PAGINATION */
+        .ch-pagination{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px 0 4px}
+        .ch-pg-btn{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:#ffffff;font-family:'Sora',sans-serif;transition:all .15s}
+        .ch-pg-btn:hover:not(:disabled){border-color:rgba(245,166,35,.4);color:var(--gold)}
+        .ch-pg-btn:disabled{opacity:.3;cursor:not-allowed}
+        .ch-pg-btn.active{background:var(--gold-glow);border-color:rgba(245,166,35,.4);color:var(--gold)}
+        .ch-pg-info{font-size:11px;color:var(--muted);font-family:var(--mono)}
 
         /* AD OVERLAY */
         .ch-ad-overlay{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0);backdrop-filter:blur(0);transition:background .35s,backdrop-filter .35s;pointer-events:none;opacity:0}
@@ -755,7 +767,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
                 <button
                   key={f}
                   className={`ch-fbtn${filter === f ? ' on' : ''}`}
-                  onClick={() => setFilter(f)}
+                  onClick={() => { setFilter(f); setTxPage(1) }}
                 >
                   {f === 'all' ? 'Tất cả' : f === 'add' ? 'Nhận' : 'Dùng'}
                 </button>
@@ -765,24 +777,36 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
             {filteredTx.length === 0 ? (
               <div className="ch-empty">Chưa có giao dịch nào</div>
             ) : (
-              filteredTx.map(t => {
-                const isAdd = t.type !== 'SPEND'
-                return (
-                  <div key={t.id} className="ch-tx-row">
-                    <div className={`ch-tx-icon ${isAdd ? 'add' : 'spend'}`}>
-                      {t.type === 'ADD_APP' ? '📱' : t.type === 'ADD_WEB' ? '▶️' : '📥'}
+              <>
+                {pagedTx.map(t => {
+                  const isAdd = t.type !== 'SPEND'
+                  return (
+                    <div key={t.id} className="ch-tx-row">
+                      <div className={`ch-tx-icon ${isAdd ? 'add' : 'spend'}`}>
+                        {t.type === 'ADD_APP' ? '📱' : t.type === 'ADD_WEB' ? '▶️' : '📥'}
+                      </div>
+                      <div className="ch-tx-desc">
+                        <h4>{t.note || (isAdd ? 'Nhận credit' : 'Tải chương')}</h4>
+                        <p>{fmtDate(t.createdAt)}</p>
+                      </div>
+                      <div className={`ch-tx-amt ${isAdd ? 'pos' : 'neg'}`}>
+                        {isAdd ? '+' : ''}{t.amount.toFixed(1)}
+                      </div>
+                      <div className="ch-tx-bal"><span style={{fontSize:10,fontWeight:500,color:'var(--muted)',letterSpacing:'.05em'}}>DƯ </span>{t.balanceAfter.toFixed(1)}</div>
                     </div>
-                    <div className="ch-tx-desc">
-                      <h4>{t.note || (isAdd ? 'Nhận credit' : 'Tải chương')}</h4>
-                      <p>{fmtDate(t.createdAt)}</p>
-                    </div>
-                    <div className={`ch-tx-amt ${isAdd ? 'pos' : 'neg'}`}>
-                      {isAdd ? '+' : ''}{t.amount.toFixed(1)}
-                    </div>
-                    <div className="ch-tx-bal"><span style={{fontSize:10,fontWeight:500,color:'var(--muted)',letterSpacing:'.05em'}}>DƯ </span>{t.balanceAfter.toFixed(1)}</div>
+                  )
+                })}
+                {totalPages > 1 && (
+                  <div className="ch-pagination">
+                    <button className="ch-pg-btn" disabled={txPage === 1} onClick={() => setTxPage(p => p - 1)}>‹</button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                      <button key={p} className={`ch-pg-btn${txPage === p ? ' active' : ''}`} onClick={() => setTxPage(p)}>{p}</button>
+                    ))}
+                    <button className="ch-pg-btn" disabled={txPage === totalPages} onClick={() => setTxPage(p => p + 1)}>›</button>
+                    <span className="ch-pg-info">{filteredTx.length} giao dịch</span>
                   </div>
-                )
-              })
+                )}
+              </>
             )}
           </div>
 

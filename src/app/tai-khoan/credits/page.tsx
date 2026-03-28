@@ -34,9 +34,12 @@ export default async function CreditsPage() {
     }),
 
     db.creditTransaction.findMany({
-      where:   { userId },
+      where:   {
+        userId,
+        createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+      },
       orderBy: { createdAt: 'desc' },
-      take:    30,
+      take:    300,
     }),
 
     db.storyRequest.findMany({
