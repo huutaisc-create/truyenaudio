@@ -271,7 +271,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         .ch-stat-lbl{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
 
         /* SECTION */
-        .ch-sec{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+        .ch-sec{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#ffffff;margin-bottom:14px;display:flex;align-items:center;gap:10px}
         .ch-sec::after{content:'';flex:1;height:1px;background:var(--border)}
 
         /* CARD BASE */
@@ -285,7 +285,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         .ch-streak{display:flex;align-items:center;gap:6px;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.25);border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap}
         .ch-days{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px}
         .ch-day{display:flex;flex-direction:column;align-items:center;gap:6px}
-        .ch-day-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+        .ch-day-lbl{font-size:10px;color:#ffffff;text-transform:uppercase;letter-spacing:.06em}
         .ch-day-dot{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;border:1.5px solid var(--border);background:var(--surface2);color:var(--muted)}
         .ch-day-dot.done{background:rgba(34,197,94,.25);border-color:rgba(34,197,94,.7);color:#4ade80;font-weight:800;font-size:17px}
         .ch-day-dot.done.bonus{background:linear-gradient(135deg,rgba(245,166,35,.4),rgba(255,210,60,.18));border-color:var(--gold);border-width:2px;color:var(--gold);font-size:18px;animation:bonusGlow 1.8s ease-in-out infinite}
@@ -306,7 +306,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         .ch-earn-icon.blue{background:rgba(96,165,250,.12)}
         .ch-earn-reward{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--gold);margin-bottom:2px}
         .ch-earn-card h3{font-size:15px;font-weight:700;margin-bottom:4px}
-        .ch-earn-card p{font-size:12px;color:#ffffff;line-height:1.5;margin-bottom:16px}
+        .ch-earn-card p{font-size:12px;color:#6b6b7a;line-height:1.5;margin-bottom:16px}
         .ch-badge{position:absolute;top:16px;right:16px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:var(--green);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.06em;text-transform:uppercase}
 
         /* BUTTONS */
@@ -531,7 +531,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
 
           {/* BACK BUTTON */}
           <div style={{ marginBottom:28 }}>
-            <a href="/" style={{ display:'inline-flex', alignItems:'center', gap:10, padding:'11px 22px', borderRadius:12, background:'linear-gradient(135deg,#f5a623,#c47f10)', color:'#0d0d0f', fontFamily:"'Sora',sans-serif", fontSize:13, fontWeight:800, letterSpacing:'.06em', textTransform:'uppercase', textDecoration:'none', boxShadow:'0 4px 16px rgba(245,166,35,.35)' }}>
+            <a href="/" style={{ display:'inline-flex', alignItems:'center', gap:10, padding:'11px 24px', borderRadius:12, background:'linear-gradient(135deg,#f5a623,#c47f10)', color:'#0d0d0f', fontFamily:"system-ui,-apple-system,sans-serif", fontSize:14, fontWeight:700, textDecoration:'none', boxShadow:'0 4px 16px rgba(245,166,35,.35)' }}>
               ← Về trang chủ
             </a>
           </div>
@@ -672,7 +672,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
 
             <div className="ch-app">
               <h3 style={{ fontSize:15, fontWeight:700, marginBottom:4 }}>Đặc quyền App</h3>
-              <p style={{ fontSize:12, color:'#ffffff' }}>So sánh tốc độ kiếm credit</p>
+              <p style={{ fontSize:12, color:'#6b6b7a' }}>So sánh tốc độ kiếm credit</p>
               <table className="ch-cmp">
                 <thead>
                   <tr><th>Hành động</th><th></th><th>Credit</th></tr>
