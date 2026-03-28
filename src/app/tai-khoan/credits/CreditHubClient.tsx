@@ -2,6 +2,8 @@
 // D:\Webtruyen\webtruyen-app\src\app\tai-khoan\credits\CreditHubClient.tsx
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { getRealm } from '@/components/common/RealmIcon'
+import RealmIcon from '@/components/common/RealmIcon'
 
 // ── TYPES ──────────────────────────────────────────────
 interface UserData {
@@ -78,6 +80,7 @@ function fmtDate(iso: string) {
 // ════════════════════════════════════════════════════════
 export default function CreditHubClient({ user, transactions: initTx, storyRequests }: Props) {
   const lv                  = getLevel(user.chaptersRead)
+  const realm               = getRealm(user.chaptersRead)
   const [credits, setCredits]       = useState(user.downloadCredits)
   const [videoCount, setVideoCount] = useState(() =>
     initTx.filter(t => t.type === 'ADD_APP' || t.type === 'ADD_WEB').length
@@ -411,7 +414,17 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         .ch-toast.warn{background:#200d0d;border-color:rgba(239,68,68,.7);box-shadow:0 12px 40px rgba(0,0,0,.8),0 0 0 4px rgba(239,68,68,.1)}
         .ch-toast.bonus{background:#1e1200;border-color:rgba(245,166,35,.9);box-shadow:0 12px 40px rgba(0,0,0,.8),0 0 0 4px rgba(245,166,35,.15),0 0 32px rgba(245,166,35,.2)}
 
-        /* RESPONSIVE */
+        /* MINI REALM CARD */
+        .ch-realm-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 20px 16px;border-radius:18px;flex-shrink:0;min-width:150px}
+        .ch-realm-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);padding:2px 12px;border-radius:99px;font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+        .ch-realm-name{font-size:16px;font-weight:800;text-align:center}
+        .ch-realm-stars{display:flex;gap:2px}
+        .ch-realm-prog{width:100%;height:4px;border-radius:99px;overflow:hidden;background:rgba(255,255,255,.1)}
+        .ch-realm-prog-fill{height:100%;border-radius:99px}
+        .ch-realm-next{font-size:9px;text-align:center;opacity:.65;margin-top:2px}
+        .ch-hero-inner{display:flex;align-items:flex-start;gap:24px}
+        .ch-hero-left{flex:1;min-width:0}
+        @media(max-width:520px){.ch-hero-inner{flex-direction:column}.ch-realm-card{width:100%}}
         @media(max-width:580px){
           .ch-earn,.ch-2col{grid-template-columns:1fr}
           .ch-count{font-size:64px}
@@ -531,33 +544,59 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
           {/* HERO */}
           <div className="ch-hero">
             <div className="ch-glow" />
-            <div className="ch-hero-label"><div className="ch-dot" /> Số dư hiện tại</div>
-            <div style={{ display:'flex', alignItems:'flex-end', gap:20, marginBottom:8 }}>
-              <div className="ch-count">{usable}</div>
-              <div className="ch-unit">lượt tải</div>
-            </div>
-            <div className="ch-sub">
-              Số dư tích lũy: <b>{credits.toFixed(1)}</b> credits
-              {pending > 0 && ` · ${pending.toFixed(1)} credit đang cộng dồn`}
-            </div>
-            <div className="ch-divider" />
-            <div className="ch-stats">
-              <div className="ch-stat">
-                <div className="ch-stat-val">{user.chaptersRead.toLocaleString('vi')}</div>
-                <div className="ch-stat-lbl">Chương đã đọc</div>
+            <div className="ch-hero-inner">
+              {/* LEFT: số dư + stats */}
+              <div className="ch-hero-left">
+                <div className="ch-hero-label"><div className="ch-dot" /> Số dư hiện tại</div>
+                <div style={{ display:'flex', alignItems:'flex-end', gap:20, marginBottom:8 }}>
+                  <div className="ch-count">{usable}</div>
+                  <div className="ch-unit">lượt tải</div>
+                </div>
+                <div className="ch-sub">
+                  Số dư tích lũy: <b>{credits.toFixed(1)}</b> credits
+                  {pending > 0 && ` · ${pending.toFixed(1)} credit đang cộng dồn`}
+                </div>
+                {/* Video stat dưới số credits */}
+                <div style={{ display:'inline-flex', alignItems:'center', gap:8, marginTop:10, padding:'6px 14px', borderRadius:10, background:'rgba(96,165,250,.1)', border:'1px solid rgba(96,165,250,.2)' }}>
+                  <span style={{ fontSize:15 }}>▶️</span>
+                  <span style={{ fontFamily:'var(--mono)', fontSize:14, fontWeight:700, color:'var(--blue)' }}>{videoCount}</span>
+                  <span style={{ fontSize:11, color:'rgba(255,255,255,.6)', letterSpacing:'.05em', textTransform:'uppercase' }}>video đã xem</span>
+                </div>
               </div>
-              <div className="ch-stat">
-                <div className="ch-stat-val">{videoCount}</div>
-                <div className="ch-stat-lbl">Video đã xem</div>
-              </div>
-              <div className="ch-stat">
-                <div className="ch-stat-val">{lv.icon} {lv.name}</div>
-                <div className="ch-stat-lbl">Cấp độ</div>
+
+              {/* RIGHT: mini realm card */}
+              <div className="ch-realm-card" style={{
+                background: `linear-gradient(145deg,rgba(20,20,40,.9),rgba(10,10,20,.95))`,
+                border: `1.5px solid ${realm.color}44`,
+                boxShadow: `0 0 30px ${realm.color}18, inset 0 0 20px ${realm.color}06`,
+              }}>
+                <div className="ch-realm-badge" style={{ background: realm.color, color: '#0a0a14' }}>
+                  CẤP {realm.idx + 1}
+                </div>
+                <RealmIcon chaptersRead={user.chaptersRead} size={80} />
+                <div className="ch-realm-name" style={{ color: realm.color, textShadow: `0 0 16px ${realm.color}88` }}>
+                  {realm.name}
+                </div>
+                <div className="ch-realm-stars">
+                  {Array.from({ length: 9 }).map((_, i) => (
+                    <span key={i} style={{ fontSize:10, color: i < realm.stars ? realm.color : '#2a2a3a', textShadow: i < realm.stars ? `0 0 6px ${realm.color}` : 'none' }}>★</span>
+                  ))}
+                </div>
+                {realm.nextName && (
+                  <>
+                    <div className="ch-realm-prog">
+                      <div className="ch-realm-prog-fill" style={{ width:`${realm.progressPct}%`, background:`linear-gradient(90deg,${realm.color}88,${realm.color})` }} />
+                    </div>
+                    <div className="ch-realm-next" style={{ color: realm.color }}>
+                      còn {realm.chaptersToNext.toLocaleString('vi')} chương → {realm.nextName}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
             {/* ── CHECKIN INLINE TRONG HERO ── */}
-            <div className="ch-divider" />
+            <div className="ch-divider" style={{ marginTop:20 }} />
             <div className="ch-ci-header">
               <div>
                 <h3 style={{ fontSize:14, fontWeight:700, marginBottom:3 }}>🔥 Điểm danh hằng ngày</h3>
@@ -629,24 +668,6 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
           <div className="ch-sec">Thành tích & Đặc quyền App</div>
           <div className="ch-2col">
             <div className="ch-achv">
-              <div className="ch-lv-row">
-                <div className="ch-lv-badge">{lv.icon}</div>
-                <div className="ch-lv-info">
-                  <h3>{lv.name}</h3>
-                  <p>Cấp {lv.idx + 1} · {user.chaptersRead.toLocaleString('vi')} chương đã đọc</p>
-                </div>
-              </div>
-              {lv.next && (
-                <div className="ch-xp-wrap">
-                  <div className="ch-xp-lbl">
-                    <span>{user.chaptersRead.toLocaleString('vi')} / {lv.next.min.toLocaleString('vi')} chương</span>
-                    <span>→ {lv.next.name}</span>
-                  </div>
-                  <div className="ch-xp-bar">
-                    <div className="ch-xp-fill" style={{ width:`${lv.pct}%` }} />
-                  </div>
-                </div>
-              )}
               <div className="ch-chips">
                 <div className="ch-chip">💬 {user.commentsCount} bình luận</div>
                 <div className="ch-chip">⭐ {user.reviewsCount} đánh giá</div>
