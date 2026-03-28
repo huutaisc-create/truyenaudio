@@ -2,7 +2,7 @@
 // SVG icons chính xác từ thiết kế, màu gốc từng cảnh giới
 
 export const REALMS = [
-  { name: 'Luyện Khí',        min: 0,      color: '#aaaaaa', glow: 'rgba(180,180,180,0.25)', world: 'Phàm Giới' },
+  { name: 'Luyện Khí',        min: 0,      color: '#ffffff', glow: 'rgba(180,180,180,0.25)', world: 'Phàm Giới' },
   { name: 'Trúc Cơ',          min: 100,    color: '#7ec87e', glow: 'rgba(126,200,126,0.3)',  world: 'Phàm Giới' },
   { name: 'Kim Đan',          min: 300,    color: '#f0c040', glow: 'rgba(240,192,64,0.35)',  world: 'Phàm Giới' },
   { name: 'Nguyên Anh',       min: 700,    color: '#80c8ff', glow: 'rgba(128,200,255,0.35)', world: 'Phàm Giới' },
