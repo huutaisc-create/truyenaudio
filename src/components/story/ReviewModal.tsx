@@ -26,7 +26,10 @@ export default function ReviewModal({ isOpen, onClose, storyId }: ReviewModalPro
         setIsSubmitting(false);
 
         if (result.success) {
-            alert("Cảm ơn bạn đã đánh giá!");
+            const msg = result.creditMessage
+                ? `Cảm ơn bạn đã đánh giá!\n\n${result.creditMessage}`
+                : "Cảm ơn bạn đã đánh giá!";
+            alert(msg);
             router.refresh();
             onClose();
         } else {

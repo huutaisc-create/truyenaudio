@@ -1,8 +1,10 @@
 "use server";
 
+// D:\Webtruyen\webtruyen-app\src\actions\interactions.ts
+
 import db from "@/lib/db";
 import { auth } from "@/auth";
-import { revalidatePath } from "next/cache";
+import { rewardCredit } from "@/lib/credits";
 
 export async function toggleFollow(storyId: string) {
     const session = await auth();
@@ -42,13 +44,33 @@ export async function toggleLike(storyId: string) {
         });
 
         if (existing) {
+            // Bỏ like — không trừ credit
             await db.like.delete({ where: { id: existing.id } });
             await db.story.update({ where: { id: storyId }, data: { likeCount: { decrement: 1 } } });
-            return { liked: false };
+            return { liked: false, creditMessage: null };
         } else {
+            // Like mới
             await db.like.create({ data: { userId, storyId } });
             await db.story.update({ where: { id: storyId }, data: { likeCount: { increment: 1 } } });
-            return { liked: true };
+
+            const story = await db.story.findUnique({
+                where: { id: storyId },
+                select: { title: true },
+            });
+
+            // +0.5 credit, tối đa 1 truyện/ngày
+            const rewardResult = await rewardCredit(
+                userId,
+                'REWARD_LIKE',
+                `[${storyId}] Yêu thích truyện: ${story?.title ?? storyId}`,
+                { amount: 0.5, maxPerDay: 1, minLength: 0, storyId }
+            );
+
+            const creditMessage = rewardResult.rewarded
+                ? '✅ +0.5 credit cho lượt yêu thích!'
+                : `ℹ️ ${rewardResult.reason}`;
+
+            return { liked: true, creditMessage };
         }
     } catch (e) {
         console.error(e);
@@ -69,15 +91,35 @@ export async function nominateStory(storyId: string) {
     // today.setHours(0,0,0,0);
     // const existing = await db.nomination.findFirst({ where: { userId, storyId, createdAt: { gte: today } } });
 
+    const userId = session.user.id;
+
     try {
         await db.nomination.create({
-            data: { userId: session.user.id, storyId }
+            data: { userId, storyId }
         });
         await db.story.update({
             where: { id: storyId },
             data: { nominationCount: { increment: 1 } }
         });
-        return { success: true };
+
+        const story = await db.story.findUnique({
+            where: { id: storyId },
+            select: { title: true },
+        });
+
+        // +0.5 credit, tối đa 1 truyện/ngày
+        const rewardResult = await rewardCredit(
+            userId,
+            'REWARD_NOMINATION',
+            `[${storyId}] Đề cử truyện: ${story?.title ?? storyId}`,
+            { amount: 0.5, maxPerDay: 1, minLength: 0, storyId }
+        );
+
+        const creditMessage = rewardResult.rewarded
+            ? '✅ +0.5 credit cho lượt đề cử!'
+            : `ℹ️ ${rewardResult.reason}`;
+
+        return { success: true, creditMessage };
     } catch (e) {
         console.error(e);
         return { error: "Lỗi hệ thống" };

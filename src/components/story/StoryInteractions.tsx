@@ -33,6 +33,7 @@ export default function StoryInteractions({ storyId, storySlug, firstChapterId, 
     const lastRead = history.find(h => h.slug === storySlug);
     const [status, setStatus] = useState(initialStatus);
     const [jumpChapter, setJumpChapter] = useState("");
+    const [creditToast, setCreditToast] = useState<string | null>(null);
     const router = useRouter();
 
     // FIX: mounted check để tránh hydration mismatch → hiện trên mobile
@@ -58,6 +59,9 @@ export default function StoryInteractions({ storyId, storySlug, firstChapterId, 
             setStatus(prev => ({ ...prev, isLiked: !newLiked }));
             setStats(prev => ({ ...prev, likeCount: prev.likeCount + (newLiked ? -1 : 1) }));
             alert(res.error);
+        } else if (newLiked && res.creditMessage) {
+            setCreditToast(res.creditMessage);
+            setTimeout(() => setCreditToast(null), 4000);
         }
     };
 
@@ -83,7 +87,11 @@ export default function StoryInteractions({ storyId, storySlug, firstChapterId, 
             setStats(prev => ({ ...prev, nominationCount: prev.nominationCount - 1 }));
             alert(res.error);
         } else {
-            alert("Đề cử thành công!");
+            const msg = res.creditMessage
+                ? `Đề cử thành công!\n${res.creditMessage}`
+                : "Đề cử thành công!";
+            setCreditToast(msg.replace('\n', ' · '));
+            setTimeout(() => setCreditToast(null), 4000);
         }
     };
 
@@ -99,6 +107,22 @@ export default function StoryInteractions({ storyId, storySlug, firstChapterId, 
 
     return (
         <div className="flex flex-col gap-3">
+
+            {/* Toast thông báo credit */}
+            {creditToast && (
+                <div
+                    className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium border animate-in fade-in slide-in-from-top-2 duration-300 ${
+                        creditToast.startsWith('✅')
+                            ? 'bg-green-50 border-green-200 text-green-800'
+                            : 'bg-amber-50 border-amber-200 text-amber-800'
+                    }`}
+                    role="status"
+                    aria-live="polite"
+                >
+                    <span className="flex-1">{creditToast}</span>
+                    <button onClick={() => setCreditToast(null)} className="shrink-0 opacity-60 hover:opacity-100">✕</button>
+                </div>
+            )}
 
             {/* Interaction bar — label trên, icon+số dưới, click tăng */}
             <div className="flex rounded-xl overflow-hidden border border-warm-border-soft">

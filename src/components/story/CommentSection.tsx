@@ -1,5 +1,7 @@
 "use client";
 
+// D:\Webtruyen\webtruyen-app\src\components\story\CommentSection.tsx
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Heart, CornerDownRight, Send, Loader2, Trash2, X } from "lucide-react";
 import Image from "next/image";
@@ -71,6 +73,32 @@ function Avatar({ name, image, size = 38 }: { name: string; image?: string | nul
     );
 }
 
+// Toast thông báo credit — tự động ẩn sau 4 giây
+function CreditToast({ message, onClose }: { message: string; onClose: () => void }) {
+    useEffect(() => {
+        const t = setTimeout(onClose, 4000);
+        return () => clearTimeout(t);
+    }, [onClose]);
+
+    const isSuccess = message.startsWith("✅");
+    return (
+        <div
+            className={`flex items-start gap-2 px-4 py-3 rounded-xl text-sm font-medium border animate-in fade-in slide-in-from-bottom-2 duration-300 ${
+                isSuccess
+                    ? "bg-green-50 border-green-200 text-green-800"
+                    : "bg-amber-50 border-amber-200 text-amber-800"
+            }`}
+            role="status"
+            aria-live="polite"
+        >
+            <span className="flex-1">{message}</span>
+            <button onClick={onClose} className="shrink-0 opacity-60 hover:opacity-100">
+                <X className="h-3.5 w-3.5" />
+            </button>
+        </div>
+    );
+}
+
 export default function CommentSection({ storySlug, currentUser }: CommentSectionProps) {
     const [comments, setComments] = useState<Comment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -81,7 +109,9 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
     const [content, setContent] = useState("");
     const [isSending, setIsSending] = useState(false);
 
-    // replyTo: comment đang được reply
+    // Toast thông báo credit
+    const [creditToast, setCreditToast] = useState<string | null>(null);
+
     const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -110,7 +140,7 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
         fetchComments();
     }, [storySlug]);
 
-    // ── Load more (older) ──────────────────────────────────────
+    // ── Load more ──────────────────────────────────────────────
     const handleLoadMore = useCallback(async () => {
         if (!hasMore || isLoadingMore || !nextCursor) return;
         setIsLoadingMore(true);
@@ -121,7 +151,6 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
             if (res.ok) {
                 const json = await res.json();
                 if (json.success) {
-                    // older comments prepend lên đầu
                     setComments(prev => [...json.data, ...prev]);
                     setHasMore(json.hasMore);
                     setNextCursor(json.nextCursor);
@@ -142,7 +171,6 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
             return;
         }
 
-        // Nếu đang reply, prepend @tên vào nội dung
         const body = replyTo
             ? `@${replyTo.name} ${content.trim()}`
             : content.trim();
@@ -154,6 +182,7 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ content: body }),
             });
+
             if (res.ok) {
                 const json = await res.json();
                 if (json.success) {
@@ -161,10 +190,14 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                     setContent("");
                     setReplyTo(null);
                     textareaRef.current?.focus();
-                    // Scroll xuống cuối
                     setTimeout(() => {
                         window.scrollBy({ top: 999, behavior: "smooth" });
                     }, 100);
+
+                    // Hiển thị toast thông báo credit
+                    if (json.creditMessage) {
+                        setCreditToast(json.creditMessage);
+                    }
                 }
             } else {
                 const err = await res.json();
@@ -177,77 +210,45 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
         }
     };
 
-    // ── Toggle like ────────────────────────────────────────────
+    // ── Like comment ──────────────────────────────────────────
     const handleLike = async (commentId: string) => {
         if (!currentUser) {
             window.location.href = "/login?callbackUrl=" + window.location.pathname;
             return;
         }
-
-        // Optimistic update
         setComments(prev =>
             prev.map(c =>
                 c.id === commentId
-                    ? { ...c, isLiked: !c.isLiked, likeCount: c.isLiked ? c.likeCount - 1 : c.likeCount + 1 }
+                    ? { ...c, isLiked: !c.isLiked, likeCount: c.likeCount + (c.isLiked ? -1 : 1) }
                     : c
             )
         );
-
         try {
-            const res = await fetch(
-                `/api/stories/${storySlug}/comments/${commentId}/like`,
-                { method: "POST" }
-            );
-            if (res.ok) {
-                const json = await res.json();
-                if (json.success) {
-                    // Sync với data thật từ server
-                    setComments(prev =>
-                        prev.map(c =>
-                            c.id === commentId
-                                ? { ...c, isLiked: json.data.isLiked, likeCount: json.data.likeCount }
-                                : c
-                        )
-                    );
-                }
-            } else {
-                // Rollback nếu lỗi
-                setComments(prev =>
-                    prev.map(c =>
-                        c.id === commentId
-                            ? { ...c, isLiked: !c.isLiked, likeCount: c.isLiked ? c.likeCount - 1 : c.likeCount + 1 }
-                            : c
-                    )
-                );
-            }
+            await fetch(`/api/stories/${storySlug}/comments/${commentId}/like`, { method: "POST" });
         } catch {
-            // Rollback
+            // rollback nếu lỗi
             setComments(prev =>
                 prev.map(c =>
                     c.id === commentId
-                        ? { ...c, isLiked: !c.isLiked, likeCount: c.isLiked ? c.likeCount - 1 : c.likeCount + 1 }
+                        ? { ...c, isLiked: !c.isLiked, likeCount: c.likeCount + (c.isLiked ? -1 : 1) }
                         : c
                 )
             );
         }
     };
 
-    // ── Xóa comment ───────────────────────────────────────────
+    // ── Delete comment ────────────────────────────────────────
     const handleDelete = async (commentId: string) => {
-        if (!confirm("Bạn có chắc muốn xóa bình luận này?")) return;
+        if (!confirm("Xóa bình luận này?")) return;
         try {
-            const res = await fetch(
-                `/api/stories/${storySlug}/comments/${commentId}`,
-                { method: "DELETE" }
-            );
+            const res = await fetch(`/api/stories/${storySlug}/comments/${commentId}`, {
+                method: "DELETE",
+            });
             if (res.ok) {
                 setComments(prev => prev.filter(c => c.id !== commentId));
-            } else {
-                const err = await res.json();
-                alert(err.error || "Xóa thất bại");
             }
         } catch {
-            alert("Lỗi kết nối, thử lại sau");
+            alert("Xóa thất bại, thử lại sau");
         }
     };
 
@@ -255,7 +256,6 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
         currentUser &&
         (currentUser.id === comment.user.id || currentUser.role === "ADMIN");
 
-    // ── Reply: focus textarea + set replyTo ───────────────────
     const handleReply = (comment: Comment) => {
         if (!currentUser) {
             window.location.href = "/login?callbackUrl=" + window.location.pathname;
@@ -282,7 +282,7 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                 )}
             </h2>
 
-            {/* Load more (older) button */}
+            {/* Load more button */}
             {hasMore && (
                 <div ref={topRef} className="flex justify-center mb-4">
                     <button
@@ -331,21 +331,16 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                                 <div className="flex items-center gap-4 text-sm text-warm-ink-soft flex-wrap">
                                     <time dateTime={comment.createdAt}>{timeAgo(comment.createdAt)}</time>
 
-                                    {/* Like */}
                                     <button
                                         onClick={() => handleLike(comment.id)}
-                                        aria-label={`${comment.isLiked ? "Bỏ thích" : "Thích"} bình luận của ${comment.user.name}. ${comment.likeCount} lượt thích`}
+                                        aria-label={`${comment.isLiked ? "Bỏ thích" : "Thích"} bình luận của ${comment.user.name}`}
                                         aria-pressed={comment.isLiked}
                                         className={`flex items-center gap-1 transition-colors ${comment.isLiked ? "text-red-500" : "hover:text-red-400"}`}
                                     >
-                                        <Heart
-                                            className={`h-3.5 w-3.5 ${comment.isLiked ? "fill-current" : ""}`}
-                                            aria-hidden="true"
-                                        />
+                                        <Heart className={`h-3.5 w-3.5 ${comment.isLiked ? "fill-current" : ""}`} aria-hidden="true" />
                                         <span>{comment.likeCount > 0 ? comment.likeCount : "Thích"}</span>
                                     </button>
 
-                                    {/* Reply */}
                                     <button
                                         onClick={() => handleReply(comment)}
                                         className="flex items-center gap-1 hover:text-warm-primary transition-colors"
@@ -355,7 +350,6 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                                         Trả lời
                                     </button>
 
-                                    {/* Delete */}
                                     {canDelete(comment) && (
                                         <button
                                             onClick={() => handleDelete(comment.id)}
@@ -390,6 +384,15 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                             </button>
                         </div>
                     )}
+
+                    {/* Toast thông báo credit */}
+                    {creditToast && (
+                        <CreditToast
+                            message={creditToast}
+                            onClose={() => setCreditToast(null)}
+                        />
+                    )}
+
                     <textarea
                         ref={textareaRef}
                         value={content}
@@ -399,7 +402,7 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                             currentUser
                                 ? replyTo
                                     ? `Trả lời ${replyTo.name}...`
-                                    : "Chia sẻ cảm nhận của bạn về truyện..."
+                                    : "Chia sẻ cảm nhận của bạn (≥20 ký tự để nhận +0.2 credit)..."
                                 : "Đăng nhập để bình luận..."
                         }
                         rows={3}
@@ -407,9 +410,9 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                         disabled={!currentUser}
                         className="w-full px-4 py-3 text-sm rounded-xl resize-none outline-none transition-all bg-warm-bg border border-warm-border text-warm-ink placeholder:text-warm-ink-soft focus:border-warm-primary disabled:opacity-60"
                     />
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm text-warm-ink-soft" aria-hidden="true">
-                            Ctrl+Enter để gửi
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-xs text-warm-ink-soft" aria-hidden="true">
+                            Ctrl+Enter để gửi · ≥20 ký tự để nhận credit
                         </span>
                         <button
                             onClick={handleSend}

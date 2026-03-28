@@ -21,6 +21,7 @@ export type SearchParams = {
 }
 
 import { auth } from '@/auth';
+import { rewardCredit } from '@/lib/credits';
 
 export async function searchStories(params: SearchParams) {
     const {
@@ -424,6 +425,12 @@ export async function submitReview(storyId: string, rating: number, content: str
     }
 
     try {
+        // Lấy tên truyện để ghi note
+        const story = await db.story.findUnique({
+            where: { id: storyId },
+            select: { title: true, ratingScore: true, ratingCount: true }
+        });
+
         await db.$transaction(async (tx) => {
             await tx.review.create({
                 data: {
@@ -432,11 +439,6 @@ export async function submitReview(storyId: string, rating: number, content: str
                     rating,
                     content
                 }
-            });
-
-            const story = await tx.story.findUnique({
-                where: { id: storyId },
-                select: { ratingScore: true, ratingCount: true }
             });
 
             if (story) {
@@ -455,7 +457,28 @@ export async function submitReview(storyId: string, rating: number, content: str
             }
         });
 
-        return { success: true };
+        // Tính credit — phải ở 5 truyện khác nhau, nội dung >= 20 ký tự
+        const rewardResult = await rewardCredit(
+            session.user.id,
+            'REWARD_REVIEW',
+            `[${storyId}] Đánh giá truyện: ${story?.title ?? storyId}`,
+            {
+                content: content ?? '',
+                amount: 0.2,
+                maxPerDay: 5,
+                minLength: 20,
+                storyId,
+            }
+        );
+
+        let creditMessage: string;
+        if (rewardResult.rewarded) {
+            creditMessage = '✅ +0.2 credit cho đánh giá này!';
+        } else {
+            creditMessage = `ℹ️ ${rewardResult.reason}`;
+        }
+
+        return { success: true, creditMessage };
     } catch (error) {
         console.error("Submit Review Error:", error);
         return { success: false, error: "Lỗi hệ thống, vui lòng thử lại sau." };
