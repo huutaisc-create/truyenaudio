@@ -275,7 +275,12 @@ export default function ListeningClient({
   const [commentInput, setCommentInput] = useState('');
   const [commentSending, setCommentSending] = useState(false);
   const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
+  const [commentPage, setCommentPage] = useState(1);
+  const COMMENTS_PER_PAGE = 20;
   const [infoLoaded, setInfoLoaded] = useState(false);
+  const [reviewPage, setReviewPage] = useState(1);
+  const REVIEWS_PER_PAGE = 20;
+  const [descExpanded, setDescExpanded] = useState(false);
   const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // ── Interaction state (like / follow / nominate) ──
@@ -392,6 +397,7 @@ export default function ListeningClient({
 
   // ── IntersectionObserver: desktop panel ──
   useEffect(() => {
+    if (desktopTab !== 'chapters') return; // sentinel chỉ tồn tại khi tab chapters active
     const el = desktopSentinelRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(entries => {
@@ -402,7 +408,7 @@ export default function ListeningClient({
     }, { threshold: 0.1 });
     obs.observe(el);
     return () => obs.disconnect();
-  }, [sortedChapters.length, loadMoreChapters]);
+  }, [desktopTab, sortedChapters.length, loadMoreChapters]);
 
   // ── Fetch comments (lazy: chỉ khi user mở tab lần đầu) ──
   const fetchComments = useCallback(async () => {
@@ -416,6 +422,7 @@ export default function ListeningClient({
           setCommentHasMore(json.hasMore ?? false);
           setCommentNextCursor(json.nextCursor ?? null);
           setCommentLoaded(true);
+          setCommentPage(1);
         }
       }
     } catch (e) { console.error(e); }
@@ -583,7 +590,7 @@ export default function ListeningClient({
     if (tab === 'comments' && !commentLoaded) {
       fetchComments();
     }
-    if (tab === 'info') setInfoLoaded(true);
+    if (tab === 'info') { setInfoLoaded(true); setReviewPage(1); }
   }, [commentLoaded, fetchComments]);
 
   // ── Desktop tab switch ──
@@ -1927,36 +1934,111 @@ export default function ListeningClient({
       {storyInfo.description && (
         <div>
           <p className="text-[12px] font-black uppercase tracking-[.1em] text-white mb-3">Giới thiệu</p>
-          <p className="text-[14px] text-white leading-relaxed line-clamp-6">{storyInfo.description}</p>
+          <div className="relative">
+            <p className={`text-[14px] text-white leading-relaxed transition-all ${descExpanded ? '' : 'line-clamp-6'}`}>
+              {storyInfo.description}
+            </p>
+            {!descExpanded && (
+              <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-[#0f0d0a] to-transparent pointer-events-none" />
+            )}
+          </div>
+          <button
+            onClick={() => setDescExpanded(v => !v)}
+            className="mt-2 flex items-center gap-1 text-[11px] font-bold text-[#e8580a] hover:text-[#ff7c35] transition-colors"
+          >
+            {descExpanded ? (
+              <>Thu gọn <ChevronDown size={12} className="rotate-180 transition-transform" /></>
+            ) : (
+              <>Xem thêm <ChevronDown size={12} className="transition-transform" /></>
+            )}
+          </button>
         </div>
       )}
 
       {/* Reviews */}
       {storyInfo.reviews?.length > 0 && (
         <div>
-          <p className="text-[12px] font-black uppercase tracking-[.1em] text-white mb-3">Đánh giá</p>
-          <div className="flex flex-col gap-3">
-            {storyInfo.reviews.map(r => (
-              <div key={r.id} className="bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 py-3">
-                <div className="flex items-center gap-2 mb-2">
-                  {r.user.image
-                    ? <img src={r.user.image} alt={r.user.name} className="w-7 h-7 rounded-full object-cover" />
-                    : <div className="w-7 h-7 rounded-full bg-white/[0.1] flex items-center justify-center text-[11px] font-bold text-white">{r.user.name?.[0]?.toUpperCase()}</div>
-                  }
-                  <span className="text-[12px] font-bold text-[#f0ebe4]">{r.user.name}</span>
-                  <div className="flex items-center gap-0.5 ml-auto">
-                    {[1,2,3,4,5].map(i => (
-                      <svg key={i} width="10" height="10" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1.5" opacity={i <= r.rating ? 1 : 0.25}>
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                      </svg>
-                    ))}
-                  </div>
-                </div>
-                {r.content && <p className="text-[12px] text-[#c0b9b0] leading-relaxed">{r.content}</p>}
-                <p className="text-[10px] text-[#8a7e72] mt-1.5">{new Date(r.createdAt).toLocaleDateString('vi-VN')}</p>
-              </div>
-            ))}
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[12px] font-black uppercase tracking-[.1em] text-white">
+              Đánh giá
+              <span className="ml-1.5 text-[#8a7e72] font-normal normal-case tracking-normal">({storyInfo.reviews.length})</span>
+            </p>
+            {storyInfo.reviews.length > REVIEWS_PER_PAGE && (
+              <span className="text-[10px] text-[#8a7e72]">
+                Trang {reviewPage} / {Math.ceil(storyInfo.reviews.length / REVIEWS_PER_PAGE)}
+              </span>
+            )}
           </div>
+
+          {/* Scrollable review list */}
+          <div className="overflow-y-auto max-h-[420px] pr-1 space-y-2.5 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            {storyInfo.reviews
+              .slice((reviewPage - 1) * REVIEWS_PER_PAGE, reviewPage * REVIEWS_PER_PAGE)
+              .map(r => (
+                <div key={r.id} className="bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 py-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    {r.user.image
+                      ? <img src={r.user.image} alt={r.user.name} className="w-7 h-7 rounded-full object-cover" />
+                      : <div className="w-7 h-7 rounded-full bg-white/[0.1] flex items-center justify-center text-[11px] font-bold text-white">{r.user.name?.[0]?.toUpperCase()}</div>
+                    }
+                    <span className="text-[12px] font-bold text-[#f0ebe4]">{r.user.name}</span>
+                    <div className="flex items-center gap-0.5 ml-auto">
+                      {[1,2,3,4,5].map(i => (
+                        <svg key={i} width="10" height="10" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1.5" opacity={i <= r.rating ? 1 : 0.25}>
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                      ))}
+                    </div>
+                  </div>
+                  {r.content && <p className="text-[12px] text-[#c0b9b0] leading-relaxed">{r.content}</p>}
+                  <p className="text-[10px] text-[#8a7e72] mt-1.5">{new Date(r.createdAt).toLocaleDateString('vi-VN')}</p>
+                </div>
+              ))}
+          </div>
+
+          {/* Pagination controls */}
+          {storyInfo.reviews.length > REVIEWS_PER_PAGE && (
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <button
+                onClick={() => setReviewPage(p => Math.max(1, p - 1))}
+                disabled={reviewPage === 1}
+                className="px-3 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08] text-[11px] text-[#f0ebe4] disabled:opacity-30 hover:bg-white/[0.1] transition-colors"
+              >
+                ‹ Trước
+              </button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.ceil(storyInfo.reviews.length / REVIEWS_PER_PAGE) }).map((_, i) => {
+                  const pg = i + 1;
+                  const total = Math.ceil(storyInfo.reviews.length / REVIEWS_PER_PAGE);
+                  if (total <= 7 || pg === 1 || pg === total || Math.abs(pg - reviewPage) <= 1) {
+                    return (
+                      <button
+                        key={pg}
+                        onClick={() => setReviewPage(pg)}
+                        className={`w-6 h-6 rounded text-[10px] font-bold transition-colors ${reviewPage === pg
+                          ? 'bg-[#e8580a] text-white'
+                          : 'bg-white/[0.05] text-[#8a7e72] hover:bg-white/[0.1]'
+                        }`}
+                      >
+                        {pg}
+                      </button>
+                    );
+                  }
+                  if (Math.abs(pg - reviewPage) === 2) {
+                    return <span key={pg} className="text-[10px] text-[#8a7e72]">…</span>;
+                  }
+                  return null;
+                })}
+              </div>
+              <button
+                onClick={() => setReviewPage(p => Math.min(Math.ceil(storyInfo.reviews.length / REVIEWS_PER_PAGE), p + 1))}
+                disabled={reviewPage === Math.ceil(storyInfo.reviews.length / REVIEWS_PER_PAGE)}
+                className="px-3 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08] text-[11px] text-[#f0ebe4] disabled:opacity-30 hover:bg-white/[0.1] transition-colors"
+              >
+                Sau ›
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1965,12 +2047,15 @@ export default function ListeningClient({
   // ─────────────────────────────────────────────────────────
   // ── COMMENTS PANEL ──
   // ─────────────────────────────────────────────────────────
+  const totalCommentPages = Math.max(1, Math.ceil(comments.length / COMMENTS_PER_PAGE));
+  const pagedComments = comments.slice((commentPage - 1) * COMMENTS_PER_PAGE, commentPage * COMMENTS_PER_PAGE);
+
   const CommentsPanel = (
     <div className="flex flex-col h-full">
       {/* Comment list */}
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
 
-        {/* Load more older */}
+        {/* Load more older (from server) */}
         {commentHasMore && (
           <div className="flex justify-center pb-3">
             <button
@@ -1992,56 +2077,113 @@ export default function ListeningClient({
         ) : comments.length === 0 ? (
           <p className="text-[11px] text-[#8a7e72] text-center py-8 italic">Chưa có bình luận nào. Hãy là người đầu tiên! 💬</p>
         ) : (
-          <ol aria-label="Danh sách bình luận" className="space-y-0.5">
-            {comments.map(cmt => (
-              <li key={cmt.id} className="flex gap-2.5 p-2.5 rounded-xl hover:bg-white/[0.03] transition-colors">
-                {getAvatar(cmt.user.name, cmt.user.image, 28)}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                    <span className="text-[14px] font-bold text-white">{cmt.user.name}</span>
-                    {cmt.user.role === 'ADMIN' && (
-                      <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-[#e8580a] text-white uppercase tracking-wider">Admin</span>
-                    )}
-                    <time dateTime={cmt.createdAt} className="text-[12px] text-white/80">{timeAgo(cmt.createdAt)}</time>
-                  </div>
-                  <p className="text-[14px] text-white leading-relaxed mb-1.5 whitespace-pre-wrap">{cmt.content}</p>
-                  <div className="flex items-center gap-3">
-                    {/* Like */}
-                    <button
-                      onClick={() => handleLikeComment(cmt.id)}
-                      aria-label={`${cmt.isLiked ? 'Bỏ thích' : 'Thích'} bình luận của ${cmt.user.name}. ${cmt.likeCount} lượt thích`}
-                      aria-pressed={cmt.isLiked}
-                      className={`flex items-center gap-1 text-[13px] font-semibold transition-colors ${cmt.isLiked ? 'text-[#e8580a]' : 'text-[#e8580a] hover:opacity-80'}`}
-                    >
-                      <Heart size={11} className={cmt.isLiked ? 'fill-current' : ''} />
-                      <span>{cmt.likeCount > 0 ? cmt.likeCount : 'Thích'}</span>
-                    </button>
-                    {/* Reply */}
-                    <button
-                      onClick={() => handleReplyComment(cmt)}
-                      aria-label={`Trả lời bình luận của ${cmt.user.name}`}
-                      className="flex items-center gap-1 text-[13px] font-semibold text-[#e8580a] transition-colors"
-                    >
-                      <CornerDownRight size={11} />
-                      Trả lời
-                    </button>
-                    {/* Delete */}
-                    {currentUser && (currentUser.id === cmt.user.id || currentUser.role === 'ADMIN') && (
+          <>
+            {/* Page info header */}
+            <div className="flex items-center justify-between pb-2 px-0.5">
+              <span className="text-[10px] text-[#8a7e72]">
+                {comments.length} bình luận
+              </span>
+              {totalCommentPages > 1 && (
+                <span className="text-[10px] text-[#8a7e72]">
+                  Trang {commentPage} / {totalCommentPages}
+                </span>
+              )}
+            </div>
+
+            <ol aria-label="Danh sách bình luận" className="space-y-0.5">
+              {pagedComments.map(cmt => (
+                <li key={cmt.id} className="flex gap-2.5 p-2.5 rounded-xl hover:bg-white/[0.03] transition-colors">
+                  {getAvatar(cmt.user.name, cmt.user.image, 28)}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                      <span className="text-[14px] font-bold text-white">{cmt.user.name}</span>
+                      {cmt.user.role === 'ADMIN' && (
+                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-[#e8580a] text-white uppercase tracking-wider">Admin</span>
+                      )}
+                      <time dateTime={cmt.createdAt} className="text-[12px] text-white/80">{timeAgo(cmt.createdAt)}</time>
+                    </div>
+                    <p className="text-[14px] text-white leading-relaxed mb-1.5 whitespace-pre-wrap">{cmt.content}</p>
+                    <div className="flex items-center gap-3">
+                      {/* Like */}
                       <button
-                        onClick={() => {
-                          if (confirm('Bạn có chắc muốn xóa bình luận này?')) handleDeleteComment(cmt.id);
-                        }}
-                        aria-label={`Xóa bình luận của ${cmt.user.name}`}
-                        className="flex items-center gap-1 text-[10px] text-[#8a7e72] hover:text-red-500 transition-colors ml-auto"
+                        onClick={() => handleLikeComment(cmt.id)}
+                        aria-label={`${cmt.isLiked ? 'Bỏ thích' : 'Thích'} bình luận của ${cmt.user.name}. ${cmt.likeCount} lượt thích`}
+                        aria-pressed={cmt.isLiked}
+                        className={`flex items-center gap-1 text-[13px] font-semibold transition-colors ${cmt.isLiked ? 'text-[#e8580a]' : 'text-[#e8580a] hover:opacity-80'}`}
                       >
-                        <Trash2 size={11} />
+                        <Heart size={11} className={cmt.isLiked ? 'fill-current' : ''} />
+                        <span>{cmt.likeCount > 0 ? cmt.likeCount : 'Thích'}</span>
                       </button>
-                    )}
+                      {/* Reply */}
+                      <button
+                        onClick={() => handleReplyComment(cmt)}
+                        aria-label={`Trả lời bình luận của ${cmt.user.name}`}
+                        className="flex items-center gap-1 text-[13px] font-semibold text-[#e8580a] transition-colors"
+                      >
+                        <CornerDownRight size={11} />
+                        Trả lời
+                      </button>
+                      {/* Delete */}
+                      {currentUser && (currentUser.id === cmt.user.id || currentUser.role === 'ADMIN') && (
+                        <button
+                          onClick={() => {
+                            if (confirm('Bạn có chắc muốn xóa bình luận này?')) handleDeleteComment(cmt.id);
+                          }}
+                          aria-label={`Xóa bình luận của ${cmt.user.name}`}
+                          className="flex items-center gap-1 text-[10px] text-[#8a7e72] hover:text-red-500 transition-colors ml-auto"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      )}
+                    </div>
                   </div>
+                </li>
+              ))}
+            </ol>
+
+            {/* Comment pagination controls */}
+            {totalCommentPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-3 pb-1">
+                <button
+                  onClick={() => setCommentPage(p => Math.max(1, p - 1))}
+                  disabled={commentPage === 1}
+                  className="px-3 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08] text-[11px] text-[#f0ebe4] disabled:opacity-30 hover:bg-white/[0.1] transition-colors"
+                >
+                  ‹ Trước
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalCommentPages }).map((_, i) => {
+                    const pg = i + 1;
+                    if (totalCommentPages <= 7 || pg === 1 || pg === totalCommentPages || Math.abs(pg - commentPage) <= 1) {
+                      return (
+                        <button
+                          key={pg}
+                          onClick={() => setCommentPage(pg)}
+                          className={`w-6 h-6 rounded text-[10px] font-bold transition-colors ${commentPage === pg
+                            ? 'bg-[#e8580a] text-white'
+                            : 'bg-white/[0.05] text-[#8a7e72] hover:bg-white/[0.1]'
+                          }`}
+                        >
+                          {pg}
+                        </button>
+                      );
+                    }
+                    if (Math.abs(pg - commentPage) === 2) {
+                      return <span key={pg} className="text-[10px] text-[#8a7e72]">…</span>;
+                    }
+                    return null;
+                  })}
                 </div>
-              </li>
-            ))}
-          </ol>
+                <button
+                  onClick={() => setCommentPage(p => Math.min(totalCommentPages, p + 1))}
+                  disabled={commentPage === totalCommentPages}
+                  className="px-3 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08] text-[11px] text-[#f0ebe4] disabled:opacity-30 hover:bg-white/[0.1] transition-colors"
+                >
+                  Sau ›
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
