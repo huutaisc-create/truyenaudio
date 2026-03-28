@@ -87,17 +87,12 @@ export async function POST(
       },
     });
 
-    // Tính credit — chờ kết quả để trả về thông báo cho user
-    // Điều kiện:
-    //   - Nội dung >= 20 ký tự
-    //   - Cooldown 60 giây giữa 2 lần liên tiếp
-    //   - Mỗi truyện chỉ tính 1 lần/ngày (storyId check)
-    //   - Tối đa 5 truyện khác nhau/ngày
+    // Tính credit
+    // Note hiển thị cho user: KHÔNG có storyId raw
     const rewardResult = await rewardCredit(
       authUser.id,
       'REWARD_COMMENT',
-      // Embed storyId vào note để check "truyện khác nhau"
-      `[${story.id}] Bình luận truyện: ${story.title}`,
+      `Bình luận truyện: ${story.title}`,  // note thân thiện, storyId sẽ được prefix bởi rewardCredit
       {
         content: content.trim(),
         amount: 0.2,
@@ -108,17 +103,26 @@ export async function POST(
       }
     );
 
-    // Tạo message thông báo credit rõ ràng cho user
-    let creditMessage: string;
+    // Toast message đầy đủ thông tin
+    let creditMessage: string
+    let cooldownSeconds: number | undefined
+
     if (rewardResult.rewarded) {
-      creditMessage = '✅ +0.2 credit cho bình luận này!';
+      const usable  = rewardResult.usable
+      creditMessage = `✅ Bạn vừa cộng được +0.2 credit · Còn ${usable} lượt tải`
     } else {
-      creditMessage = `ℹ️ ${rewardResult.reason}`;
+      if ('cooldownSeconds' in rewardResult && rewardResult.cooldownSeconds) {
+        cooldownSeconds = rewardResult.cooldownSeconds
+        creditMessage = `⏳ Vui lòng chờ ${rewardResult.cooldownSeconds} giây trước khi bình luận tiếp`
+      } else {
+        creditMessage = `ℹ️ ${rewardResult.reason}`
+      }
     }
 
     return NextResponse.json({
       success: true,
       creditMessage,
+      cooldownSeconds,
       data: {
         id: comment.id,
         content: comment.content,

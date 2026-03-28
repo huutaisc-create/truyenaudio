@@ -54,8 +54,8 @@ export type RewardType =
   | 'REWARD_LIKE'
 
 export type RewardResult =
-  | { rewarded: true }
-  | { rewarded: false; reason: string }
+  | { rewarded: true; newBalance: number; usable: number }
+  | { rewarded: false; reason: string; cooldownSeconds?: number }
 
 /**
  * Thưởng credit cho tương tác.
@@ -63,14 +63,21 @@ export type RewardResult =
  * options:
  *   content         — text để check độ dài (undefined = bỏ qua check)
  *   amount          — credit thưởng (default 0.2)
- *   maxPerDay       — giới hạn lần/ngày (default 5)
+ *   maxPerDay       — giới hạn số truyện khác nhau/ngày (default 5)
  *   minLength       — ký tự tối thiểu (default 20, 0 = bỏ qua)
  *   storyId         — nếu truyền → check chưa được thưởng type này ở truyện này hôm nay
+ *                     VÀ check tổng số truyện khác nhau hôm nay
  *   cooldownSeconds — cooldown giữa 2 lần liên tiếp tính bằng giây (0 = bỏ qua)
+ *
+ * NOTE về note format: KHÔNG embed storyId vào note để hiển thị cho user.
+ * storyId được lưu riêng trong field storyId (nếu schema có) hoặc dùng
+ * query distinct. Ở đây ta dùng note chứa storyId nhưng TÁCH BIỆT với
+ * phần hiển thị — caller truyền displayNote riêng.
  */
 export async function rewardCredit(
   userId: string,
   type: RewardType,
+  /** Note lưu vào DB — nên là text thân thiện, KHÔNG có storyId raw */
   note: string,
   options?: {
     content?: string
@@ -114,18 +121,20 @@ export async function rewardCredit(
         return {
           rewarded: false,
           reason: `Vui lòng chờ ${remaining} giây trước khi bình luận tiếp`,
+          cooldownSeconds: remaining,
         }
       }
     }
   }
 
-  // 3. Check đã thưởng ở truyện này hôm nay chưa (phải ở truyện khác nhau)
+  // 3. Check đã thưởng ở truyện này hôm nay chưa
   if (storyId) {
     const alreadyRewarded = await db.creditTransaction.findFirst({
       where: {
         userId,
         type,
-        note: { contains: storyId },
+        // Dùng metadata field nếu có, hoặc note pattern an toàn hơn
+        note: { startsWith: `[story:${storyId}]` },
         createdAt: { gte: todayStart },
       },
     })
@@ -135,25 +144,57 @@ export async function rewardCredit(
         reason: 'Bạn đã nhận thưởng cho truyện này hôm nay rồi',
       }
     }
-  }
 
-  // 4. Check tổng số lần nhận thưởng hôm nay
-  const countToday = await db.creditTransaction.count({
-    where: {
-      userId,
-      type,
-      createdAt: { gte: todayStart },
-    },
-  })
+    // 4. BUG FIX: Đếm số TRUYỆN KHÁC NHAU đã nhận thưởng hôm nay
+    // (không phải tổng số lần)
+    const txsToday = await db.creditTransaction.findMany({
+      where: {
+        userId,
+        type,
+        note: { startsWith: '[story:' },
+        createdAt: { gte: todayStart },
+      },
+      select: { note: true },
+    })
 
-  if (countToday >= maxPerDay) {
-    return {
-      rewarded: false,
-      reason: `Bạn đã dùng đủ ${maxPerDay} lượt ${labelForType(type)} hôm nay. Hẹn gặp lại ngày mai! 🎉`,
+    // Extract storyId từ note pattern "[story:xxx] ..."
+    const distinctStoryIds = new Set(
+      txsToday
+        .map(tx => {
+          const match = tx.note.match(/^\[story:([^\]]+)\]/)
+          return match ? match[1] : null
+        })
+        .filter(Boolean)
+    )
+
+    if (distinctStoryIds.size >= maxPerDay) {
+      return {
+        rewarded: false,
+        reason: `Bạn đã nhận thưởng từ ${maxPerDay} truyện khác nhau hôm nay. Hẹn gặp lại ngày mai! 🎉`,
+      }
+    }
+  } else {
+    // Không có storyId → đếm tổng số lần (cho các type không cần storyId)
+    const countToday = await db.creditTransaction.count({
+      where: {
+        userId,
+        type,
+        createdAt: { gte: todayStart },
+      },
+    })
+    if (countToday >= maxPerDay) {
+      return {
+        rewarded: false,
+        reason: `Bạn đã dùng đủ ${maxPerDay} lượt ${labelForType(type)} hôm nay. Hẹn gặp lại ngày mai! 🎉`,
+      }
     }
   }
 
   // 5. Cộng credit + ghi log
+  // Note format: "[story:storyId] text thân thiện" — storyId ẩn trong prefix,
+  // phần hiển thị cho user chỉ thấy text sau prefix
+  const dbNote = storyId ? `[story:${storyId}] ${note}` : note
+
   const updated = await db.user.update({
     where: { id: userId },
     data: { downloadCredits: { increment: amount } },
@@ -166,11 +207,15 @@ export async function rewardCredit(
       type,
       amount,
       balanceAfter: updated.downloadCredits,
-      note,
+      note: dbNote,
     },
   })
 
-  return { rewarded: true }
+  return {
+    rewarded: true,
+    newBalance: updated.downloadCredits,
+    usable: Math.floor(updated.downloadCredits),
+  }
 }
 
 function labelForType(type: RewardType): string {

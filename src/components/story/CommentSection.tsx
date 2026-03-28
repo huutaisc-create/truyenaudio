@@ -114,8 +114,32 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
 
     const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
 
+    // Cooldown state — block UI sau khi gửi comment (sync với backend 60s)
+    const [cooldownSec, setCooldownSec] = useState(0);
+    const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const topRef = useRef<HTMLDivElement>(null);
+
+    // ── Cooldown timer ─────────────────────────────────────────
+    const startCooldown = (seconds: number) => {
+        if (cooldownRef.current) clearInterval(cooldownRef.current);
+        setCooldownSec(seconds);
+        cooldownRef.current = setInterval(() => {
+            setCooldownSec(prev => {
+                if (prev <= 1) {
+                    clearInterval(cooldownRef.current!);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    };
+
+    // Cleanup cooldown on unmount
+    useEffect(() => {
+        return () => { if (cooldownRef.current) clearInterval(cooldownRef.current); };
+    }, []);
 
     // ── Fetch lần đầu ──────────────────────────────────────────
     useEffect(() => {
@@ -197,6 +221,13 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                     // Hiển thị toast thông báo credit
                     if (json.creditMessage) {
                         setCreditToast(json.creditMessage);
+                    }
+                    // Start frontend cooldown nếu server trả về cooldownSeconds
+                    if (json.cooldownSeconds && json.cooldownSeconds > 0) {
+                        startCooldown(json.cooldownSeconds);
+                    } else {
+                        // Comment thành công → bắt đầu cooldown mặc định 60s
+                        startCooldown(60);
                     }
                 }
             } else {
@@ -416,15 +447,26 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                         </span>
                         <button
                             onClick={handleSend}
-                            disabled={isSending || !content.trim()}
-                            aria-label={isSending ? "Đang gửi bình luận..." : "Gửi bình luận"}
+                            disabled={isSending || !content.trim() || cooldownSec > 0}
+                            aria-label={
+                                cooldownSec > 0
+                                    ? `Chờ ${cooldownSec}s trước khi gửi tiếp`
+                                    : isSending ? "Đang gửi bình luận..." : "Gửi bình luận"
+                            }
                             className="flex items-center gap-2 px-5 py-2 rounded-xl text-base font-bold text-white bg-warm-primary hover:bg-warm-primary-soft transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isSending
                                 ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                                : cooldownSec > 0
+                                ? <span className="text-xs font-mono">{cooldownSec}s</span>
                                 : <Send className="h-3.5 w-3.5" aria-hidden="true" />
                             }
-                            {replyTo ? "Trả lời" : "Gửi bình luận"}
+                            {isSending
+                                ? "Đang gửi..."
+                                : cooldownSec > 0
+                                ? `Chờ ${cooldownSec}s`
+                                : replyTo ? "Trả lời" : "Gửi bình luận"
+                            }
                         </button>
                     </div>
                 </div>

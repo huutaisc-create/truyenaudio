@@ -58,17 +58,22 @@ export async function toggleLike(storyId: string) {
                 select: { title: true },
             });
 
-            // +0.5 credit, tối đa 1 truyện/ngày
+            // +0.5 credit, tối đa 1 truyện/ngày, note thân thiện (không có storyId raw)
             const rewardResult = await rewardCredit(
                 userId,
                 'REWARD_LIKE',
-                `[${storyId}] Yêu thích truyện: ${story?.title ?? storyId}`,
+                `Yêu thích truyện: ${story?.title ?? 'Unknown'}`,
                 { amount: 0.5, maxPerDay: 1, minLength: 0, storyId }
             );
 
-            const creditMessage = rewardResult.rewarded
-                ? '✅ +0.5 credit cho lượt yêu thích!'
-                : `ℹ️ ${rewardResult.reason}`;
+            let creditMessage: string
+            if (rewardResult.rewarded) {
+                const usable = rewardResult.usable
+                creditMessage = `✅ Bạn vừa cộng được +0.5 credit · Còn ${usable} lượt tải`
+            } else {
+                // Đã dùng hết lượt yêu thích hôm nay
+                creditMessage = `ℹ️ Đã dùng hết lượt yêu thích hôm nay`
+            }
 
             return { liked: true, creditMessage };
         }
@@ -82,42 +87,57 @@ export async function nominateStory(storyId: string) {
     const session = await auth();
     if (!session?.user) return { error: "Bạn cần đăng nhập để thực hiện chức năng này." };
 
-    // Simple nomination: just create record and increment. 
-    // Real world: Limit 1 per day per user? For now, unlimited or just simple check.
-    // Let's implement 1 per day restriction check if needed, but for now simple.
-
-    // Check if nominated today?
-    // const today = new Date(); 
-    // today.setHours(0,0,0,0);
-    // const existing = await db.nomination.findFirst({ where: { userId, storyId, createdAt: { gte: today } } });
-
     const userId = session.user.id;
 
     try {
-        await db.nomination.create({
-            data: { userId, storyId }
-        });
-        await db.story.update({
-            where: { id: storyId },
-            data: { nominationCount: { increment: 1 } }
-        });
-
         const story = await db.story.findUnique({
             where: { id: storyId },
             select: { title: true },
         });
 
-        // +0.5 credit, tối đa 1 truyện/ngày
+        // BUG FIX: Check đã đề cử và đã nhận thưởng hôm nay TRƯỚC khi tạo record
+        // để tránh inflate nominationCount
+        const todayStart = new Date()
+        todayStart.setUTCHours(0, 0, 0, 0)
+
+        const alreadyNominatedToday = await db.creditTransaction.findFirst({
+            where: {
+                userId,
+                type: 'REWARD_NOMINATION',
+                note: { startsWith: `[story:${storyId}]` },
+                createdAt: { gte: todayStart },
+            },
+        })
+
+        if (alreadyNominatedToday) {
+            return {
+                success: false,
+                creditMessage: `ℹ️ Đã dùng hết lượt đề cử hôm nay`,
+            }
+        }
+
+        // Tạo nomination record và tăng counter
+        await db.nomination.create({ data: { userId, storyId } });
+        await db.story.update({
+            where: { id: storyId },
+            data: { nominationCount: { increment: 1 } }
+        });
+
+        // +0.5 credit, tối đa 1 truyện/ngày, note thân thiện
         const rewardResult = await rewardCredit(
             userId,
             'REWARD_NOMINATION',
-            `[${storyId}] Đề cử truyện: ${story?.title ?? storyId}`,
+            `Đề cử truyện: ${story?.title ?? 'Unknown'}`,
             { amount: 0.5, maxPerDay: 1, minLength: 0, storyId }
         );
 
-        const creditMessage = rewardResult.rewarded
-            ? '✅ +0.5 credit cho lượt đề cử!'
-            : `ℹ️ ${rewardResult.reason}`;
+        let creditMessage: string
+        if (rewardResult.rewarded) {
+            const usable = rewardResult.usable
+            creditMessage = `✅ Bạn vừa cộng được +0.5 credit · Còn ${usable} lượt tải`
+        } else {
+            creditMessage = `ℹ️ Đã dùng hết lượt đề cử hôm nay`
+        }
 
         return { success: true, creditMessage };
     } catch (e) {

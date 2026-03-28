@@ -458,10 +458,11 @@ export async function submitReview(storyId: string, rating: number, content: str
         });
 
         // Tính credit — phải ở 5 truyện khác nhau, nội dung >= 20 ký tự
+        // Note thân thiện: KHÔNG có storyId raw hiển thị cho user
         const rewardResult = await rewardCredit(
             session.user.id,
             'REWARD_REVIEW',
-            `[${storyId}] Đánh giá truyện: ${story?.title ?? storyId}`,
+            `Đánh giá truyện: ${story?.title ?? 'Unknown'}`,
             {
                 content: content ?? '',
                 amount: 0.2,
@@ -473,7 +474,8 @@ export async function submitReview(storyId: string, rating: number, content: str
 
         let creditMessage: string;
         if (rewardResult.rewarded) {
-            creditMessage = '✅ +0.2 credit cho đánh giá này!';
+            const usable = rewardResult.usable
+            creditMessage = `✅ Bạn vừa cộng được +0.2 credit · Còn ${usable} lượt tải`;
         } else {
             creditMessage = `ℹ️ ${rewardResult.reason}`;
         }

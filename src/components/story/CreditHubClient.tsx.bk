@@ -77,6 +77,11 @@ function fmtDate(iso: string) {
   })
 }
 
+// Strip [story:xxx] hoặc [xxx] prefix khỏi note trước khi hiển thị
+function cleanNote(note: string): string {
+  return note.replace(/^\[story:[^\]]+\]\s*/, '').replace(/^\[[^\]]+\]\s*/, '')
+}
+
 // ════════════════════════════════════════════════════════
 export default function CreditHubClient({ user, transactions: initTx, storyRequests }: Props) {
   const lv                  = getLevel(user.chaptersRead)
@@ -824,7 +829,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
                         {t.type === 'ADD_APP' ? '📱' : t.type === 'ADD_WEB' ? '▶️' : '📥'}
                       </div>
                       <div className="ch-tx-desc">
-                        <h4>{t.note || (isAdd ? 'Nhận credit' : 'Tải chương')}</h4>
+                        <h4>{cleanNote(t.note) || (isAdd ? 'Nhận credit' : 'Tải chương')}</h4>
                         <p>{fmtDate(t.createdAt)}</p>
                       </div>
                       <div className={`ch-tx-amt ${isAdd ? 'pos' : 'neg'}`}>
