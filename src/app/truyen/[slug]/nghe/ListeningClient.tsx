@@ -1804,25 +1804,25 @@ export default function ListeningClient({
           setShowChapterList(false);
           goToChapter(chap); // không await — tránh block UI
         }}
-        className={`group flex items-center gap-3 h-[52px] px-4 cursor-pointer border-l-[3px] transition-all ${isActive
-          ? 'bg-[#e8580a] border-l-[#d4500a]'
-          : 'border-l-transparent hover:bg-white/[0.08]'
+        className={`group flex items-center gap-3 h-[40px] px-4 cursor-pointer border-l-[2px] transition-all ${isActive
+          ? 'bg-[#e8580a]/10 border-l-[#e8580a]'
+          : 'border-l-transparent hover:bg-white/[0.05] hover:border-l-white/20'
           }`}
       >
-        <span className="text-[12px] font-black w-7 text-center shrink-0 text-white">
+        <span className={`text-[11px] font-medium w-7 text-center shrink-0 tabular-nums ${isActive ? 'text-[#e8580a]' : 'text-[#8a7e72]'}`}>
           {chap.index}
         </span>
         <div className="flex-1 min-w-0">
-          <p className={`text-[15px] ${isActive ? 'text-white font-bold' : 'text-white group-hover:text-[#e8580a]'}`}>
+          <p className={`text-[13px] leading-snug ${isActive ? 'text-[#e8580a] font-semibold' : 'text-[#c0b4a8] group-hover:text-white'}`}>
             {chap.title}
           </p>
-          {isActive && <p className="text-[9px] text-white mt-0.5">Đang nghe</p>}
+          {isActive && <p className="text-[9px] text-[#e8580a]/70 mt-0.5">Đang nghe</p>}
         </div>
         {isActive
-          ? <WaveIcon color="#ffffff" />
+          ? <WaveIcon color="#e8580a" />
           : isDone
-            ? <CheckCircle2 size={13} className="text-green-500 shrink-0" />
-            : <div className="w-[13px]" />}
+            ? <CheckCircle2 size={12} className="text-green-500/60 shrink-0" />
+            : <div className="w-[12px]" />}
       </div>
     );
   }, [currentIdx, completedChapters, goToChapter]);
@@ -2236,7 +2236,7 @@ export default function ListeningClient({
       {/* ── Version Badge ── */}
       <div className="fixed bottom-16 right-3 z-50 pointer-events-none">
         <div className="bg-[#1a1612]/90 border border-white/[0.07] rounded-lg px-2 py-1">
-          <span className="text-[10px] font-black text-[#e8580a]">v 6.1</span>
+          <span className="text-[10px] font-black text-[#e8580a]">v 6.2</span>
         </div>
       </div>
 
@@ -2382,7 +2382,7 @@ export default function ListeningClient({
               <button
                 key={tab.id}
                 onClick={() => handleDesktopTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-1 py-2.5 text-[9px] font-black uppercase tracking-[.08em] transition-colors border-b-[1.5px] ${desktopTab === tab.id
+                className={`flex-1 flex items-center justify-center gap-1 py-2.5 text-[13px] font-black uppercase tracking-[.06em] transition-colors border-b-[1.5px] ${desktopTab === tab.id
                   ? 'text-[#e8580a] border-[#e8580a]'
                   : 'text-white border-transparent hover:text-[#e8580a]'
                   }`}
