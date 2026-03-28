@@ -1825,26 +1825,28 @@ export default function ListeningClient({
   const InfoPanel = (
     <div className="flex flex-col gap-4 px-4 py-4">
 
-      {/* Rating stars */}
-      {storyInfo.ratingScore > 0 && (
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-0.5">
-            {[1, 2, 3, 4, 5].map(i => (
-              <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill={i <= Math.round(storyInfo.ratingScore) ? '#e8580a' : 'none'} stroke="#e8580a" strokeWidth="2">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-              </svg>
-            ))}
-          </div>
-          <span className="text-[13px] font-bold text-[#f0ebe4]">{storyInfo.ratingScore.toFixed(1)}</span>
-          <span className="text-[11px] text-[#8a7e72]">({storyInfo.ratingCount} đánh giá)</span>
-          <ReviewButton
-            storyId={storyInfo.id}
-            text="Đánh giá"
-            currentUser={undefined}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#e8580a]/10 text-[#e8580a] border border-[#e8580a]/30 hover:bg-[#e8580a]/20 transition-all active:scale-95"
-          />
-        </div>
-      )}
+      {/* Rating stars + nút đánh giá */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {storyInfo.ratingScore > 0 && (
+          <>
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map(i => (
+                <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill={i <= Math.round(storyInfo.ratingScore) ? '#e8580a' : 'none'} stroke="#e8580a" strokeWidth="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              ))}
+            </div>
+            <span className="text-[13px] font-bold text-[#f0ebe4]">{storyInfo.ratingScore.toFixed(1)}</span>
+            <span className="text-[11px] text-[#8a7e72]">({storyInfo.ratingCount} đánh giá)</span>
+          </>
+        )}
+        <ReviewButton
+          storyId={storyInfo.id}
+          text="Đánh giá"
+          currentUser={undefined}
+          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#e8580a]/10 text-[#e8580a] border border-[#e8580a]/30 hover:bg-[#e8580a]/20 transition-all active:scale-95"
+        />
+      </div>
 
       {/* Interaction bar — giống StoryInteractions: label trên, icon+số dưới, click được */}
       <div className="flex rounded-xl overflow-hidden border border-white/[0.10]">
@@ -2054,7 +2056,7 @@ export default function ListeningClient({
       {/* ── Version Badge ── */}
       <div className="fixed bottom-16 right-3 z-50 pointer-events-none">
         <div className="bg-[#1a1612]/90 border border-white/[0.07] rounded-lg px-2 py-1">
-          <span className="text-[10px] font-black text-[#e8580a]">v 6.0</span>
+          <span className="text-[10px] font-black text-[#e8580a]">v 6.1</span>
         </div>
       </div>
 
