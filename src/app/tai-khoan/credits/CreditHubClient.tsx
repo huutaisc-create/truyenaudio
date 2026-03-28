@@ -439,19 +439,8 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         .ch-realm-prog{width:100%;height:4px;border-radius:99px;overflow:hidden;background:rgba(255,255,255,.1)}
         .ch-realm-prog-fill{height:100%;border-radius:99px}
         .ch-realm-next{font-size:9px;text-align:center;opacity:.65;margin-top:2px}
-        .ch-hero-inner{display:flex;align-items:flex-start;gap:20px}
+        .ch-hero-inner{display:flex;align-items:center;gap:20px}
         .ch-hero-left{flex:1;min-width:0}
-
-        /* LEVEL CARD (giua hero) */
-        .ch-level-card{display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px 18px 16px;border-radius:18px;flex-shrink:0;min-width:148px;position:relative}
-        .ch-level-badge-top{font-size:12px;font-weight:700;letter-spacing:.04em;white-space:nowrap;text-align:center}
-        .ch-level-ring{width:76px;height:76px;border-radius:50%;border:3px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:4px 0;transition:box-shadow .4s}
-        .ch-level-num{font-size:30px;font-weight:800;line-height:1;font-family:var(--mono)}
-        .ch-level-sub{font-size:9px;font-weight:700;letter-spacing:.12em;opacity:.65;margin-top:-2px}
-        .ch-level-bar-wrap{width:100%;height:5px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden}
-        .ch-level-bar-fill{height:100%;border-radius:99px;transition:width .8s cubic-bezier(.22,1,.36,1)}
-        .ch-level-info{font-size:9.5px;text-align:center;line-height:1.5}
-        .ch-level-exp{font-size:10px;font-weight:700;font-family:var(--mono)}
 
         /* +3 CREDITS NOI BAT trong checkin header */
         .ch-bonus-badge{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,rgba(245,166,35,.22),rgba(255,210,60,.1));border:1.5px solid rgba(245,166,35,.7);border-radius:10px;padding:8px 16px 8px 12px;font-size:15px;font-weight:800;color:var(--gold);letter-spacing:.02em;box-shadow:0 0 16px rgba(245,166,35,.25);animation:bonusGlow 1.8s ease-in-out infinite;cursor:default}
@@ -459,7 +448,7 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
         .ch-bonus-badge .bb-text{font-family:var(--mono);font-size:16px;font-weight:800;color:var(--gold);text-shadow:0 0 10px rgba(245,166,35,.5)}
         .ch-bonus-badge .bb-streak{font-size:12px;font-weight:700;color:rgba(245,166,35,.8);margin-left:2px}
 
-        @media(max-width:520px){.ch-hero-inner{flex-direction:column}.ch-realm-card,.ch-level-card{width:100%}}
+        @media(max-width:520px){.ch-hero-inner{flex-direction:column}.ch-realm-card{width:100%}}
         @media(max-width:580px){
           .ch-earn,.ch-2col{grid-template-columns:1fr}
           .ch-count{font-size:64px}
@@ -590,28 +579,6 @@ export default function CreditHubClient({ user, transactions: initTx, storyReque
                   <span style={{ fontSize:15 }}>▶️</span>
                   <span style={{ fontFamily:'var(--mono)', fontSize:14, fontWeight:700, color:'var(--blue)' }}>{videoCount}</span>
                   <span style={{ fontSize:11, color:'rgba(255,255,255,.6)', letterSpacing:'.05em', textTransform:'uppercase' }}>video đã xem</span>
-                </div>
-              </div>
-
-              {/* CENTER: level card */}
-              <div className="ch-level-card" style={{
-                background: `linear-gradient(145deg,rgba(20,16,30,.95),rgba(12,10,20,.98))`,
-                border: `1.5px solid ${lv.color}55`,
-                boxShadow: `0 0 24px ${lv.color}18, inset 0 0 16px ${lv.color}06`,
-              }}>
-                <div className="ch-level-badge-top" style={{ color: `${lv.color}cc` }}>{lv.icon} {lv.name}</div>
-                <div className="ch-level-ring" style={{ borderColor: lv.color, boxShadow: `0 0 24px ${lv.color}55` }}>
-                  <span className="ch-level-num" style={{ color: lv.color }}>{lv.idx + 1}</span>
-                  <span className="ch-level-sub">CẤP</span>
-                </div>
-                <div className="ch-level-bar-wrap">
-                  <div className="ch-level-bar-fill" style={{ width: `${lv.pct}%`, background: `linear-gradient(90deg,${lv.color}88,${lv.color})` }} />
-                </div>
-                <div className="ch-level-info" style={{ color: `${lv.color}99` }}>
-                  {lv.next ? <>còn <b style={{ color: lv.color }}>{lv.toNext.toLocaleString('vi')}</b> chương → {lv.next.name}</> : '✦ Đỉnh Phong'}
-                </div>
-                <div className="ch-level-exp" style={{ color: `${lv.color}77` }}>
-                  {lv.pct}% tiến độ
                 </div>
               </div>
 
