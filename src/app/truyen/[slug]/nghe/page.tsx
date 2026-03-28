@@ -65,6 +65,7 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
       content,
     },
     storyInfo: {
+      id: storyData.id,
       description: storyData.description ?? '',
       status: storyData.status ?? '',
       genres: storyData.genres.map((g: any) => g.name),

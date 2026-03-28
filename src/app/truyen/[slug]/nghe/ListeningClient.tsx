@@ -10,6 +10,7 @@ import {
   Loader2, CornerDownRight, Trash2, X, Send, Bookmark, Trophy,
 } from 'lucide-react';
 import { toggleFollow, toggleLike, nominateStory, getStoryInteractions } from '@/actions/interactions';
+import ReviewButton from '@/components/story/ReviewButton';
 
 // ── R2 CDN base URL ──────────────────────────────────────────────────────
 // Đổi URL này khi có custom domain, không cần sửa chỗ nào khác
@@ -28,6 +29,7 @@ interface ChapterMeta {
   title: string;
 }
 interface StoryInfo {
+  id: string;
   description: string;
   status: string;
   genres: string[];
@@ -1835,6 +1837,12 @@ export default function ListeningClient({
           </div>
           <span className="text-[13px] font-bold text-[#f0ebe4]">{storyInfo.ratingScore.toFixed(1)}</span>
           <span className="text-[11px] text-[#8a7e72]">({storyInfo.ratingCount} đánh giá)</span>
+          <ReviewButton
+            storyId={storyInfo.id}
+            text="Đánh giá"
+            currentUser={undefined}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#e8580a]/10 text-[#e8580a] border border-[#e8580a]/30 hover:bg-[#e8580a]/20 transition-all active:scale-95"
+          />
         </div>
       )}
 
