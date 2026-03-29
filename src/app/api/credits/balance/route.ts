@@ -1,26 +1,15 @@
-// D:\Webtruyen\webtruyen-app\src\app\api\credits\balance\route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
-import { getToken } from 'next-auth/jwt'
+import { getAuthUser } from '@/lib/auth-helper'
 import db from '@/lib/db'
 
 export async function GET(req: NextRequest) {
-  let userId: string | undefined
-
-  const session = await auth()
-  if (session?.user?.id) {
-    userId = session.user.id
-  } else {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET })
-    if (token?.sub) userId = token.sub
-  }
-
-  if (!userId) {
+  const authUser = await getAuthUser(req)
+  if (!authUser) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const user = await db.user.findUnique({
-    where: { id: userId },
+    where: { id: authUser.id },
     select: {
       downloadCredits: true,
       lastCheckIn: true,

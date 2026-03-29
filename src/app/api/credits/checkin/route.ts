@@ -1,31 +1,20 @@
 // src/app/api/credits/checkin/route.ts
 import { NextResponse, NextRequest } from 'next/server'
-import { auth } from '@/auth'
-import { getToken } from 'next-auth/jwt'
+import { getAuthUser } from '@/lib/auth-helper'
 import db from '@/lib/db'
 
-const CHECKIN_BASE    = 0.5   // credit cơ bản mỗi ngày
-const STREAK_BONUS    = 3.0   // bonus khi đạt streak 7
-const STREAK_MILESTONE = 7    // mốc nhận bonus
+const CHECKIN_BASE    = 0.5
+const STREAK_BONUS    = 3.0
+const STREAK_MILESTONE = 7
 
 export async function POST(req: NextRequest) {
-  let userId: string | undefined
-
-  const session = await auth()
-  if (session?.user?.id) {
-    userId = session.user.id
-  } else {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET })
-    if (token?.sub) userId = token.sub
-  }
-
-  if (!userId) {
+  const authUser = await getAuthUser(req)
+  if (!authUser) {
     return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 })
   }
 
-  // Lấy user hiện tại
   const user = await db.user.findUnique({
-    where: { id: userId },
+    where: { id: authUser.id },
     select: {
       downloadCredits: true,
       lastCheckIn:     true,
@@ -60,15 +49,13 @@ export async function POST(req: NextRequest) {
     newStreak = diffDays === 1 ? (user.currentStreak + 1) : 1
   }
 
-  // Tính credit nhận được
   const isBonus    = newStreak % STREAK_MILESTONE === 0
   const earned     = CHECKIN_BASE + (isBonus ? STREAK_BONUS : 0)
   const newBalance = Math.round((user.downloadCredits + earned) * 10) / 10
 
-  // Ghi DB trong transaction
   const [updatedUser] = await db.$transaction([
     db.user.update({
-      where: { id: userId },
+      where: { id: authUser.id },
       data: {
         downloadCredits: newBalance,
         lastCheckIn:     todayVN,
@@ -77,7 +64,7 @@ export async function POST(req: NextRequest) {
     }),
     db.creditTransaction.create({
       data: {
-        userId,
+        userId: authUser.id,
         type:        'ADD_WEB',
         amount:      earned,
         balanceAfter: newBalance,
