@@ -296,8 +296,8 @@ export default function ListeningClient({
   // ── Lớp 2: Soft cooldown 60s sau mỗi lần gửi ──
   const [commentCooldown, setCommentCooldown] = useState(0);
   const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // ── Lớp 2: Banner cảnh báo "còn X lượt" hiện phía trên ô input ──
-  const [commentSoftWarning, setCommentSoftWarning] = useState<string | null>(null);
+  // ── Lớp 2: Banner cảnh báo — lưu remainingSlots (số) thay vì parse string ──
+  const [commentSoftWarning, setCommentSoftWarning] = useState<number | null>(null);
   // ── Lớp 3: Hard lock 15 phút (5 tin trong 8 phút) ──
   const [commentHardLock, setCommentHardLock] = useState(0); // đếm ngược giây
   const hardLockTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -701,8 +701,8 @@ export default function ListeningClient({
         if (json.creditMessage) showCreditToast(json.creditMessage);
         // [FIX #3] Ghi timestamp vào sessionStorage thay vì useRef
         saveSpamTimestamps([...getSpamTimestamps(), Date.now()]);
-        // Lớp 2: lưu warning banner + bật cooldown 60s
-        setCommentSoftWarning(json.creditMessage || null);
+        // Lớp 2: lưu remainingSlots (số) + bật cooldown 60s — không parse string nữa
+        setCommentSoftWarning(json.remainingSlots ?? null);
         startCooldown(60);
         // Nếu đây là lần bình luận truyện này hôm nay → lock ngày
         if (json.cooldownSeconds && json.cooldownSeconds > 60) {
@@ -2346,9 +2346,12 @@ export default function ListeningClient({
         )}
 
         {/* Lớp 2 — Soft Warning banner (vàng), chỉ hiện trong 60s cooldown */}
-        {commentHardLock === 0 && commentCooldown > 0 && commentSoftWarning && (
+        {commentHardLock === 0 && commentCooldown > 0 && commentSoftWarning !== null && (
           <div className="mb-2 px-3 py-2 rounded-lg bg-amber-900/30 border border-amber-500/40 text-[10px] text-amber-300 font-semibold leading-snug">
-            ⚠️ Các bình luận tiếp theo ở truyện này sẽ không được tính điểm. {commentSoftWarning.includes('còn') ? commentSoftWarning.split('·').pop()?.trim() : 'Bạn vẫn có thể bình luận truyện khác.'}
+            ⚠️ Các bình luận tiếp theo ở truyện này sẽ không được tính điểm.{' '}
+            {commentSoftWarning > 0
+              ? `Bạn còn ${commentSoftWarning} lượt bình luận cho truyện khác.`
+              : 'Bạn đã dùng hết 5 lượt hôm nay.'}
           </div>
         )}
 

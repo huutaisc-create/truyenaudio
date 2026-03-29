@@ -2,7 +2,7 @@
 
 // D:\Webtruyen\webtruyen-app\src\components\story\ReviewButton.tsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReviewModal, {
     ToastPortal,
     useToast,
@@ -11,6 +11,7 @@ import ReviewModal, {
 } from "./ReviewModal";
 import { PenLine, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { checkHasReviewed } from "@/actions/interactions";
 
 type ReviewButtonProps = {
     storyId: string;
@@ -32,6 +33,14 @@ export default function ReviewButton({
     const [isOpen, setIsOpen] = useState(false);
     const [localHasReviewed, setLocalHasReviewed] = useState(hasReviewed);
     const router = useRouter();
+
+    // Check server khi mount để restore đúng trạng thái sau refresh/login lại
+    useEffect(() => {
+        if (!currentUser || localHasReviewed) return;
+        checkHasReviewed(storyId).then(reviewed => {
+            if (reviewed) setLocalHasReviewed(true);
+        });
+    }, [storyId, currentUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Toast state sống ở đây — không bị unmount khi modal đóng
     const { toasts, addToast, dismissToast } = useToast();

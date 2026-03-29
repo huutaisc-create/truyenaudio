@@ -244,6 +244,17 @@ export async function getStoryInteractions(storyId: string) {
   return { stats: story, userStatus };
 }
 
+// Kiểm tra nhanh user đã review truyện này chưa (dùng cho ReviewButton on mount)
+export async function checkHasReviewed(storyId: string): Promise<boolean> {
+  const session = await auth();
+  if (!session?.user?.id) return false;
+  const review = await db.review.findFirst({
+    where: { userId: session.user.id, storyId },
+    select: { id: true },
+  });
+  return !!review;
+}
+
 export async function getRecentReads(limit = 10) {
   const session = await auth();
   if (!session?.user) return [];
