@@ -1,19 +1,27 @@
 // src/app/api/credits/checkin/route.ts
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import { auth } from '@/auth'
+import { getToken } from 'next-auth/jwt'
 import db from '@/lib/db'
 
 const CHECKIN_BASE    = 0.5   // credit cơ bản mỗi ngày
 const STREAK_BONUS    = 3.0   // bonus khi đạt streak 7
 const STREAK_MILESTONE = 7    // mốc nhận bonus
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  let userId: string | undefined
+
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 })
+  if (session?.user?.id) {
+    userId = session.user.id
+  } else {
+    const token = await getToken({ req, secret: process.env.AUTH_SECRET })
+    if (token?.sub) userId = token.sub
   }
 
-  const userId = session.user.id
+  if (!userId) {
+    return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 })
+  }
 
   // Lấy user hiện tại
   const user = await db.user.findUnique({
@@ -81,12 +89,15 @@ export async function POST() {
   ])
 
   return NextResponse.json({
-    downloadCredits: newBalance,
-    currentStreak:   newStreak,
-    earned,
-    isBonus,
-    message: isBonus
-      ? `🎉 Streak ${newStreak} ngày! Nhận +${earned.toFixed(1)} credit (gồm bonus +${STREAK_BONUS})!`
-      : `✓ Điểm danh thành công! Streak ${newStreak} ngày · +${earned.toFixed(1)} credit`,
+    success: true,
+    data: {
+      downloadCredits: newBalance,
+      currentStreak:   newStreak,
+      earned,
+      isBonus,
+      creditMessage: isBonus
+        ? `🎉 Streak ${newStreak} ngày! Nhận +${earned.toFixed(1)} credit (gồm bonus +${STREAK_BONUS})!`
+        : `✓ Điểm danh thành công! Streak ${newStreak} ngày · +${earned.toFixed(1)} credit`,
+    },
   })
 }
