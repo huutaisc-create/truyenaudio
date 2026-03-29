@@ -1,10 +1,8 @@
 import { getStoryBySlug, getChaptersByStoryId, getChapterBySlugAndIndex } from '@/actions/stories';
 import { notFound, redirect } from 'next/navigation';
-import { headers } from 'next/headers';
 import { auth } from '@/auth';
 import db from '@/lib/db';
 import ListeningClient from './ListeningClient';
-import ListeningMobileAndroid from './ListeningMobileAndroid';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -26,10 +24,6 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
   const params = await paramsPromise;
   const sp = await spPromise;
   const chapterIndex = sp.chuong ? parseInt(sp.chuong) : 1;
-
-  // Detect device từ User-Agent
-  const ua = (await headers()).get('user-agent') ?? '';
-  const isAndroid = /Android/i.test(ua);
 
   const [session, storyData, chapterData] = await Promise.all([
     auth(),
@@ -95,7 +89,7 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
         id: r.id,
         rating: r.rating,
         content: r.content,
-        createdAt: r.createdAt,
+        createdAt: r.createdAt.toISOString(),
         user: { name: r.user.name, image: r.user.image },
       })),
     },
@@ -107,6 +101,5 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
     } : null,
   };
 
-  if (isAndroid) return <ListeningMobileAndroid {...props} />;
   return <ListeningClient {...props} />;
 }
