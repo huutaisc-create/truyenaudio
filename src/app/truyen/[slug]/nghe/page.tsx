@@ -2,6 +2,7 @@ import { getStoryBySlug, getChaptersByStoryId, getChapterBySlugAndIndex } from '
 import { notFound, redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { auth } from '@/auth';
+import db from '@/lib/db';
 import ListeningClient from './ListeningClient';
 import ListeningMobileAndroid from './ListeningMobileAndroid';
 
@@ -44,9 +45,18 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
     redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   }
 
-  const [chaptersResult, content] = await Promise.all([
+  const [chaptersResult, content, freshReviews] = await Promise.all([
     getChaptersByStoryId(storyData.id, 1),
     fetchContentFromR2(chapterData.chapter.contentUrl),
+    db.review.findMany({
+      where: { storyId: storyData.id },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: {
+        id: true, rating: true, content: true, createdAt: true,
+        user: { select: { name: true, image: true } },
+      },
+    }),
   ]);
 
   const initialChapters = chaptersResult.chapters.map((c) => ({
@@ -81,7 +91,7 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
       likeCount: storyData.likeCount ?? 0,
       followCount: storyData.followCount ?? 0,
       nominationCount: (storyData as any).nominationCount ?? 0,
-      reviews: (storyData.reviews ?? []).map((r: any) => ({
+      reviews: freshReviews.map((r) => ({
         id: r.id,
         rating: r.rating,
         content: r.content,
