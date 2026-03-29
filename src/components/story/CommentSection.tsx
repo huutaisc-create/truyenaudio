@@ -86,7 +86,7 @@ function ToastPortal({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss: (i
     if (toasts.length === 0) return null;
     return (
         <div
-            className="fixed bottom-6 right-4 z-[9999] flex flex-col gap-2 items-end pointer-events-none"
+            className="fixed top-1/2 -translate-y-1/2 right-4 z-[9999] flex flex-col gap-2 items-end pointer-events-none"
             style={{ maxWidth: "min(calc(100vw - 32px), 360px)" }}
         >
             {toasts.map(toast => (

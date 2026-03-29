@@ -2398,7 +2398,7 @@ export default function ListeningClient({
     <div className="min-h-screen bg-[#0f0d0a] relative">
       {/* ── Credit Toast — fixed overlay, dùng chung cho like / nominate / comment ── */}
       {creditToast && (
-        <div className="fixed bottom-6 right-4 z-[9999] pointer-events-auto max-w-[360px] w-[calc(100vw-32px)] animate-in fade-in slide-in-from-right-4 duration-300">
+        <div className="fixed top-1/2 -translate-y-1/2 right-4 z-[9999] pointer-events-auto max-w-[360px] w-[calc(100vw-32px)] animate-in fade-in slide-in-from-right-4 duration-300">
           <div className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-[12px] font-semibold border shadow-2xl backdrop-blur-md ${
             creditToast.startsWith('Bạn nhận được')
               ? 'bg-green-900/90 border-green-600/50 text-green-100'
