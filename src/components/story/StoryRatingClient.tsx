@@ -70,29 +70,35 @@ export default function StoryRatingClient({
 
     return (
         <>
-            {/* Dòng rating + nút Đánh giá — thay thế đoạn tương ứng trong page.tsx */}
+            {/* Dòng rating + nút Đánh giá */}
             <div className="flex items-center gap-2 flex-wrap">
                 <span
                     role="img"
-                    aria-label={`Điểm đánh giá: ${ratingScore} trên 5 sao`}
+                    aria-label={ratingCount === 0 ? "Chưa có đánh giá" : `Điểm đánh giá: ${ratingScore} trên 5 sao`}
                     className="flex"
                 >
                     {[1, 2, 3, 4, 5].map(i => (
                         <Star
                             key={i}
                             className={`h-4 w-4 fill-current ${
-                                i <= Math.round(ratingScore)
+                                ratingCount > 0 && i <= Math.round(ratingScore)
                                     ? "text-amber-400"
-                                    : "text-zinc-200"
+                                    : "text-zinc-300"
                             }`}
                             aria-hidden="true"
                         />
                     ))}
                 </span>
-                <span className="text-lg font-black text-warm-gold">{ratingScore}</span>
-                <span className="text-base font-bold text-warm-ink-soft">
-                    ({ratingCount.toLocaleString("vi-VN")})
-                </span>
+                {ratingCount > 0 ? (
+                    <>
+                        <span className="text-lg font-black text-warm-gold">{ratingScore}</span>
+                        <span className="text-base font-bold text-warm-ink-soft">
+                            ({ratingCount.toLocaleString("vi-VN")})
+                        </span>
+                    </>
+                ) : (
+                    <span className="text-base font-bold text-warm-ink-soft">0 đánh giá</span>
+                )}
                 <ReviewButton
                     storyId={storyId}
                     text="Đánh giá"

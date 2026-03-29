@@ -6,7 +6,6 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Star, X, CheckCircle2, Info, Clock } from "lucide-react";
 import { submitReview } from "@/actions/stories";
-import { useRouter } from "next/navigation";
 
 // ── Types export ra ngoài để ReviewButton và StoryRatingClient dùng ──
 export type ReviewSubmitPayload = {
@@ -125,7 +124,6 @@ export default function ReviewModal({
     const [hovered, setHovered]       = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [locked, setLocked]         = useState(false);
-    const router = useRouter();
 
     // Reset mỗi lần mở lại
     useEffect(() => {
@@ -153,8 +151,8 @@ export default function ReviewModal({
                 creditMessage: result.creditMessage,
             });
             setLocked(true);
-            // Đóng modal sau 1s — toast vẫn sống ở component cha (10s)
-            setTimeout(() => { onClose(); router.refresh(); }, 1000);
+            // Đóng modal sau 1s — KHÔNG refresh vì StoryRatingClient tự update state
+            setTimeout(() => { onClose(); }, 1000);
         } else if (result.blocked && result.blockReason === 'SAME_STORY_TODAY') {
             onReviewSubmitted?.({
                 rating,

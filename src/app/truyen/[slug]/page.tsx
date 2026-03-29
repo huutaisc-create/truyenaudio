@@ -83,7 +83,7 @@ const StoryDetail = async ({
             storyData.status === 'CONVERTED' ? 'Convert' : 'Đang ra',
         chapters: formatNumber(storyData._count.chapters),
         views: formatNumber(storyData.viewCount),
-        rating: storyData.ratingScore || 5.0,
+        rating: storyData.ratingScore ?? 0,
         ratingCount: storyData.ratingCount || 0,
         description: storyData.description || 'Chưa có giới thiệu.',
         reviews: (storyData.reviews || []).map(review => ({
