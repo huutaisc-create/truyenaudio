@@ -86,7 +86,14 @@ const StoryDetail = async ({
         rating: storyData.ratingScore || 5.0,
         ratingCount: storyData.ratingCount || 0,
         description: storyData.description || 'Chưa có giới thiệu.',
-        reviews: storyData.reviews || [],
+        reviews: (storyData.reviews || []).map(review => ({
+			...review,
+			user: {
+				...review.user,
+				name: review.user.name || "Khách ẩn danh", // Nếu null thì gán tên mặc định
+				image: review.user.image || ""             // Nếu null thì gán chuỗi rỗng
+			}
+		})),
         latestChapters: storyData.chapters.map(c => ({
             id: c.index,
             title: c.title,
