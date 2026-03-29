@@ -643,13 +643,13 @@ export default function ListeningClient({
   const handleSendComment = useCallback(async () => {
     // Lớp 3: đang hard lock → chặn hoàn toàn
     if (commentHardLock > 0) return;
-    if (!commentInput.trim() || commentSending || commentLocked) return;
+    if (!commentInput.trim() || commentSending) return;
     if (!currentUser) { window.location.href = '/login?callbackUrl=' + window.location.pathname; return; }
 
     // ── Kiểm tra spam trước khi gửi (Lớp 3) ──
     const now = Date.now();
     const SPAM_WINDOW_MS = 8 * 60 * 1000; // 8 phút
-    const SPAM_LIMIT = 6; // check TRƯỚC khi push → cần 6 để user gửi đủ 5 tin trước khi lock
+    const SPAM_LIMIT = 5; // check trước khi push → comment thứ 5 bị lock, gửi được 4
     const HARD_LOCK_SECS = 15 * 60; // 15 phút
     // [FIX #3] Đọc từ sessionStorage thay vì useRef → survive refresh
     const freshTimestamps = getSpamTimestamps().filter(t => now - t < SPAM_WINDOW_MS);
@@ -658,11 +658,11 @@ export default function ListeningClient({
       // Kích hoạt Hard Lock 15 phút
       if (hardLockTimerRef.current) clearInterval(hardLockTimerRef.current);
       setCommentHardLock(HARD_LOCK_SECS);
+      showCreditToast('Bạn đã bình luận quá nhanh! Tính năng được mở lại sau 15 phút.');
       hardLockTimerRef.current = setInterval(() => {
         setCommentHardLock(prev => {
           if (prev <= 1) {
             clearInterval(hardLockTimerRef.current!);
-            // [FIX #3] Clear cả sessionStorage khi hết lock
             saveSpamTimestamps([]);
             return 0;
           }
@@ -685,10 +685,9 @@ export default function ListeningClient({
       });
       const json = await res.json();
 
-      // Đã bình luận truyện này hôm nay → toast + lock đến 0h
+      // Backend block (đã bình luận truyện này hôm nay) → chỉ toast, không lock UI
       if (json.blockReason === 'SAME_STORY_TODAY') {
         showCreditToast(json.creditMessage || 'Hãy quay lại vào ngày mai nhé!');
-        setCommentLocked(true);
         return;
       }
 
@@ -697,23 +696,17 @@ export default function ListeningClient({
         setCommentInput('');
         setReplyTo(null);
         commentTextareaRef.current?.focus();
-        // Toast credit
         if (json.creditMessage) showCreditToast(json.creditMessage);
-        // [FIX #3] Ghi timestamp vào sessionStorage thay vì useRef
         saveSpamTimestamps([...getSpamTimestamps(), Date.now()]);
-        // Lớp 2: lưu remainingSlots (số) + bật cooldown 60s — không parse string nữa
+        // Lớp 2: bật soft cooldown 60s + lưu số lượt còn lại cho banner
         setCommentSoftWarning(json.remainingSlots ?? null);
         startCooldown(60);
-        // Nếu đây là lần bình luận truyện này hôm nay → lock ngày
-        if (json.cooldownSeconds && json.cooldownSeconds > 60) {
-          setCommentLocked(true);
-        }
       } else {
         showCreditToast(json.error || 'Gửi thất bại');
       }
     } catch { showCreditToast('Lỗi kết nối'); }
     finally { setCommentSending(false); }
-  }, [commentInput, commentSending, commentCooldown, commentLocked, commentHardLock, slug, replyTo, currentUser, showCreditToast, startCooldown]);
+  }, [commentInput, commentSending, commentCooldown, commentHardLock, slug, replyTo, currentUser, showCreditToast, startCooldown]);
 
   // ── Khi user mở tab info/comments lần đầu ──
   const handleOpenTab = useCallback((tab: DrawerTab) => {
@@ -2335,33 +2328,27 @@ export default function ListeningClient({
           </div>
         )}
 
-        {/* Lớp 3 — Hard Lock banner (đỏ) */}
+        {/* ── Lớp 3: Hard Lock banner ── */}
         {commentHardLock > 0 && (
-          <div className="mb-2 px-3 py-2 rounded-lg bg-red-900/40 border border-red-500/40 text-[10px] text-red-300 font-semibold leading-snug">
-            🚫 Bạn đã bình luận quá nhanh! Tính năng được mở lại sau{' '}
+          <div className="mb-2 px-3 py-2.5 rounded-lg bg-red-500/15 border border-red-500/50 text-[11px] text-red-300 font-semibold">
+            ⚠️ Bạn đã bình luận quá nhanh! Tính năng được mở lại sau{' '}
             <span className="font-black text-red-200">
               {String(Math.floor(commentHardLock / 60)).padStart(2, '0')}:{String(commentHardLock % 60).padStart(2, '0')}
             </span> nữa.
           </div>
         )}
 
-        {/* Lớp 2 — Soft Warning banner (vàng), chỉ hiện trong 60s cooldown */}
+        {/* ── Lớp 2: Soft Cooldown banner — hiện trong 60s sau khi gửi ── */}
         {commentHardLock === 0 && commentCooldown > 0 && commentSoftWarning !== null && (
-          <div className="mb-2 px-3 py-2 rounded-lg bg-amber-900/30 border border-amber-500/40 text-[10px] text-amber-300 font-semibold leading-snug">
-            ⚠️ Các bình luận tiếp theo ở truyện này sẽ không được tính điểm.{' '}
+          <div className="mb-2 px-3 py-2.5 rounded-lg bg-amber-500/15 border border-amber-500/50 text-[11px] text-amber-300 font-semibold">
+            ⚠️ Cảnh báo: Các bình luận tiếp theo ở truyện sẽ không được tính điểm.{' '}
             {commentSoftWarning > 0
-              ? `Bạn còn ${commentSoftWarning} lượt bình luận cho truyện khác.`
+              ? `Bạn vẫn còn ${commentSoftWarning} lượt bình luận ở truyện khác.`
               : 'Bạn đã dùng hết 5 lượt hôm nay.'}
           </div>
         )}
 
-        {/* Lock ngày banner */}
-        {commentLocked && commentHardLock === 0 && (
-          <div className="mb-2 px-3 py-2 rounded-lg bg-zinc-800/60 border border-zinc-600/40 text-[10px] text-zinc-400 font-semibold">
-            🔒 Đã bình luận truyện này hôm nay · Mở lại sau 0h
-          </div>
-        )}
-
+        {/* ── Input + Nút gửi ── */}
         <div className="flex gap-2 items-end">
           {currentUser && getAvatar(currentUser.name, currentUser.image, 24)}
           <textarea
@@ -2370,29 +2357,24 @@ export default function ListeningClient({
             onChange={e => setCommentInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) handleSendComment(); }}
             placeholder={
-              !currentUser
-                ? 'Đăng nhập để bình luận...'
-                : commentHardLock > 0
-                ? 'Tính năng bình luận tạm khóa do gửi quá nhanh...'
-                : commentLocked
-                ? 'Bạn đã bình luận truyện này hôm nay. Quay lại sau 0h nhé!'
-                : replyTo
-                  ? `Trả lời ${replyTo.name}...`
-                  : 'Chia sẻ cảm nhận... (≥20 ký tự để nhận +0.2 credit)'
+              !currentUser ? 'Đăng nhập để bình luận...'
+                : commentHardLock > 0 ? 'Tính năng bình luận tạm khóa...'
+                : replyTo ? `Trả lời ${replyTo.name}...`
+                : 'Chia sẻ cảm nhận... (≥20 ký tự để nhận +0.2 credit)'
             }
             rows={2}
             aria-label="Nội dung bình luận"
-            disabled={!currentUser || commentHardLock > 0 || commentLocked}
-            className="flex-1 bg-[#1a1612] border border-white/[0.08] rounded-lg px-3 py-2 text-[11px] text-[#f0ebe4] placeholder:text-[#8a7e72] outline-none focus:border-[#e8580a]/50 resize-none disabled:opacity-50"
+            disabled={!currentUser || commentHardLock > 0}
+            className="flex-1 bg-[#1a1612] border border-white/[0.08] rounded-lg px-3 py-2 text-[11px] text-[#f0ebe4] placeholder:text-[#8a7e72] outline-none focus:border-[#e8580a]/50 resize-none disabled:opacity-40"
           />
           <button
             onClick={handleSendComment}
-            disabled={commentSending || !commentInput.trim() || commentCooldown > 0 || commentHardLock > 0 || commentLocked}
+            disabled={commentSending || !commentInput.trim() || commentCooldown > 0 || commentHardLock > 0}
             aria-label={
               commentHardLock > 0 ? 'Đang bị khóa do spam'
-                : commentLocked ? 'Đã bình luận truyện này hôm nay'
                 : commentCooldown > 0 ? `Chờ ${commentCooldown}s`
-                : commentSending ? 'Đang gửi...' : replyTo ? 'Gửi trả lời' : 'Gửi bình luận'
+                : commentSending ? 'Đang gửi...'
+                : replyTo ? 'Gửi trả lời' : 'Gửi bình luận'
             }
             className="px-2.5 py-2 bg-[#e8580a] rounded-lg text-white disabled:opacity-40 hover:bg-[#d4500a] transition-colors shrink-0 min-w-[36px] flex items-center justify-center"
           >
@@ -2405,15 +2387,6 @@ export default function ListeningClient({
               : <Send size={13} />}
           </button>
         </div>
-        {currentUser && (
-          <p className="text-[9px] text-[#8a7e72] mt-1 text-right">
-            {commentHardLock > 0
-              ? `Mở lại sau ${String(Math.floor(commentHardLock / 60)).padStart(2, '0')}:${String(commentHardLock % 60).padStart(2, '0')}`
-              : commentLocked
-              ? '🔒 Đã bình luận truyện này hôm nay · Mở lại sau 0h'
-              : commentCooldown > 0 ? `Chờ ${commentCooldown}s trước khi gửi tiếp` : 'Ctrl+Enter để gửi'}
-          </p>
-        )}
       </div>
     </div>
   );

@@ -239,13 +239,6 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
 
             const json = await res.json();
 
-            // Đã bình luận truyện này hôm nay → không lưu, toast + lock
-            if (json.blockReason === 'SAME_STORY_TODAY') {
-                addToast(json.creditMessage, 'warning');
-                setCommentLocked(true);
-                return;
-            }
-
             // Lỗi validation (content trống, < 21 ký tự, ...)
             if (!res.ok && !json.success) {
                 addToast(json.error || "Gửi bình luận thất bại", 'info');

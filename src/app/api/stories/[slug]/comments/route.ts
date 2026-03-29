@@ -131,24 +131,9 @@ export async function POST(
 
     const alreadyThisStory = distinctStoryIds.has(story.id);
     const isOverDailyLimit = distinctStoryIds.size >= MAX_STORIES_PER_DAY;
-    const remainingSlots = MAX_STORIES_PER_DAY - distinctStoryIds.size; // trước khi dùng slot này
+    const remainingSlots = MAX_STORIES_PER_DAY - distinctStoryIds.size;
 
-    // ── [RULE] Đã bình luận truyện này hôm nay → không lưu DB ──
-    if (alreadyThisStory) {
-      // Số slot còn lại (không tính truyện này vì đã dùng)
-      const slotsLeft = MAX_STORIES_PER_DAY - distinctStoryIds.size;
-      return NextResponse.json({
-        success: false,
-        blocked: true,
-        blockReason: 'SAME_STORY_TODAY',
-        cooldownSeconds: secsUntilMidnight,
-        // [FIX #1] Thêm remainingSlots field riêng
-        remainingSlots: slotsLeft,
-        creditMessage: `Hãy quay lại vào ngày mai nhé, bạn còn ${slotsLeft} lượt bình luận cho truyện khác`,
-      }, { status: 429 });
-    }
-
-    // ── Lưu bình luận ──
+    // ── Luôn lưu bình luận — credit check sau ──
     const comment = await db.comment.create({
       data: {
         content: trimmed,
@@ -160,23 +145,37 @@ export async function POST(
       },
     });
 
-    // ── [RULE] Vượt max 5 truyện → lưu comment nhưng không credit ──
+    const commentData = {
+      id: comment.id,
+      content: comment.content,
+      likeCount: comment.likeCount,
+      createdAt: comment.createdAt,
+      isLiked: false,
+      user: comment.user,
+    };
+
+    // ── Đã bình luận truyện này hôm nay → lưu bình thường, không credit ──
+    if (alreadyThisStory) {
+      const slots = MAX_STORIES_PER_DAY - distinctStoryIds.size;
+      return NextResponse.json({
+        success: true,
+        credited: false,
+        remainingSlots: slots,
+        creditMessage: slots > 0
+          ? `Bình luận đã lưu và không nhận được credit, Còn ${slots} lượt ở truyện khác`
+          : `Bình luận đã lưu và không nhận được credit, Hết lượt nhận credit hôm nay rồi`,
+        data: commentData,
+      }, { status: 201 });
+    }
+
+    // ── Vượt max 5 truyện → lưu bình thường, không credit ──
     if (isOverDailyLimit) {
       return NextResponse.json({
         success: true,
         credited: false,
-        cooldownSeconds: secsUntilMidnight,
-        // [FIX #1] remainingSlots = 0 vì đã hết
         remainingSlots: 0,
-        creditMessage: `Lượt nhận credit hôm nay của bạn đã hết. Cảm ơn bạn đã bình luận`,
-        data: {
-          id: comment.id,
-          content: comment.content,
-          likeCount: comment.likeCount,
-          createdAt: comment.createdAt,
-          isLiked: false,
-          user: comment.user,
-        },
+        creditMessage: `Hết lượt nhận credit hôm nay rồi`,
+        data: commentData,
       }, { status: 201 });
     }
 
@@ -195,33 +194,24 @@ export async function POST(
       }
     );
 
-    // remainingSlots - 1 vì vừa dùng slot này
     const slotsLeft = remainingSlots - 1;
 
     let creditMessage: string;
     if (rewardResult.rewarded) {
       creditMessage = slotsLeft > 0
-        ? `Bạn nhận được +0.2 credit · Bạn còn ${slotsLeft} lượt bình luận cho truyện khác`
-        : `Bạn nhận được +0.2 credit · Đã dùng hết 5 lượt hôm nay 🎉`;
+        ? `Bạn nhận được +0.2 credit · Còn ${slotsLeft} lượt ở truyện khác`
+        : `Bạn nhận được +0.2 credit · Hết lượt nhận credit hôm nay rồi`;
     } else {
-      creditMessage = `Lượt nhận credit hôm nay của bạn đã hết. Cảm ơn bạn đã bình luận`;
+      creditMessage = `Hết lượt nhận credit hôm nay rồi`;
     }
 
     return NextResponse.json({
       success: true,
       credited: rewardResult.rewarded,
-      // [FIX #1] Thêm remainingSlots field riêng, frontend dùng thẳng số này
       remainingSlots: rewardResult.rewarded ? Math.max(0, slotsLeft) : 0,
       creditMessage,
       cooldownSeconds: secsUntilMidnight,
-      data: {
-        id: comment.id,
-        content: comment.content,
-        likeCount: comment.likeCount,
-        createdAt: comment.createdAt,
-        isLiked: false,
-        user: comment.user,
-      },
+      data: commentData,
     }, { status: 201 });
   } catch (error) {
     console.error('POST comment error:', error);

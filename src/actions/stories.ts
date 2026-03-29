@@ -2,7 +2,7 @@
 
 import db from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { unstable_cache } from 'next/cache'
+import { unstable_cache, revalidatePath } from 'next/cache'
 
 export type SearchParams = {
     keyword?: string
@@ -154,71 +154,42 @@ export async function searchStories(params: SearchParams) {
     }
 }
 
-// FIX PERF: Cache getStoryBySlug 60 giây
-// Giảm số lần query Neon DB cho cùng 1 slug
-const getCachedStory = unstable_cache(
-    async (slug: string) => {
-        return db.story.findUnique({
-            where: { slug },
-            select: {
-                id: true,
-                title: true,
-                slug: true,
-                coverImage: true,
-                author: true,
-                status: true,
-                viewCount: true,
-                likeCount: true,
-                followCount: true,
-                nominationCount: true,
-                ratingScore: true,
-                ratingCount: true,
-                description: true,
-                totalChapters: true,
-                // FIX PERF: select thay include — chỉ lấy field cần
-                genres: {
-                    select: { name: true, type: true }
+// Cache getStoryBySlug 60 giây, dùng per-slug tag để invalidate đúng truyện sau khi submit review
+function getCachedStory(slug: string) {
+    return unstable_cache(
+        async () => {
+            return db.story.findUnique({
+                where: { slug },
+                select: {
+                    id: true,
+                    title: true,
+                    slug: true,
+                    coverImage: true,
+                    author: true,
+                    status: true,
+                    viewCount: true,
+                    likeCount: true,
+                    followCount: true,
+                    nominationCount: true,
+                    ratingScore: true,
+                    ratingCount: true,
+                    description: true,
+                    totalChapters: true,
+                    genres: { select: { name: true, type: true } },
+                    chapters: {
+                        orderBy: { index: 'desc' },
+                        take: 5,
+                        select: { id: true, index: true, title: true, updatedAt: true },
+                    },
+                    // reviews fetch riêng trong page.tsx (không cache) → luôn fresh
+                    _count: { select: { chapters: true } },
                 },
-                chapters: {
-                    orderBy: { index: 'desc' },
-                    take: 5,
-                    select: {
-                        id: true,
-                        index: true,
-                        title: true,
-                        updatedAt: true,
-                    }
-                },
-                // FIX PERF: reviews tách riêng, không load trong query chính
-                // để trang vẫn cache được dù reviews thay đổi liên tục
-                reviews: {
-                    orderBy: { createdAt: 'desc' },
-                    take: 10,
-                    select: {
-                        id: true,
-                        rating: true,
-                        content: true,
-                        createdAt: true,
-                        user: {
-                            select: {
-                                name: true,
-                                image: true
-                            }
-                        }
-                    }
-                },
-                _count: {
-                    select: { chapters: true }
-                }
-            }
-        })
-    },
-    ['story-by-slug'], // cache key prefix
-    {
-        revalidate: 60, // 60 giây
-        tags: ['story'], // cho phép revalidate theo tag khi admin update
-    }
-)
+            });
+        },
+        [`story-${slug}`],
+        { revalidate: 60, tags: ['story', `story-${slug}`] }
+    )();
+}
 
 export async function getStoryBySlug(slug: string) {
     try {
@@ -430,7 +401,7 @@ export async function submitReview(storyId: string, rating: number, content: str
   try {
     const story = await db.story.findUnique({
       where: { id: storyId },
-      select: { title: true, ratingScore: true, ratingCount: true },
+      select: { title: true, slug: true, ratingScore: true, ratingCount: true },
     });
 
     const todayStart = new Date();
@@ -493,6 +464,12 @@ export async function submitReview(storyId: string, rating: number, content: str
         });
       }
     });
+
+    // Invalidate cache của truyện này → ratingScore/ratingCount fresh sau khi refresh
+    if (story?.slug) {
+        revalidateTag(`story-${story.slug}`);
+        revalidatePath(`/truyen/${story.slug}`);
+    }
 
     // ── [RULE] Vượt max 5 truyện → lưu review nhưng không credit ──
     if (isOverDailyLimit) {

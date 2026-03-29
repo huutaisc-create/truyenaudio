@@ -53,13 +53,23 @@ const StoryDetail = async ({
         ? { id: session.user.id, name: session.user.name ?? '', image: session.user.image ?? null }
         : null;
 
-    // Round 2: query cần storyId
-    const [chapterDataReal, relatedStoriesReal, authorStoriesReal, topNominations] =
+    // Round 2: tất cả query cần storyId chạy song song
+    // reviews fetch thẳng DB (không cache) → luôn fresh, không bị stale 60s
+    const [chapterDataReal, relatedStoriesReal, authorStoriesReal, topNominations, freshReviews] =
         await Promise.all([
             getChaptersByStoryId(storyData.id, currentPage),
             getRelatedStories(storyData.id, storyData.genres.map(g => g.name), 5),
             getStoriesByAuthor(storyData.author, storyData.id, 4),
             getTopNominations(5),
+            db.review.findMany({
+                where: { storyId: storyData.id },
+                orderBy: { createdAt: 'desc' },
+                take: 10,
+                select: {
+                    id: true, rating: true, content: true, createdAt: true,
+                    user: { select: { name: true, image: true } },
+                },
+            }),
         ]);
 
     // Check user đã review truyện này chưa (chỉ khi đã đăng nhập)
@@ -86,14 +96,14 @@ const StoryDetail = async ({
         rating: storyData.ratingScore ?? 0,
         ratingCount: storyData.ratingCount || 0,
         description: storyData.description || 'Chưa có giới thiệu.',
-        reviews: (storyData.reviews || []).map(review => ({
-			...review,
-			user: {
-				...review.user,
-				name: review.user.name || "Khách ẩn danh", // Nếu null thì gán tên mặc định
-				image: review.user.image || ""             // Nếu null thì gán chuỗi rỗng
-			}
-		})),
+        reviews: freshReviews.map(review => ({
+            ...review,
+            user: {
+                ...review.user,
+                name: review.user.name || "Khách ẩn danh",
+                image: review.user.image || "",
+            },
+        })),
         latestChapters: storyData.chapters.map(c => ({
             id: c.index,
             title: c.title,
