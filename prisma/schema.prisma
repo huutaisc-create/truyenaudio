@@ -175,7 +175,7 @@ model Like {
 model Review {
   id          String   @id @default(uuid())
   rating      Int
-  content     String?
+  content     String
   createdAt   DateTime @default(now())
 
   userId      String
