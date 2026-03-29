@@ -28,6 +28,10 @@ export async function GET(req: NextRequest) {
       _count: {
         select: { comments: true, reviews: true, nominations: true },
       },
+      creditTransactions: {
+        where: { type: { in: ['ADD_APP', 'ADD_WEB'] } },
+        select: { id: true },
+      },
     },
   })
 
@@ -45,6 +49,7 @@ export async function GET(req: NextRequest) {
       commentsCount: user._count.comments,
       reviewsCount: user._count.reviews,
       nominationsCount: user._count.nominations,
+      videoCount: user.creditTransactions.length,
     },
   })
 }
