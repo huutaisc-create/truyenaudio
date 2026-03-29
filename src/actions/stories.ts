@@ -2,7 +2,7 @@
 
 import db from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { unstable_cache, revalidatePath, revalidateTag } from 'next/cache'
+import { unstable_cache, revalidatePath } from 'next/cache'
 
 export type SearchParams = {
     keyword?: string
@@ -467,8 +467,7 @@ export async function submitReview(storyId: string, rating: number, content: str
 
     // Invalidate cache của truyện này → ratingScore/ratingCount fresh sau khi refresh
     if (story?.slug) {
-        revalidateTag(`story-${story.slug}`);
-        revalidatePath(`/truyen/${story.slug}`);
+        revalidatePath(`/truyen/${story.slug}`, 'page');
     }
 
     // ── [RULE] Vượt max 5 truyện → lưu review nhưng không credit ──
