@@ -181,6 +181,8 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                         setComments(json.data);
                         setHasMore(json.hasMore);
                         setNextCursor(json.nextCursor);
+                        // Khôi phục commentLocked sau refresh nếu đã bình luận truyện này hôm nay
+                        if (json.commentedToday) setCommentLocked(true);
                     }
                 }
             } catch (e) {

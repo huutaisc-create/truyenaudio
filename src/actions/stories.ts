@@ -480,7 +480,7 @@ export async function submitReview(storyId: string, rating: number, content: str
         data: { userId, storyId, rating, content },
       });
       if (story) {
-        const currentScore = story.ratingScore || 5.0;
+        const currentScore = story.ratingScore ?? 0;
         const currentCount = story.ratingCount || 0;
         const newCount = currentCount + 1;
         const newScore = ((currentScore * currentCount) + rating) / newCount;

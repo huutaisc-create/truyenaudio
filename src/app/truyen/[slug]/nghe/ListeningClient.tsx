@@ -584,6 +584,11 @@ export default function ListeningClient({
     };
   }, []);
 
+  // ── Clear banner vàng khi hết soft cooldown ──
+  useEffect(() => {
+    if (commentCooldown === 0) setCommentSoftWarning(null);
+  }, [commentCooldown]);
+
   // ── Like handler ──
   const handleLike = useCallback(async () => {
     if (!checkAuth()) return;
@@ -644,7 +649,7 @@ export default function ListeningClient({
     // ── Kiểm tra spam trước khi gửi (Lớp 3) ──
     const now = Date.now();
     const SPAM_WINDOW_MS = 8 * 60 * 1000; // 8 phút
-    const SPAM_LIMIT = 5;
+    const SPAM_LIMIT = 6; // check TRƯỚC khi push → cần 6 để user gửi đủ 5 tin trước khi lock
     const HARD_LOCK_SECS = 15 * 60; // 15 phút
     // [FIX #3] Đọc từ sessionStorage thay vì useRef → survive refresh
     const freshTimestamps = getSpamTimestamps().filter(t => now - t < SPAM_WINDOW_MS);

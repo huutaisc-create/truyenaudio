@@ -22,6 +22,23 @@ export async function GET(
 
     const authUser = await getAuthUser(req);
 
+    // Kiểm tra user đã bình luận truyện này hôm nay chưa (để frontend set commentLocked đúng sau refresh)
+    let commentedToday = false;
+    if (authUser && !after) {
+      const todayStart = new Date();
+      todayStart.setUTCHours(0, 0, 0, 0);
+      const tx = await db.creditTransaction.findFirst({
+        where: {
+          userId: authUser.id,
+          type: 'REWARD_COMMENT',
+          note: { startsWith: `[story:${story.id}]` },
+          createdAt: { gte: todayStart },
+        },
+        select: { id: true },
+      });
+      commentedToday = !!tx;
+    }
+
     const comments = await db.comment.findMany({
       where: { storyId: story.id },
       include: {
@@ -38,6 +55,7 @@ export async function GET(
     const reversed = comments.reverse();
     return NextResponse.json({
       success: true,
+      commentedToday,
       data: reversed.map(c => ({
         id: c.id,
         content: c.content,
