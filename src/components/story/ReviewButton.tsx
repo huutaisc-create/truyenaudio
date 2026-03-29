@@ -12,9 +12,7 @@ type ReviewButtonProps = {
     className?: string;
     text?: string;
     currentUser?: any;
-    // [FIX #2] Prop mới: đã review truyện này chưa (all-time)
     hasReviewed?: boolean;
-    // [FIX #4] Callback để update UI ngay sau khi submit (không chờ router.refresh)
     onReviewSubmitted?: (review: { rating: number; content: string }) => void;
 };
 
@@ -27,6 +25,8 @@ export default function ReviewButton({
     onReviewSubmitted,
 }: ReviewButtonProps) {
     const [isOpen, setIsOpen] = useState(false);
+    // [FIX #3] Local state để cập nhật UI ngay lập tức, không phụ thuộc prop tĩnh từ server
+    const [localHasReviewed, setLocalHasReviewed] = useState(hasReviewed);
     const router = useRouter();
 
     const handleClick = () => {
@@ -39,8 +39,14 @@ export default function ReviewButton({
         setIsOpen(true);
     };
 
-    // [FIX #2] Đã review → hiển thị badge nổi bật, không mở modal
-    if (hasReviewed) {
+    // [FIX #3] Callback khi submit thành công — update local state NGAY
+    const handleReviewSubmitted = (review: { rating: number; content: string }) => {
+        setLocalHasReviewed(true);
+        onReviewSubmitted?.(review);
+    };
+
+    // Dùng localHasReviewed thay vì hasReviewed (prop)
+    if (localHasReviewed) {
         return (
             <div
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-green-500/20 text-green-300 border border-green-500/30 cursor-default select-none"
@@ -60,12 +66,11 @@ export default function ReviewButton({
             >
                 <PenLine className="h-4 w-4" /> {text}
             </button>
-            {/* [FIX #4] Truyền onReviewSubmitted xuống ReviewModal */}
             <ReviewModal
                 isOpen={isOpen}
                 onClose={() => setIsOpen(false)}
                 storyId={storyId}
-                onReviewSubmitted={onReviewSubmitted}
+                onReviewSubmitted={handleReviewSubmitted}
             />
         </>
     );
