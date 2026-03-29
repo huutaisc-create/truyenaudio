@@ -21,7 +21,14 @@ export async function GET(req: NextRequest) {
 
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { downloadCredits: true },
+    select: {
+      downloadCredits: true,
+      lastCheckIn: true,
+      currentStreak: true,
+      _count: {
+        select: { comments: true, reviews: true, nominations: true },
+      },
+    },
   })
 
   if (!user) {
@@ -29,7 +36,15 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
-    downloadCredits: user.downloadCredits,            // Số thực, vd: 1.5
-    usableCredits:   Math.floor(user.downloadCredits), // Số có thể dùng, vd: 1
+    success: true,
+    data: {
+      downloadCredits: user.downloadCredits,
+      usableCredits: Math.floor(user.downloadCredits),
+      lastCheckIn: user.lastCheckIn?.toISOString() ?? null,
+      currentStreak: user.currentStreak ?? 0,
+      commentsCount: user._count.comments,
+      reviewsCount: user._count.reviews,
+      nominationsCount: user._count.nominations,
+    },
   })
 }

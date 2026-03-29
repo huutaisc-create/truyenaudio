@@ -4,10 +4,12 @@ import db from '@/lib/db';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'webtruyen-secret-key-123456';
-// Web Client ID from Google Cloud Console
+// Web Client ID (NextAuth web login)
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+// App Client ID (Flutter mobile app) — có thể trùng hoặc khác
+const GOOGLE_CLIENT_ID_APP = process.env.GOOGLE_CLIENT_ID_APP || GOOGLE_CLIENT_ID;
 
-const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+const client = new OAuth2Client();
 
 export async function POST(req: Request) {
     try {
@@ -17,12 +19,13 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Missing idToken' }, { status: 400 });
         }
 
-        // Verify the Google ID token
+        // Verify the Google ID token — thử cả 2 client ID (web + app)
         let payload;
+        const audiences = [...new Set([GOOGLE_CLIENT_ID, GOOGLE_CLIENT_ID_APP].filter(Boolean))];
         try {
             const ticket = await client.verifyIdToken({
                 idToken,
-                audience: GOOGLE_CLIENT_ID || undefined,
+                audience: audiences.length > 0 ? audiences : undefined,
             });
             payload = ticket.getPayload();
         } catch (verifyError) {
