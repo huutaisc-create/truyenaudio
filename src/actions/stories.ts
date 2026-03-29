@@ -2,7 +2,7 @@
 
 import db from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { unstable_cache, revalidatePath } from 'next/cache'
+import { unstable_cache, revalidatePath, revalidateTag } from 'next/cache'
 
 export type SearchParams = {
     keyword?: string
