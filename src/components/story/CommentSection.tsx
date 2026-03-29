@@ -3,7 +3,7 @@
 // D:\Webtruyen\webtruyen-app\src\components\story\CommentSection.tsx
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Heart, CornerDownRight, Send, Loader2, Trash2, X } from "lucide-react";
+import { Heart, CornerDownRight, Send, Loader2, Trash2, X, CheckCircle2, Info, Clock } from "lucide-react";
 import Image from "next/image";
 
 type CommentUser = {
@@ -73,35 +73,80 @@ function Avatar({ name, image, size = 38 }: { name: string; image?: string | nul
     );
 }
 
-// Toast thông báo credit — fixed bottom center, tự động ẩn sau 5 giây
-function CreditToast({ message, onClose }: { message: string; onClose: () => void }) {
-    useEffect(() => {
-        const t = setTimeout(onClose, 5000);
-        return () => clearTimeout(t);
-    }, [onClose]);
+// ── Toast component — fixed bottom-right, tồn tại 10s ──
+type ToastType = 'success' | 'info' | 'warning';
 
-    const isSuccess = message.startsWith("✅");
-    const isLocked = message.startsWith("🔒") || message.startsWith("🎉");
+interface ToastItem {
+    id: number;
+    message: string;
+    type: ToastType;
+}
+
+function ToastPortal({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss: (id: number) => void }) {
+    if (toasts.length === 0) return null;
     return (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] w-[calc(100vw-32px)] max-w-sm pointer-events-auto animate-in fade-in slide-in-from-bottom-3 duration-300">
-            <div
-                className={`flex items-start gap-2.5 px-4 py-3.5 rounded-2xl text-sm font-medium border shadow-2xl backdrop-blur-md ${
-                    isSuccess
-                        ? "bg-green-900/90 border-green-600/50 text-green-100"
-                        : isLocked
-                        ? "bg-zinc-900/95 border-zinc-600/50 text-zinc-200"
-                        : "bg-amber-900/90 border-amber-600/50 text-amber-100"
-                }`}
-                role="status"
-                aria-live="polite"
-            >
-                <span className="flex-1 leading-snug">{message}</span>
-                <button onClick={onClose} className="shrink-0 opacity-60 hover:opacity-100 mt-0.5">
-                    <X className="h-3.5 w-3.5" />
-                </button>
-            </div>
+        <div
+            className="fixed bottom-6 right-4 z-[9999] flex flex-col gap-2 items-end pointer-events-none"
+            style={{ maxWidth: "min(calc(100vw - 32px), 360px)" }}
+        >
+            {toasts.map(toast => (
+                <div
+                    key={toast.id}
+                    className="pointer-events-auto w-full animate-in fade-in slide-in-from-right-4 duration-300"
+                    role="status"
+                    aria-live="polite"
+                >
+                    <div className={`flex items-start gap-2.5 px-4 py-3.5 rounded-2xl text-sm font-medium border shadow-2xl backdrop-blur-md ${
+                        toast.type === 'success'
+                            ? 'bg-green-900/90 border-green-600/50 text-green-100'
+                            : toast.type === 'warning'
+                            ? 'bg-zinc-900/95 border-zinc-600/50 text-zinc-200'
+                            : 'bg-blue-900/90 border-blue-600/50 text-blue-100'
+                    }`}>
+                        <span className="shrink-0 mt-0.5">
+                            {toast.type === 'success' && <CheckCircle2 className="h-4 w-4" />}
+                            {toast.type === 'info' && <Info className="h-4 w-4" />}
+                            {toast.type === 'warning' && <Clock className="h-4 w-4" />}
+                        </span>
+                        <span className="flex-1 leading-snug">{toast.message}</span>
+                        <button
+                            onClick={() => onDismiss(toast.id)}
+                            className="shrink-0 opacity-60 hover:opacity-100 mt-0.5 transition-opacity"
+                            aria-label="Đóng thông báo"
+                        >
+                            <X className="h-3.5 w-3.5" />
+                        </button>
+                    </div>
+                </div>
+            ))}
         </div>
     );
+}
+
+function useToast() {
+    const [toasts, setToasts] = useState<ToastItem[]>([]);
+    const counterRef = useRef(0);
+
+    const addToast = useCallback((message: string, type: ToastType = 'info') => {
+        const id = ++counterRef.current;
+        setToasts(prev => [...prev, { id, message, type }]);
+        // Tự động xóa sau 10s
+        setTimeout(() => {
+            setToasts(prev => prev.filter(t => t.id !== id));
+        }, 10000);
+    }, []);
+
+    const dismissToast = useCallback((id: number) => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+    }, []);
+
+    return { toasts, addToast, dismissToast };
+}
+
+function getToastType(message: string): ToastType {
+    if (message.startsWith('Bạn nhận được')) return 'success';
+    if (message.startsWith('Hãy quay lại')) return 'warning';
+    return 'info';
 }
 
 export default function CommentSection({ storySlug, currentUser }: CommentSectionProps) {
@@ -114,38 +159,15 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
     const [content, setContent] = useState("");
     const [isSending, setIsSending] = useState(false);
 
-    // Toast thông báo credit
-    const [creditToast, setCreditToast] = useState<string | null>(null);
+    const { toasts, addToast, dismissToast } = useToast();
 
     const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
 
-    // Cooldown state — lock truyện này tới 0h (giây còn lại từ server)
-    const [cooldownSec, setCooldownSec] = useState(0);
-    const [commentLocked, setCommentLocked] = useState(false); // khóa cả ngày
-    const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    // Lock state: đã bình luận truyện này hôm nay
+    const [commentLocked, setCommentLocked] = useState(false);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const topRef = useRef<HTMLDivElement>(null);
-
-    // ── Cooldown timer ─────────────────────────────────────────
-    const startCooldown = (seconds: number) => {
-        if (cooldownRef.current) clearInterval(cooldownRef.current);
-        setCooldownSec(seconds);
-        cooldownRef.current = setInterval(() => {
-            setCooldownSec(prev => {
-                if (prev <= 1) {
-                    clearInterval(cooldownRef.current!);
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-    };
-
-    // Cleanup cooldown on unmount
-    useEffect(() => {
-        return () => { if (cooldownRef.current) clearInterval(cooldownRef.current); };
-    }, []);
 
     // ── Fetch lần đầu ──────────────────────────────────────────
     useEffect(() => {
@@ -195,7 +217,7 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
 
     // ── Gửi comment ───────────────────────────────────────────
     const handleSend = async () => {
-        if (!content.trim() || isSending || commentLocked || cooldownSec > 0) return;
+        if (!content.trim() || isSending || commentLocked) return;
         if (!currentUser) {
             window.location.href = "/login?callbackUrl=" + window.location.pathname;
             return;
@@ -215,17 +237,21 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
 
             const json = await res.json();
 
-            // Server block (đã bình luận truyện này hôm nay / hết 5 lượt)
-            if (!res.ok || json.blocked) {
-                if (json.creditMessage) setCreditToast(json.creditMessage);
-                if (json.blocked && json.cooldownSeconds) {
-                    // Lock theo ngày — không cần đếm ngược, chỉ disable
-                    setCommentLocked(true);
-                }
+            // Đã bình luận truyện này hôm nay → không lưu, toast + lock
+            if (json.blockReason === 'SAME_STORY_TODAY') {
+                addToast(json.creditMessage, 'warning');
+                setCommentLocked(true);
+                return;
+            }
+
+            // Lỗi validation (content trống, < 21 ký tự, ...)
+            if (!res.ok && !json.success) {
+                addToast(json.error || "Gửi bình luận thất bại", 'info');
                 return;
             }
 
             if (json.success) {
+                // Thêm comment vào danh sách
                 setComments(prev => [...prev, json.data]);
                 setContent("");
                 setReplyTo(null);
@@ -234,19 +260,20 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                     window.scrollBy({ top: 999, behavior: "smooth" });
                 }, 100);
 
-                if (json.creditMessage) setCreditToast(json.creditMessage);
+                // Hiện toast credit
+                if (json.creditMessage) {
+                    addToast(json.creditMessage, getToastType(json.creditMessage));
+                }
 
-                // Lock truyện này tới 0h — server trả secsUntilMidnight
+                // Lock truyện này tới 0h (server trả cooldownSeconds = giây tới 0h)
                 if (json.cooldownSeconds && json.cooldownSeconds > 60) {
                     setCommentLocked(true);
-                } else if (json.cooldownSeconds && json.cooldownSeconds > 0) {
-                    startCooldown(json.cooldownSeconds);
                 }
             } else {
-                alert(json.error || "Gửi bình luận thất bại");
+                addToast(json.error || "Gửi bình luận thất bại", 'info');
             }
         } catch {
-            alert("Lỗi kết nối, thử lại sau");
+            addToast("Lỗi kết nối, thử lại sau", 'info');
         } finally {
             setIsSending(false);
         }
@@ -268,7 +295,6 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
         try {
             await fetch(`/api/stories/${storySlug}/comments/${commentId}/like`, { method: "POST" });
         } catch {
-            // rollback nếu lỗi
             setComments(prev =>
                 prev.map(c =>
                     c.id === commentId
@@ -290,7 +316,7 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                 setComments(prev => prev.filter(c => c.id !== commentId));
             }
         } catch {
-            alert("Xóa thất bại, thử lại sau");
+            addToast("Xóa thất bại, thử lại sau", 'info');
         }
     };
 
@@ -314,6 +340,9 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
             aria-label="Bình luận"
             className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-6 md:p-8"
         >
+            {/* Toast portal — fixed bottom-right */}
+            <ToastPortal toasts={toasts} onDismiss={dismissToast} />
+
             <h2 className="font-bold text-base mb-5 text-warm-ink flex items-center gap-2.5">
                 <span className="w-1 h-5 rounded-sm bg-warm-primary shrink-0" aria-hidden="true" />
                 Bình luận
@@ -427,14 +456,6 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                         </div>
                     )}
 
-                    {/* Toast thông báo credit — fixed bottom, render ở root */}
-                    {creditToast && (
-                        <CreditToast
-                            message={creditToast}
-                            onClose={() => setCreditToast(null)}
-                        />
-                    )}
-
                     <textarea
                         ref={textareaRef}
                         value={content}
@@ -447,7 +468,7 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                                 ? "Bạn đã bình luận truyện này hôm nay. Quay lại sau 0h nhé!"
                                 : replyTo
                                 ? `Trả lời ${replyTo.name}...`
-                                : "Chia sẻ cảm nhận của bạn (≥20 ký tự để nhận +0.2 credit)..."
+                                : "Chia sẻ cảm nhận của bạn (cần hơn 20 ký tự để nhận +0.2 credit)..."
                         }
                         rows={3}
                         aria-label="Nội dung bình luận"
@@ -458,34 +479,26 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                         <span className="text-xs text-warm-ink-soft" aria-hidden="true">
                             {commentLocked
                                 ? "🔒 Đã bình luận truyện này hôm nay · Mở lại sau 0h"
-                                : cooldownSec > 0
-                                ? `Chờ ${cooldownSec}s trước khi gửi tiếp`
-                                : "Ctrl+Enter để gửi · ≥20 ký tự để nhận credit"}
+                                : "Ctrl+Enter để gửi · hơn 20 ký tự để nhận credit"}
                         </span>
                         <button
                             onClick={handleSend}
-                            disabled={isSending || !content.trim() || cooldownSec > 0 || commentLocked}
+                            disabled={isSending || !content.trim() || commentLocked}
                             aria-label={
                                 commentLocked
                                     ? "Đã bình luận truyện này hôm nay"
-                                    : cooldownSec > 0
-                                    ? `Chờ ${cooldownSec}s`
                                     : isSending ? "Đang gửi bình luận..." : "Gửi bình luận"
                             }
                             className="flex items-center gap-2 px-5 py-2 rounded-xl text-base font-bold text-white bg-warm-primary hover:bg-warm-primary-soft transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isSending
                                 ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                                : cooldownSec > 0
-                                ? <span className="text-xs font-mono">{cooldownSec}s</span>
                                 : <Send className="h-3.5 w-3.5" aria-hidden="true" />
                             }
                             {isSending
                                 ? "Đang gửi..."
                                 : commentLocked
                                 ? "🔒 Đã bình luận hôm nay"
-                                : cooldownSec > 0
-                                ? `Chờ ${cooldownSec}s`
                                 : replyTo ? "Trả lời" : "Gửi bình luận"
                             }
                         </button>
