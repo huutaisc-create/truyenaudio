@@ -90,7 +90,7 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
         rating: r.rating,
         content: r.content,
         createdAt: r.createdAt.toISOString(),
-        user: { name: r.user.name, image: r.user.image },
+        user: { name: r.user.name ?? '', image: r.user.image },
       })),
     },
     currentUser: session?.user ? {
