@@ -22,6 +22,7 @@ export type SearchParams = {
 
 import { auth } from '@/auth';
 import { rewardCredit } from '@/lib/credits';
+import { getVnTodayStart, secsUntilVnMidnight } from '@/lib/date-vn';
 
 export async function searchStories(params: SearchParams) {
     const {
@@ -404,11 +405,8 @@ export async function submitReview(storyId: string, rating: number, content: str
       select: { title: true, slug: true, ratingScore: true, ratingCount: true },
     });
 
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
-    const tomorrow = new Date(todayStart);
-    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-    const secsUntilMidnight = Math.ceil((tomorrow.getTime() - Date.now()) / 1000);
+    const todayStart = getVnTodayStart();
+    const secsUntilMidnight = secsUntilVnMidnight();
 
     // ── [FIX Bug 1] Check đã review all-time (không giới hạn theo ngày) ──
     const alreadyReviewed = await db.review.findFirst({

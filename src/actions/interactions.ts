@@ -5,6 +5,7 @@
 import db from "@/lib/db";
 import { auth } from "@/auth";
 import { rewardCredit } from "@/lib/credits";
+import { getVnTodayStart, secsUntilVnMidnight } from "@/lib/date-vn";
 
 const MAX_STORIES_PER_DAY = 5;
 
@@ -77,11 +78,8 @@ export async function nominateStory(storyId: string) {
       select: { title: true },
     });
 
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
-    const tomorrow = new Date(todayStart);
-    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-    const secsUntilMidnight = Math.ceil((tomorrow.getTime() - Date.now()) / 1000);
+    const todayStart = getVnTodayStart();
+    const secsUntilMidnight = secsUntilVnMidnight();
 
     const txsToday = await db.creditTransaction.findMany({
       where: {
@@ -202,8 +200,7 @@ export async function getStoryInteractions(storyId: string) {
   };
 
   if (userId) {
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayStart = getVnTodayStart();
 
     const [lib, like, history, nominationToday, reviewAllTime, commentedTodayTx] = await Promise.all([
       db.library.findUnique({ where: { userId_storyId: { userId, storyId } } }),

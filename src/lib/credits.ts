@@ -1,6 +1,7 @@
 // D:\Webtruyen\webtruyen-app\src\lib\credits.ts
 
 import db from '@/lib/db'
+import { getVnTodayStart } from '@/lib/date-vn'
 
 /**
  * Trừ 1 credit để tải chương.
@@ -103,9 +104,8 @@ export async function rewardCredit(
     }
   }
 
-  // 0h00 hôm nay UTC
-  const todayStart = new Date()
-  todayStart.setUTCHours(0, 0, 0, 0)
+  // 0h00 hôm nay giờ VN (UTC+7)
+  const todayStart = getVnTodayStart()
 
   // 2. Check cooldown — lấy giao dịch gần nhất của type này
   if (cooldownSeconds > 0) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-helper'
 import db from '@/lib/db'
+import { getVnTodayStart } from '@/lib/date-vn'
 
 export async function GET(
   req: NextRequest,
@@ -24,8 +25,7 @@ export async function GET(
   }
 
   if (authUser) {
-    const todayStart = new Date()
-    todayStart.setUTCHours(0, 0, 0, 0)
+    const todayStart = getVnTodayStart()
 
     const [lib, like, nomToday, commentedTodayTx, review] = await Promise.all([
       db.library.findUnique({
