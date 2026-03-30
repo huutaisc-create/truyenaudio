@@ -114,7 +114,6 @@ const StoryCard = ({
           border: "1.5px solid var(--hear-border)",
           color: "var(--hear-color)",
         }}
-        onMouseEnter={undefined}
       >
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
@@ -275,25 +274,16 @@ export default async function Home() {
               </div>
               <div className="p-4">
                 <div className="flex flex-wrap gap-1.5">
+                  <style>{`.genre-tag:hover { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; } .new-story-row:hover { background: var(--card) !important; }`}</style>
                   {GENRES.map((genre) => (
                     <Link
                       key={genre}
                       href={`/tim-kiem?the-loai=${encodeURIComponent(genre)}`}
-                      className="rounded-full px-3 py-1 text-xs font-medium transition-all"
+                      className="genre-tag rounded-full px-3 py-1 text-xs font-medium transition-all"
                       style={{
                         background: "var(--card)",
                         border: "1px solid var(--border)",
                         color: "var(--text-muted)",
-                      }}
-                      onMouseEnter={e => {
-                        (e.currentTarget as HTMLElement).style.background = "var(--accent)";
-                        (e.currentTarget as HTMLElement).style.color = "#fff";
-                        (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)";
-                      }}
-                      onMouseLeave={e => {
-                        (e.currentTarget as HTMLElement).style.background = "var(--card)";
-                        (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
-                        (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
                       }}
                     >
                       {genre}
@@ -321,10 +311,8 @@ export default async function Home() {
                       href={`/truyen/${story.slug}`}
                       key={story.id}
                       aria-label={`${story.title}${ch ? `, chương ${ch.index}` : ""}`}
-                      className="group flex items-center gap-3 px-3 py-2.5 transition-colors"
+                      className="group new-story-row flex items-center gap-3 px-3 py-2.5 transition-colors"
                       style={{ borderBottom: "1px solid var(--border-soft)" }}
-                      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = "var(--card)")}
-                      onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = "transparent")}
                     >
                       <div
                         className="shrink-0 w-9 h-12 rounded overflow-hidden relative"
