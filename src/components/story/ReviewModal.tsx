@@ -119,11 +119,16 @@ export default function ReviewModal({
     storyId,
     onReviewSubmitted,
 }: ReviewModalProps) {
+    const MIN_LENGTH = 21;
+
     const [rating, setRating]         = useState(5);   // default 5 sao
     const [content, setContent]       = useState("");
     const [hovered, setHovered]       = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [locked, setLocked]         = useState(false);
+    const [validationError, setValidationError] = useState<string | null>(null);
+
+    const charCount = content.trim().length;
 
     // Reset mỗi lần mở lại
     useEffect(() => {
@@ -133,12 +138,24 @@ export default function ReviewModal({
             setHovered(0);
             setIsSubmitting(false);
             setLocked(false);
+            setValidationError(null);
         }
     }, [isOpen]);
 
     const displayRating = hovered || rating;
 
     const handleSubmit = async () => {
+        // ── Validate client-side trước khi gọi API ──
+        const trimmed = content.trim();
+        if (trimmed.length === 0) {
+            setValidationError('Vui lòng nhập nội dung đánh giá.');
+            return;
+        }
+        if (trimmed.length < MIN_LENGTH) {
+            setValidationError(`Cần ít nhất ${MIN_LENGTH} ký tự để gửi đánh giá (hiện tại: ${trimmed.length}).`);
+            return;
+        }
+        setValidationError(null);
         setIsSubmitting(true);
         const result = await submitReview(storyId, rating, content);
         setIsSubmitting(false);
@@ -223,13 +240,46 @@ export default function ReviewModal({
                         </span>
                     </div>
 
-                    <textarea
-                        value={content}
-                        onChange={e => setContent(e.target.value)}
-                        placeholder="Chia sẻ cảm nghĩ của bạn (hơn 20 ký tự để nhận +0.2 credit)..."
-                        disabled={locked}
-                        className="w-full h-32 p-4 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-900 focus:ring-2 focus:ring-orange-500 focus:outline-none resize-none disabled:opacity-60"
-                    />
+                    <div className="space-y-1.5">
+                        <textarea
+                            value={content}
+                            onChange={e => { setContent(e.target.value); setValidationError(null); }}
+                            placeholder="Chia sẻ cảm nghĩ của bạn..."
+                            disabled={locked}
+                            className={`w-full h-32 p-4 rounded-xl border bg-gray-50 dark:bg-zinc-900 focus:ring-2 focus:outline-none resize-none disabled:opacity-60 transition-colors ${
+                                validationError
+                                    ? 'border-red-400 focus:ring-red-400'
+                                    : charCount > 0 && charCount < MIN_LENGTH
+                                        ? 'border-orange-400 focus:ring-orange-400'
+                                        : 'border-gray-200 dark:border-zinc-700 focus:ring-orange-500'
+                            }`}
+                        />
+                        {/* Character counter */}
+                        <p className={`text-xs ${
+                            locked
+                                ? 'text-green-500'
+                                : charCount === 0
+                                    ? 'text-gray-400'
+                                    : charCount < MIN_LENGTH
+                                        ? 'text-orange-400'
+                                        : 'text-green-500'
+                        }`}>
+                            {locked
+                                ? '✓ Đánh giá đã được lưu'
+                                : charCount === 0
+                                    ? `Tối thiểu ${MIN_LENGTH} ký tự · hơn 20 ký tự để nhận +0.2 credit`
+                                    : charCount < MIN_LENGTH
+                                        ? `${charCount}/${MIN_LENGTH} ký tự · Cần thêm ${MIN_LENGTH - charCount} ký tự nữa`
+                                        : `${charCount} ký tự ✓ · Đủ điều kiện nhận +0.2 credit`
+                            }
+                        </p>
+                        {/* Validation error */}
+                        {validationError && (
+                            <p className="text-xs text-red-400 flex items-center gap-1">
+                                <span>⚠</span> {validationError}
+                            </p>
+                        )}
+                    </div>
 
                     <div className="flex gap-3">
                         <button
@@ -243,7 +293,11 @@ export default function ReviewModal({
                             <button
                                 onClick={handleSubmit}
                                 disabled={isSubmitting}
-                                className="flex-1 py-3 text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+                                className={`flex-1 py-3 text-sm font-bold text-white rounded-xl shadow-lg transition-all active:scale-95 disabled:cursor-not-allowed ${
+                                    charCount >= MIN_LENGTH
+                                        ? 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 shadow-orange-500/20'
+                                        : 'bg-gradient-to-r from-orange-500/50 to-red-600/50 cursor-not-allowed'
+                                } disabled:opacity-70`}
                             >
                                 {isSubmitting ? "Đang gửi..." : "Gửi Đánh Giá"}
                             </button>
