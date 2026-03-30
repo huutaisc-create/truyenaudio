@@ -1,51 +1,174 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-brand-primary: #f27024;
-  --color-brand-secondary: #323232;
+  --color-brand-primary: #E8580A;
+  --color-brand-secondary: #F5EDE4;
 
-  --color-warm-bg: transparent;
-  --color-warm-card: #FFFFFF;
-  --color-warm-border: #EDE0D4;
-  --color-warm-border-soft: #F5EDE4;
-  --color-warm-ink: #1A1208;
-  --color-warm-ink-mid: #3D2E1E;
-  --color-warm-ink-soft: #6B5744;
-  --color-warm-ink-light: #A08470;
-  --color-warm-primary: #E8580A;
-  --color-warm-primary-soft: #FF6B1A;
-  --color-warm-primary-pale: #FFF3EE;
-  --color-warm-gold: #F5A623;
+  /* ── WARM NOIR (Nam) — default ── */
+  --color-bg:           #0E0A06;
+  --color-surface:      #1A1208;
+  --color-card:         #211810;
+  --color-card2:        #2A1E12;
+  --color-border:       #3D2E1E;
+  --color-border-soft:  #2A1E12;
+  --color-text:         #F5EDE4;
+  --color-text-muted:   #8B7355;
+  --color-text-soft:    #6B5744;
+  --color-accent:       #E8580A;
+  --color-accent-hover: #D14D09;
+  --color-accent2:      #F5A623;
+  --color-nav-bg:       rgba(14,10,6,0.94);
+  --color-footer-bg:    #0A0704;
+  --color-footer-border:#2A1E12;
 
-  /* ✅ Đồng bộ với layout.tsx — dùng system font, không load woff2 */
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-:root {
-  color-scheme: light only;
+/* ══════════════════════════════════════════
+   THEME: NAM (Warm Noir) — default on <html>
+══════════════════════════════════════════ */
+:root,
+html[data-theme="male"] {
+  --bg:           #0E0A06;
+  --surface:      #1A1208;
+  --card:         #211810;
+  --card2:        #2A1E12;
+  --border:       #3D2E1E;
+  --border-soft:  #2A1E12;
+  --text:         #F5EDE4;
+  --text-muted:   #8B7355;
+  --text-soft:    #6B5744;
+  --accent:       #E8580A;
+  --accent-hover: #D14D09;
+  --accent2:      #F5A623;
+  --accent2-soft: rgba(245,166,35,.12);
+  --accent2-border:rgba(245,166,35,.3);
+  --pill-hot-bg:  rgba(232,88,10,.15);
+  --pill-hot-border:rgba(232,88,10,.35);
+  --pill2-bg:     rgba(245,166,35,.12);
+  --pill2-border: rgba(245,166,35,.3);
+  --pill2-color:  #F5A623;
+  --hear-bg:      rgba(245,166,35,.18);
+  --hear-border:  rgba(245,166,35,.5);
+  --hear-color:   #F5A623;
+  --rank-top:     #F5A623;
+  --glow1:        rgba(232,88,10,.2);
+  --glow2:        rgba(245,166,35,.12);
+  --stat-icon1:   rgba(232,88,10,.15);
+  --stat-icon2:   rgba(59,130,246,.12);
+  --stat-icon3:   rgba(168,85,247,.12);
+  --stat-icon4:   rgba(34,197,94,.12);
+  --tag-bg:       #1A1208;
+  --credits-bg:   linear-gradient(90deg,#E8580A,#F5A623);
+  --section-nav-bg:rgba(14,10,6,.9);
+  --nav-bg:       rgba(14,10,6,0.94);
+  --search-bg:    #1A1208;
+  --search-border:#3D2E1E;
+  --footer-bg:    #0A0704;
+  --footer-border:#2A1E12;
+  --footer-link:  #6B5744;
+  --scrollbar-track:#1A1208;
+  --scrollbar-thumb:#3D2E1E;
+  --ranking-tab-active:#F5A623;
+  --tr: 0.35s ease;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: light only;
-  }
+/* ══════════════════════════════════════════
+   THEME: NỮ (Dusk Purple)
+══════════════════════════════════════════ */
+html[data-theme="female"] {
+  --bg:           #0D0A18;
+  --surface:      #13102A;
+  --card:         #1A1635;
+  --card2:        #201C3D;
+  --border:       #2D2850;
+  --border-soft:  #1A1635;
+  --text:         #EEE8FF;
+  --text-muted:   #8B7FAD;
+  --text-soft:    #6B5F8A;
+  --accent:       #E8580A;
+  --accent-hover: #D14D09;
+  --accent2:      #B84EF5;
+  --accent2-soft: rgba(184,78,245,.1);
+  --accent2-border:rgba(184,78,245,.28);
+  --pill-hot-bg:  rgba(232,88,10,.12);
+  --pill-hot-border:rgba(232,88,10,.32);
+  --pill2-bg:     rgba(184,78,245,.1);
+  --pill2-border: rgba(184,78,245,.3);
+  --pill2-color:  #B84EF5;
+  --hear-bg:      rgba(184,78,245,.18);
+  --hear-border:  rgba(184,78,245,.5);
+  --hear-color:   #B84EF5;
+  --rank-top:     #B84EF5;
+  --glow1:        rgba(232,88,10,.15);
+  --glow2:        rgba(184,78,245,.13);
+  --stat-icon1:   rgba(232,88,10,.15);
+  --stat-icon2:   rgba(184,78,245,.13);
+  --stat-icon3:   rgba(59,130,246,.12);
+  --stat-icon4:   rgba(34,197,94,.12);
+  --tag-bg:       #13102A;
+  --credits-bg:   linear-gradient(90deg,#E8580A,#B84EF5);
+  --section-nav-bg:rgba(13,10,24,.9);
+  --nav-bg:       rgba(13,10,24,0.94);
+  --search-bg:    #13102A;
+  --search-border:#2D2850;
+  --footer-bg:    #09070F;
+  --footer-border:#1A1635;
+  --footer-link:  #6B5F8A;
+  --scrollbar-track:#13102A;
+  --scrollbar-thumb:#2D2850;
+  --ranking-tab-active:#B84EF5;
+  --tr: 0.35s ease;
+}
+
+/* ══════════════════════════════════════════
+   BASE
+══════════════════════════════════════════ */
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  @apply text-warm-ink selection:bg-orange-500/20 selection:text-orange-900;
-  background-color: #ffffff;
-
-  /*
-   * ✅ Bỏ background-attachment: fixed
-   * Lý do: "fixed" buộc browser repaint toàn bộ background mỗi lần scroll
-   * trên mobile → gây jank, tiêu tốn GPU. Không có lợi ích visual đáng kể.
-   *
-   * ✅ Chuyển 3 radial-gradient sang CSS custom property tĩnh
-   * Render 1 lần lúc paint, không recompute khi scroll.
-   */
-  /* background-image: removed — dùng trắng thuần */
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  min-height: 100vh;
+  transition: background var(--tr), color var(--tr);
 }
 
-::-webkit-scrollbar { width: 10px; }
-::-webkit-scrollbar-track { background: #faf7f2; }
-::-webkit-scrollbar-thumb { @apply bg-zinc-400 rounded-full border-2 hover:bg-zinc-500 transition-colors; border-color: #faf7f2; }
+/* ══════════════════════════════════════════
+   SCROLLBAR
+══════════════════════════════════════════ */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 99px;
+  transition: background .2s;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-soft); }
+
+/* ══════════════════════════════════════════
+   SELECTION
+══════════════════════════════════════════ */
+::selection {
+  background: rgba(232,88,10,.25);
+  color: var(--text);
+}
+
+/* ══════════════════════════════════════════
+   THEME TRANSITION — smooth swap
+══════════════════════════════════════════ */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.35s;
+  transition-timing-function: ease;
+}
+/* Loại trừ các thứ không nên transition */
+img, video, svg, canvas, [class*="animate"] {
+  transition: none;
+}

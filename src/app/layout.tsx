@@ -7,12 +7,6 @@ import BackToTop from "@/components/common/BackToTop";
 import { Suspense } from 'react';
 import { SessionWrapper } from "@/components/providers/SessionWrapper";
 
-// ── FONT: Bỏ hoàn toàn Google Font / @fontsource ─────────────────────────────
-// Dùng system font stack → không load file woff2 nào → LCP giảm ~700ms
-// Android: Roboto (có sẵn), iOS: SF Pro, Windows: Segoe UI
-// Người dùng Việt Nam chủ yếu dùng Android/iOS → font system trông rất tốt
-// ─────────────────────────────────────────────────────────────────────────────
-
 export const viewport: Viewport = {
   themeColor: '#e8580a',
   width: 'device-width',
@@ -20,13 +14,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "WebTruyen - Đọc truyện online miễn phí",
+  title: "MêTruyệnChữ - Đọc truyện online miễn phí",
   description: "Nền tảng đọc và nghe truyện online hàng đầu với hàng ngàn tiểu thuyết chất lượng cao.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "WebTruyen",
+    title: "MêTruyệnChữ",
   },
   formatDetection: {
     telephone: false,
@@ -48,29 +42,38 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className="light" suppressHydrationWarning>
+    // data-theme="male" = Warm Noir default
+    // ThemeToggle trong Header sẽ đổi attribute này thành "female" khi user bấm
+    <html lang="vi" data-theme="male" suppressHydrationWarning>
       <head>
         {/* PWA iOS */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="WebTruyen" />
+        <meta name="apple-mobile-web-app-title" content="MêTruyệnChữ" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512.png" />
 
-        {/* Preconnect R2 CDN để giảm latency load ảnh bìa */}
+        {/* Preconnect R2 CDN */}
         <link rel="preconnect" href="https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev" />
         <link rel="dns-prefetch" href="https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev" />
+
+        {/* Khôi phục theme từ localStorage — chạy trước khi React hydrate để tránh flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var t = localStorage.getItem('mtc-theme');
+                if (t === 'female') document.documentElement.setAttribute('data-theme', 'female');
+              } catch(e) {}
+            `,
+          }}
+        />
       </head>
       <body
         suppressHydrationWarning
         className="min-h-screen antialiased"
-        style={{
-          // system-ui: iOS/macOS=SF Pro, Android=Roboto, Windows=Segoe UI
-          // Tất cả đều hỗ trợ tiếng Việt đầy đủ — không fallback sang serif
-          // → trông y hệt nhưng không cần load gì cả
-          fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif',
-        }}
+        style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif' }}
       >
         <SessionWrapper>
           <RegisterSW />
@@ -84,12 +87,12 @@ export default function RootLayout({
             position: 'fixed',
             bottom: 16,
             right: 16,
-            background: 'rgba(242,112,36,0.15)',
-            border: '1px solid rgba(242,112,36,0.3)',
+            background: 'rgba(232,88,10,0.15)',
+            border: '1px solid rgba(232,88,10,0.3)',
             borderRadius: 999,
             padding: '3px 10px',
             fontSize: 11,
-            color: '#f27024',
+            color: '#E8580A',
             fontWeight: 500,
             zIndex: 9999,
             pointerEvents: 'none',
