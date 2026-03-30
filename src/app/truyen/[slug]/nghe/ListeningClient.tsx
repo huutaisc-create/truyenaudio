@@ -17,7 +17,9 @@ import ReviewButton from '@/components/story/ReviewButton';
 const R2_BASE = 'https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev';
 
 // [FIX #3] sessionStorage helpers — spam timestamps survive refresh
-const SPAM_STORAGE_KEY = 'comment_spam_ts';
+const SPAM_STORAGE_KEY     = 'comment_spam_ts';
+const HARD_LOCK_UNTIL_KEY  = 'comment_hard_lock_until'; // ms timestamp khi hard lock hết hạn
+const LAST_COMMENT_KEY     = 'comment_last_ts';         // ms timestamp lần gửi cuối (cooldown)
 
 function getSpamTimestamps(): number[] {
   try {
@@ -25,11 +27,30 @@ function getSpamTimestamps(): number[] {
     return raw ? JSON.parse(raw) : [];
   } catch { return []; }
 }
-
 function saveSpamTimestamps(timestamps: number[]) {
+  try { sessionStorage.setItem(SPAM_STORAGE_KEY, JSON.stringify(timestamps)); } catch {}
+}
+
+// Hard lock persist
+function getHardLockUntil(): number {
+  try { return parseInt(sessionStorage.getItem(HARD_LOCK_UNTIL_KEY) ?? '0', 10) || 0; } catch { return 0; }
+}
+function saveHardLockUntil(ms: number) {
+  try { sessionStorage.setItem(HARD_LOCK_UNTIL_KEY, String(ms)); } catch {}
+}
+function clearHardLockStorage() {
   try {
-    sessionStorage.setItem(SPAM_STORAGE_KEY, JSON.stringify(timestamps));
+    sessionStorage.removeItem(HARD_LOCK_UNTIL_KEY);
+    sessionStorage.removeItem(SPAM_STORAGE_KEY);
   } catch {}
+}
+
+// Cooldown persist
+function saveLastCommentTs() {
+  try { sessionStorage.setItem(LAST_COMMENT_KEY, String(Date.now())); } catch {}
+}
+function getLastCommentTs(): number {
+  try { return parseInt(sessionStorage.getItem(LAST_COMMENT_KEY) ?? '0', 10) || 0; } catch { return 0; }
 }
 
 // ─── Types ────────────────────────────────────────────────
@@ -565,11 +586,29 @@ export default function ListeningClient({
 
   // ── Cooldown timer helper ──
   const startCooldown = useCallback((seconds: number) => {
+    saveLastCommentTs(); // persist để restore sau F5
     if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
     setCommentCooldown(seconds);
     cooldownTimerRef.current = setInterval(() => {
       setCommentCooldown(prev => {
         if (prev <= 1) { clearInterval(cooldownTimerRef.current!); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  // ── Hard lock timer helper ──
+  const startHardLock = useCallback((seconds: number) => {
+    saveHardLockUntil(Date.now() + seconds * 1000); // persist để restore sau F5
+    if (hardLockTimerRef.current) clearInterval(hardLockTimerRef.current);
+    setCommentHardLock(seconds);
+    hardLockTimerRef.current = setInterval(() => {
+      setCommentHardLock(prev => {
+        if (prev <= 1) {
+          clearInterval(hardLockTimerRef.current!);
+          clearHardLockStorage(); // xóa sessionStorage khi hết lock
+          return 0;
+        }
         return prev - 1;
       });
     }, 1000);
@@ -582,6 +621,47 @@ export default function ListeningClient({
       if (creditToastTimerRef.current) clearTimeout(creditToastTimerRef.current);
       if (hardLockTimerRef.current) clearInterval(hardLockTimerRef.current);
     };
+  }, []);
+
+  // ── Restore hard lock & cooldown từ sessionStorage khi mount / sau F5 ──
+  useEffect(() => {
+    // Restore hard lock
+    const hardLockUntil = getHardLockUntil();
+    if (hardLockUntil > Date.now()) {
+      const secs = Math.ceil((hardLockUntil - Date.now()) / 1000);
+      if (hardLockTimerRef.current) clearInterval(hardLockTimerRef.current);
+      setCommentHardLock(secs);
+      hardLockTimerRef.current = setInterval(() => {
+        setCommentHardLock(prev => {
+          if (prev <= 1) {
+            clearInterval(hardLockTimerRef.current!);
+            clearHardLockStorage();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else if (hardLockUntil > 0) {
+      clearHardLockStorage(); // đã hết hạn, dọn dẹp
+    }
+
+    // Restore soft cooldown
+    const lastTs = getLastCommentTs();
+    if (lastTs > 0) {
+      const elapsed = Math.floor((Date.now() - lastTs) / 1000);
+      const remaining = 60 - elapsed;
+      if (remaining > 0) {
+        if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+        setCommentCooldown(remaining);
+        cooldownTimerRef.current = setInterval(() => {
+          setCommentCooldown(prev => {
+            if (prev <= 1) { clearInterval(cooldownTimerRef.current!); return 0; }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Clear banner vàng khi hết soft cooldown ──
@@ -646,33 +726,28 @@ export default function ListeningClient({
     if (!commentInput.trim() || commentSending) return;
     if (!currentUser) { window.location.href = '/login?callbackUrl=' + window.location.pathname; return; }
 
-    // ── Kiểm tra spam trước khi gửi (Lớp 3) ──
-    const now = Date.now();
-    const SPAM_WINDOW_MS = 8 * 60 * 1000; // 8 phút
-    const SPAM_LIMIT = 5; // check trước khi push → comment thứ 5 bị lock, gửi được 4
-    const HARD_LOCK_SECS = 15 * 60; // 15 phút
-    // [FIX #3] Đọc từ sessionStorage thay vì useRef → survive refresh
-    const freshTimestamps = getSpamTimestamps().filter(t => now - t < SPAM_WINDOW_MS);
-    saveSpamTimestamps(freshTimestamps);
-    if (freshTimestamps.length >= SPAM_LIMIT) {
-      // Kích hoạt Hard Lock 15 phút
-      if (hardLockTimerRef.current) clearInterval(hardLockTimerRef.current);
-      setCommentHardLock(HARD_LOCK_SECS);
-      showCreditToast('Bạn đã bình luận quá nhanh! Tính năng được mở lại sau 15 phút.');
-      hardLockTimerRef.current = setInterval(() => {
-        setCommentHardLock(prev => {
-          if (prev <= 1) {
-            clearInterval(hardLockTimerRef.current!);
-            saveSpamTimestamps([]);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    // Việc 1: Validate min 21 ký tự client-side
+    if (commentInput.trim().length < 21) {
+      showCreditToast('Bình luận cần ít nhất 21 ký tự.');
       return;
     }
 
-    // Lớp 2: đang soft cooldown → chặn nút nhưng không chặn ở đây (nút đã disabled)
+    // ── Kiểm tra spam trước khi gửi (Lớp 3) ──
+    const now = Date.now();
+    const SPAM_WINDOW_MS = 8 * 60 * 1000; // 8 phút
+    const SPAM_LIMIT = 5; // check trước khi push → gửi được 4, lần 5 bị lock
+    const HARD_LOCK_SECS = 15 * 60; // 15 phút
+    // Đọc từ sessionStorage → survive F5
+    const freshTimestamps = getSpamTimestamps().filter(t => now - t < SPAM_WINDOW_MS);
+    saveSpamTimestamps(freshTimestamps);
+    if (freshTimestamps.length >= SPAM_LIMIT) {
+      // Kích hoạt Hard Lock 15 phút — persist vào sessionStorage
+      startHardLock(HARD_LOCK_SECS);
+      showCreditToast('Bạn đã bình luận quá nhanh! Tính năng được mở lại sau 15 phút.');
+      return;
+    }
+
+    // Lớp 2: đang soft cooldown → nút đã disabled, guard thêm ở đây
     if (commentCooldown > 0) return;
 
     const body = replyTo ? `@${replyTo.name} ${commentInput.trim()}` : commentInput.trim();
@@ -698,7 +773,7 @@ export default function ListeningClient({
         commentTextareaRef.current?.focus();
         if (json.creditMessage) showCreditToast(json.creditMessage);
         saveSpamTimestamps([...getSpamTimestamps(), Date.now()]);
-        // Lớp 2: bật soft cooldown 60s + lưu số lượt còn lại cho banner
+        // Lớp 2: bật soft cooldown 60s (đã persist lastCommentTs bên trong)
         setCommentSoftWarning(json.remainingSlots ?? null);
         startCooldown(60);
       } else {
@@ -706,7 +781,7 @@ export default function ListeningClient({
       }
     } catch { showCreditToast('Lỗi kết nối'); }
     finally { setCommentSending(false); }
-  }, [commentInput, commentSending, commentCooldown, commentHardLock, slug, replyTo, currentUser, showCreditToast, startCooldown]);
+  }, [commentInput, commentSending, commentCooldown, commentHardLock, slug, replyTo, currentUser, showCreditToast, startCooldown, startHardLock]);
 
   // ── Khi user mở tab info/comments lần đầu ──
   const handleOpenTab = useCallback((tab: DrawerTab) => {
