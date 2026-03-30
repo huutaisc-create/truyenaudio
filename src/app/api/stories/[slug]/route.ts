@@ -23,13 +23,19 @@ export async function GET(
             },
             include: {
                 genres: {
+                    select: { id: true, name: true },
+                },
+                reviews: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 10,
                     select: {
                         id: true,
-                        name: true,
-                    }
+                        rating: true,
+                        content: true,
+                        createdAt: true,
+                        user: { select: { name: true, image: true } },
+                    },
                 },
-                // We do not fetch all chapters here to keep payload small.
-                // There will be a separate route for chapters list.
             },
         });
 
