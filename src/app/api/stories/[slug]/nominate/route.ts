@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-helper'
 import { rewardCredit } from '@/lib/credits'
 import db from '@/lib/db'
+import { getVnTodayStart, secsUntilVnMidnight } from '@/lib/date-vn'
 
 const MAX_STORIES_PER_DAY = 5
 
@@ -16,11 +17,8 @@ export async function POST(
   const story = await db.story.findUnique({ where: { slug }, select: { id: true, title: true } })
   if (!story) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const todayStart = new Date()
-  todayStart.setUTCHours(0, 0, 0, 0)
-  const tomorrow = new Date(todayStart)
-  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
-  const secsUntilMidnight = Math.ceil((tomorrow.getTime() - Date.now()) / 1000)
+  const todayStart = getVnTodayStart()
+  const secsUntilMidnight = secsUntilVnMidnight()
 
   const txsToday = await db.creditTransaction.findMany({
     where: {

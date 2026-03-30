@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getAuthUser } from '@/lib/auth-helper';
 import { rewardCredit } from '@/lib/credits';
+import { getVnTodayStart, secsUntilVnMidnight } from '@/lib/date-vn';
 
 const PAGE_SIZE = 20;
 const MAX_STORIES_PER_DAY = 5;
@@ -25,8 +26,7 @@ export async function GET(
     // Kiểm tra user đã bình luận truyện này hôm nay chưa (để frontend set commentLocked đúng sau refresh)
     let commentedToday = false;
     if (authUser && !after) {
-      const todayStart = new Date();
-      todayStart.setUTCHours(0, 0, 0, 0);
+      const todayStart = getVnTodayStart();
       const tx = await db.creditTransaction.findFirst({
         where: {
           userId: authUser.id,
@@ -106,11 +106,8 @@ export async function POST(
     if (!story) return NextResponse.json({ error: 'Story not found' }, { status: 404 });
 
     // ── Lấy lịch sử credit hôm nay ──
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
-    const tomorrow = new Date(todayStart);
-    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-    const secsUntilMidnight = Math.ceil((tomorrow.getTime() - Date.now()) / 1000);
+    const todayStart = getVnTodayStart();
+    const secsUntilMidnight = secsUntilVnMidnight();
 
     const txsToday = await db.creditTransaction.findMany({
       where: {

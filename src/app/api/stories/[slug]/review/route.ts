@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-helper'
 import { rewardCredit } from '@/lib/credits'
 import db from '@/lib/db'
+import { getVnTodayStart, secsUntilVnMidnight } from '@/lib/date-vn'
 
 const MAX_STORIES_PER_DAY = 5
 
@@ -19,6 +20,13 @@ export async function POST(
 
   if (!rating || rating < 1 || rating > 5) {
     return NextResponse.json({ error: 'Rating phải từ 1 đến 5 sao.' }, { status: 400 })
+  }
+
+  // ── [GUARD] Nội dung < 21 ký tự → reject, không lưu DB ──
+  if (content.length < 21) {
+    return NextResponse.json({
+      error: 'Nội dung đánh giá cần ít nhất 21 ký tự.',
+    }, { status: 400 })
   }
 
   const story = await db.story.findUnique({
@@ -41,11 +49,8 @@ export async function POST(
     }, { status: 409 })
   }
 
-  const todayStart = new Date()
-  todayStart.setUTCHours(0, 0, 0, 0)
-  const tomorrow = new Date(todayStart)
-  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
-  const secsUntilMidnight = Math.ceil((tomorrow.getTime() - Date.now()) / 1000)
+  const todayStart = getVnTodayStart()
+  const secsUntilMidnight = secsUntilVnMidnight()
 
   const txsToday = await db.creditTransaction.findMany({
     where: {
