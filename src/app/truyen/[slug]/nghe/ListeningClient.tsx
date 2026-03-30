@@ -2414,13 +2414,6 @@ export default function ListeningClient({
         </div>
       )}
 
-      {/* ── Version Badge ── */}
-      <div className="fixed bottom-16 right-3 z-50 pointer-events-none">
-        <div className="bg-[#1a1612]/90 border border-white/[0.07] rounded-lg px-2 py-1">
-          <span className="text-[10px] font-black text-[#e8580a]">v 6.1</span>
-        </div>
-      </div>
-
       {/* ── Loading Overlay ── */}
       {isGenerating && generatedRef.current === 0 && prefetchedPCMRef.current.length === 0 && (
         <LoadingOverlay

@@ -41,26 +41,21 @@ const SidebarTitle = ({ emoji, label }: { emoji: string; label: string }) => (
 );
 
 const SeeAllLink = ({ href, label }: { href: string; label: string }) => (
-  <Link
-    href={href}
-    aria-label={label}
-    className="inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold border-[1.5px] transition-all"
-    style={{
-      borderColor: "var(--accent)",
-      color: "var(--accent)",
-      background: "transparent",
-    }}
-    onMouseEnter={e => {
-      (e.currentTarget as HTMLElement).style.background = 'var(--accent)';
-      (e.currentTarget as HTMLElement).style.color = '#fff';
-    }}
-    onMouseLeave={e => {
-      (e.currentTarget as HTMLElement).style.background = 'transparent';
-      (e.currentTarget as HTMLElement).style.color = 'var(--accent)';
-    }}
-  >
-    Tất cả →
-  </Link>
+  <>
+    <style>{`.see-all-link:hover { background: var(--accent) !important; color: #fff !important; }`}</style>
+    <Link
+      href={href}
+      aria-label={label}
+      className="see-all-link inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold border-[1.5px] transition-all"
+      style={{
+        borderColor: "var(--accent)",
+        color: "var(--accent)",
+        background: "transparent",
+      }}
+    >
+      Tất cả →
+    </Link>
+  </>
 );
 
 // ── StoryCard ──

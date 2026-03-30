@@ -82,21 +82,7 @@ export default function RootLayout({
           </Suspense>
           <ClientLayout>{children}</ClientLayout>
           <BackToTop />
-          {/* Version badge */}
-          <div style={{
-            position: 'fixed',
-            bottom: 16,
-            right: 16,
-            background: 'rgba(232,88,10,0.15)',
-            border: '1px solid rgba(232,88,10,0.3)',
-            borderRadius: 999,
-            padding: '3px 10px',
-            fontSize: 11,
-            color: '#E8580A',
-            fontWeight: 500,
-            zIndex: 9999,
-            pointerEvents: 'none',
-          }}>v 3.7</div>
+          
         </SessionWrapper>
       </body>
     </html>
