@@ -217,7 +217,7 @@ export default function ReviewModal({
                         </p>
                         <div className="flex gap-3 w-full">
                             <button
-                                onClick={() => setShowNoCreditConfirm(false)}
+                                onClick={onClose}
                                 className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white/60 bg-white/[0.08] hover:bg-white/[0.12] transition-colors"
                             >
                                 Hủy
