@@ -2153,7 +2153,7 @@ export default function ListeningClient({
 
         {/* Đề cử */}
         <button
-          onClick={handleNominate}
+          onClick={() => handleNominate()}
           disabled={nominateLocked}
           aria-label="Đề cử"
           className={`flex-1 flex flex-col items-center transition-all active:scale-95 ${nominateLocked ? 'opacity-60 cursor-not-allowed bg-transparent' : 'cursor-pointer bg-transparent hover:bg-white/[0.03]'}`}
