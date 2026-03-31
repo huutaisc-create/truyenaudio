@@ -325,7 +325,7 @@ export default function ReviewModal({
                         </button>
                         {!locked && (
                             <button
-                                onClick={handleSubmit}
+                                onClick={() => handleSubmit()}
                                 disabled={isSubmitting}
                                 className={`flex-1 py-3 text-sm font-bold text-white rounded-xl shadow-lg transition-all active:scale-95 disabled:cursor-not-allowed ${
                                     charCount >= MIN_LENGTH
