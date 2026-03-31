@@ -194,15 +194,16 @@ export async function getStoryInteractions(storyId: string) {
     nominationCount: 0,
     lastReadChapterId: null as number | null,
     isNominatedToday: false,
-    // [FIX #2] Thêm 2 field mới
     hasReviewed: false,
     commentedToday: false,
+    nominateSlotsLeft: MAX_STORIES_PER_DAY,
+    reviewSlotsLeft: MAX_STORIES_PER_DAY,
   };
 
   if (userId) {
     const todayStart = getVnTodayStart();
 
-    const [lib, like, history, nominationToday, reviewAllTime, commentedTodayTx] = await Promise.all([
+    const [lib, like, history, nominationToday, reviewAllTime, commentedTodayTx, nominateTxsToday, reviewTxsToday] = await Promise.all([
       db.library.findUnique({ where: { userId_storyId: { userId, storyId } } }),
       db.like.findUnique({ where: { userId_storyId: { userId, storyId } } }),
       db.readingHistory.findUnique({
@@ -213,20 +214,20 @@ export async function getStoryInteractions(storyId: string) {
         where: { userId, storyId, createdAt: { gte: todayStart } },
         select: { id: true },
       }),
-      // [FIX #2] Check đã review truyện này ALL-TIME (không giới hạn ngày)
-      db.review.findFirst({
-        where: { userId, storyId },
+      db.review.findFirst({ where: { userId, storyId }, select: { id: true } }),
+      db.creditTransaction.findFirst({
+        where: { userId, type: 'REWARD_COMMENT', note: { startsWith: `[story:${storyId}]` }, createdAt: { gte: todayStart } },
         select: { id: true },
       }),
-      // [FIX #2] Check đã bình luận truyện này HÔM NAY (via credit transaction)
-      db.creditTransaction.findFirst({
-        where: {
-          userId,
-          type: 'REWARD_COMMENT',
-          note: { startsWith: `[story:${storyId}]` },
-          createdAt: { gte: todayStart },
-        },
-        select: { id: true },
+      // Đếm distinct stories đã nhận credit đề cử hôm nay
+      db.creditTransaction.findMany({
+        where: { userId, type: 'REWARD_NOMINATION', note: { startsWith: '[story:' }, createdAt: { gte: todayStart } },
+        select: { note: true },
+      }),
+      // Đếm distinct stories đã nhận credit đánh giá hôm nay
+      db.creditTransaction.findMany({
+        where: { userId, type: 'REWARD_REVIEW', note: { startsWith: '[story:' }, createdAt: { gte: todayStart } },
+        select: { note: true },
       }),
     ]);
 
@@ -236,6 +237,11 @@ export async function getStoryInteractions(storyId: string) {
     userStatus.isNominatedToday = !!nominationToday;
     userStatus.hasReviewed = !!reviewAllTime;
     userStatus.commentedToday = !!commentedTodayTx;
+
+    const nominateDistinct = new Set(nominateTxsToday.map((tx, i) => tx.note?.match(/^\[story:([^\]]+)\]/)?.[1] ?? `__${i}`));
+    const reviewDistinct   = new Set(reviewTxsToday.map((tx, i)   => tx.note?.match(/^\[story:([^\]]+)\]/)?.[1] ?? `__${i}`));
+    userStatus.nominateSlotsLeft = Math.max(0, MAX_STORIES_PER_DAY - nominateDistinct.size);
+    userStatus.reviewSlotsLeft   = Math.max(0, MAX_STORIES_PER_DAY - reviewDistinct.size);
   }
 
   return { stats: story, userStatus };

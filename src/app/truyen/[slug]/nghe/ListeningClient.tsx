@@ -319,7 +319,7 @@ export default function ListeningClient({
   const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // ── Lớp 2: Banner cảnh báo — lưu remainingSlots (số) thay vì parse string ──
   const [commentSoftWarning, setCommentSoftWarning] = useState<number | null>(null);
-  // ── Lớp 3: Hard lock 15 phút (5 tin trong 8 phút) ──
+  // ── Lớp 3: Hard lock 5 phút (5 tin trong 8 phút) ──
   const [commentHardLock, setCommentHardLock] = useState(0); // đếm ngược giây
   const hardLockTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // ── Lock ngày (đã bình luận truyện này hôm nay, reset sau 0h) ──
@@ -349,6 +349,12 @@ export default function ListeningClient({
   const [interactLoading, setInteractLoading] = useState<'like' | 'follow' | 'nominate' | null>(null);
   // (interactLoading reserved for future use)
   const [nominateLocked, setNominateLocked] = useState(false);
+  // Slots còn lại để nhận credit hôm nay (null = chưa biết)
+  const [nominateSlotsLeft, setNominateSlotsLeft] = useState<number | null>(null);
+  const [reviewSlotsLeft, setReviewSlotsLeft] = useState<number | null>(null);
+  // Dialog xác nhận khi hết credit: lưu loại hành động đang chờ
+  const [noCreditConfirm, setNoCreditConfirm] = useState<'comment' | 'nominate' | null>(null);
+  const pendingCommentBodyRef = useRef<string>('');
 
   // ── Fetch interaction status & stats mới nhất từ DB khi mount ──
   useEffect(() => {
@@ -365,12 +371,12 @@ export default function ListeningClient({
         isFollowed: us.isFollowed,
         isNominated: false,
       });
-      // Khóa nút đề cử nếu đã đề cử truyện này hôm nay
       if (us.isNominatedToday) setNominateLocked(true);
-      // [FIX #2] Khóa comment nếu đã bình luận truyện này hôm nay
       if (us.commentedToday) setCommentLocked(true);
-      // [FIX #2] Set hasReviewed để ReviewButton hiển thị đúng sau refresh
       if (us.hasReviewed) setHasReviewed(true);
+      // Init slots còn lại để hiện dialog khi hết credit
+      if (us.nominateSlotsLeft !== undefined) setNominateSlotsLeft(us.nominateSlotsLeft);
+      if (us.reviewSlotsLeft   !== undefined) setReviewSlotsLeft(us.reviewSlotsLeft);
     });
   }, [storyId]);
 
@@ -698,26 +704,31 @@ export default function ListeningClient({
   }, [checkAuth, userStatus.isFollowed, storyId]);
 
   // ── Nominate handler ──
-  const handleNominate = useCallback(async () => {
+  const handleNominate = useCallback(async (skipCreditCheck = false) => {
     if (!checkAuth()) return;
+    // Hết credit hôm nay → hỏi user trước
+    if (!skipCreditCheck && nominateSlotsLeft === 0) {
+      setNoCreditConfirm('nominate');
+      return;
+    }
+    setNoCreditConfirm(null);
     // Optimistic: tăng count trước
     setInteractStats(s => ({ ...s, nominationCount: s.nominationCount + 1 }));
     const res = await nominateStory(storyId);
     if (res.error) {
-      // Lỗi hệ thống — rollback
       setInteractStats(s => ({ ...s, nominationCount: s.nominationCount - 1 }));
       showCreditToast(res.error);
     } else if (res.success === false) {
-      // Đã đề cử hôm nay hoặc bị block — rollback, chỉ toast thông báo
       setInteractStats(s => ({ ...s, nominationCount: s.nominationCount - 1 }));
       if (res.creditMessage) showCreditToast(res.creditMessage);
       setNominateLocked(true);
-    } else if (res.creditMessage) {
-      // Đề cử thành công
-      showCreditToast(res.creditMessage);
+    } else {
+      if (res.creditMessage) showCreditToast(res.creditMessage);
       setNominateLocked(true);
+      // Cập nhật slots còn lại
+      if (res.remainingSlots !== undefined) setNominateSlotsLeft(res.remainingSlots as number);
     }
-  }, [checkAuth, storyId, showCreditToast]);
+  }, [checkAuth, storyId, showCreditToast, nominateSlotsLeft]);
 
   // ── Gửi comment ──
   const handleSendComment = useCallback(async () => {
@@ -736,14 +747,14 @@ export default function ListeningClient({
     const now = Date.now();
     const SPAM_WINDOW_MS = 8 * 60 * 1000; // 8 phút
     const SPAM_LIMIT = 5; // check trước khi push → gửi được 4, lần 5 bị lock
-    const HARD_LOCK_SECS = 15 * 60; // 15 phút
+    const HARD_LOCK_SECS = 5 * 60; // 5 phút
     // Đọc từ sessionStorage → survive F5
     const freshTimestamps = getSpamTimestamps().filter(t => now - t < SPAM_WINDOW_MS);
     saveSpamTimestamps(freshTimestamps);
     if (freshTimestamps.length >= SPAM_LIMIT) {
-      // Kích hoạt Hard Lock 15 phút — persist vào sessionStorage
+      // Kích hoạt Hard Lock 5 phút — persist vào sessionStorage
       startHardLock(HARD_LOCK_SECS);
-      showCreditToast('Bạn đã bình luận quá nhanh! Tính năng được mở lại sau 15 phút.');
+      showCreditToast('Bạn đã bình luận quá nhanh! Tính năng được mở lại sau 5 phút.');
       return;
     }
 
@@ -751,6 +762,14 @@ export default function ListeningClient({
     if (commentCooldown > 0) return;
 
     const body = replyTo ? `@${replyTo.name} ${commentInput.trim()}` : commentInput.trim();
+
+    // Hết credit hôm nay → hỏi user trước
+    if (commentSoftWarning === 0) {
+      pendingCommentBodyRef.current = body;
+      setNoCreditConfirm('comment');
+      return;
+    }
+
     setCommentSending(true);
     try {
       const res = await fetch(`/api/stories/${slug}/comments`, {
@@ -781,7 +800,35 @@ export default function ListeningClient({
       }
     } catch { showCreditToast('Lỗi kết nối'); }
     finally { setCommentSending(false); }
-  }, [commentInput, commentSending, commentCooldown, commentHardLock, slug, replyTo, currentUser, showCreditToast, startCooldown, startHardLock]);
+  }, [commentInput, commentSending, commentCooldown, commentHardLock, slug, replyTo, currentUser, showCreditToast, startCooldown, startHardLock, commentSoftWarning]);
+
+  // ── Gửi comment sau khi user confirm "vẫn đăng không credit" ──
+  const doSendCommentNoCredit = useCallback(async () => {
+    setNoCreditConfirm(null);
+    const body = pendingCommentBodyRef.current;
+    if (!body) return;
+    setCommentSending(true);
+    try {
+      const res = await fetch(`/api/stories/${slug}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: body }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setComments(prev => [...prev, json.data]);
+        setCommentInput('');
+        setReplyTo(null);
+        commentTextareaRef.current?.focus();
+        if (json.creditMessage) showCreditToast(json.creditMessage);
+        saveSpamTimestamps([...getSpamTimestamps(), Date.now()]);
+        startCooldown(60);
+      } else {
+        showCreditToast(json.error || 'Gửi thất bại');
+      }
+    } catch { showCreditToast('Lỗi kết nối'); }
+    finally { setCommentSending(false); }
+  }, [slug, showCreditToast, startCooldown]);
 
   // ── Khi user mở tab info/comments lần đầu ──
   const handleOpenTab = useCallback((tab: DrawerTab) => {
@@ -2059,6 +2106,7 @@ export default function ListeningClient({
           text="Đánh giá"
           currentUser={currentUser}
           hasReviewed={hasReviewed}
+          reviewSlotsLeft={reviewSlotsLeft ?? undefined}
           onReviewSubmitted={() => setHasReviewed(true)}
           className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-white/[0.06] text-[#f0ebe4] border border-white/[0.15] hover:bg-white/[0.1] transition-all active:scale-95"
         />
@@ -2471,6 +2519,35 @@ export default function ListeningClient({
   // ─────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#0f0d0a] relative">
+      {/* ── Dialog xác nhận khi hết credit ── */}
+      {noCreditConfirm && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-sm px-5">
+          <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <p className="text-sm font-semibold text-white/90 text-center leading-relaxed mb-5">
+              Hết lượt cộng credit hôm nay.<br />
+              <span className="text-white/60 font-normal">Bạn vẫn muốn đăng không?</span>
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setNoCreditConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white/60 bg-white/[0.06] hover:bg-white/[0.1] transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  if (noCreditConfirm === 'comment') doSendCommentNoCredit();
+                  else if (noCreditConfirm === 'nominate') handleNominate(true);
+                }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 transition-colors"
+              >
+                Vẫn đăng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Credit Toast — fixed overlay, dùng chung cho like / nominate / comment ── */}
       {creditToast && (
         <div className="fixed top-1/2 -translate-y-1/2 right-4 z-[9999] pointer-events-auto max-w-[360px] w-[calc(100vw-32px)] animate-in fade-in slide-in-from-right-4 duration-300">

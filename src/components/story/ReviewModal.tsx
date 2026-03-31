@@ -40,7 +40,7 @@ export function ToastPortal({
 
     return createPortal(
         <div
-            className="fixed bottom-6 right-4 z-[99999] flex flex-col gap-2 items-end pointer-events-none"
+            className="fixed top-1/2 -translate-y-1/2 right-4 z-[99999] flex flex-col gap-2 items-end pointer-events-none"
             style={{ maxWidth: "min(calc(100vw - 32px), 360px)" }}
         >
             {toasts.map(toast => (
@@ -109,6 +109,7 @@ type ReviewModalProps = {
     isOpen: boolean;
     onClose: () => void;
     storyId: string;
+    slotsLeft?: number; // số lượt credit còn lại hôm nay (undefined = chưa biết)
     // Trả toàn bộ kết quả về component cha — modal không tự giữ toast
     onReviewSubmitted?: (payload: ReviewSubmitPayload) => void;
 };
@@ -117,6 +118,7 @@ export default function ReviewModal({
     isOpen,
     onClose,
     storyId,
+    slotsLeft,
     onReviewSubmitted,
 }: ReviewModalProps) {
     const MIN_LENGTH = 21;
@@ -127,6 +129,7 @@ export default function ReviewModal({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [locked, setLocked]         = useState(false);
     const [validationError, setValidationError] = useState<string | null>(null);
+    const [showNoCreditConfirm, setShowNoCreditConfirm] = useState(false);
 
     const charCount = content.trim().length;
 
@@ -139,12 +142,13 @@ export default function ReviewModal({
             setIsSubmitting(false);
             setLocked(false);
             setValidationError(null);
+            setShowNoCreditConfirm(false);
         }
     }, [isOpen]);
 
     const displayRating = hovered || rating;
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (skipCreditCheck = false) => {
         // ── Validate client-side trước khi gọi API ──
         const trimmed = content.trim();
         if (trimmed.length === 0) {
@@ -155,6 +159,12 @@ export default function ReviewModal({
             setValidationError(`Cần ít nhất ${MIN_LENGTH} ký tự để gửi đánh giá (hiện tại: ${trimmed.length}).`);
             return;
         }
+        // Hết credit hôm nay → hỏi user trước
+        if (!skipCreditCheck && slotsLeft === 0) {
+            setShowNoCreditConfirm(true);
+            return;
+        }
+        setShowNoCreditConfirm(false);
         setValidationError(null);
         setIsSubmitting(true);
         const result = await submitReview(storyId, rating, content);
@@ -196,7 +206,31 @@ export default function ReviewModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-white dark:bg-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="relative bg-white dark:bg-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+
+                {/* ── Overlay confirm khi hết credit ── */}
+                {showNoCreditConfirm && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-zinc-900/95 rounded-2xl px-6 gap-5">
+                        <p className="text-sm font-semibold text-white/90 text-center leading-relaxed">
+                            Hết lượt cộng credit hôm nay.<br />
+                            <span className="text-white/60 font-normal">Bạn vẫn muốn đăng không?</span>
+                        </p>
+                        <div className="flex gap-3 w-full">
+                            <button
+                                onClick={() => setShowNoCreditConfirm(false)}
+                                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white/60 bg-white/[0.08] hover:bg-white/[0.12] transition-colors"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={() => handleSubmit(true)}
+                                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 transition-colors"
+                            >
+                                Vẫn đăng
+                            </button>
+                        </div>
+                    </div>
+                )}
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">Viết Đánh Giá</h3>
                     <button

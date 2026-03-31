@@ -19,6 +19,7 @@ type ReviewButtonProps = {
     text?: string;
     currentUser?: any;
     hasReviewed?: boolean;
+    reviewSlotsLeft?: number;
     onReviewSubmitted?: (review: { rating: number; content: string }) => void;
 };
 
@@ -28,6 +29,7 @@ export default function ReviewButton({
     text = "VIẾT REVIEW",
     currentUser,
     hasReviewed = false,
+    reviewSlotsLeft,
     onReviewSubmitted,
 }: ReviewButtonProps) {
     const [isOpen, setIsOpen] = useState(false);
@@ -102,6 +104,7 @@ export default function ReviewButton({
                 isOpen={isOpen}
                 onClose={() => setIsOpen(false)}
                 storyId={storyId}
+                slotsLeft={reviewSlotsLeft}
                 onReviewSubmitted={handleReviewResult}
             />
         </>
