@@ -122,6 +122,51 @@ html[data-theme="female"] {
 }
 
 /* ══════════════════════════════════════════
+   ADMIN OVERRIDE — reset về light theme
+   Ghi đè toàn bộ CSS variables bên trong
+   [data-admin] để admin panel luôn dùng
+   màu chữ tối trên nền sáng, bất kể theme
+══════════════════════════════════════════ */
+[data-admin="true"] {
+  color-scheme: light;
+  --bg:           #f3f4f6;
+  --surface:      #ffffff;
+  --card:         #ffffff;
+  --card2:        #f9fafb;
+  --border:       #e5e7eb;
+  --border-soft:  #f3f4f6;
+  --text:         #111827;
+  --text-muted:   #6b7280;
+  --text-soft:    #9ca3af;
+  --accent:       #f97316;
+  --accent-hover: #ea6c0a;
+  --accent2:      #f97316;
+  --scrollbar-track: #f3f4f6;
+  --scrollbar-thumb: #d1d5db;
+
+  /* Đảm bảo tất cả input/select/textarea trong admin dùng chữ đen */
+  color: #111827;
+}
+
+[data-admin="true"] input,
+[data-admin="true"] select,
+[data-admin="true"] textarea {
+  color: #111827 !important;
+}
+
+[data-admin="true"] input::placeholder,
+[data-admin="true"] textarea::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Dark mode admin — giữ sidebar tối, nội dung vẫn đọc được */
+@media (prefers-color-scheme: dark) {
+  [data-admin="true"] {
+    color-scheme: light dark;
+  }
+}
+
+/* ══════════════════════════════════════════
    BASE
 ══════════════════════════════════════════ */
 :root {

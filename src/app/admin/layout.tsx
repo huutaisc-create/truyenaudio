@@ -22,7 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const r = role;
 
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-zinc-900">
+    <div data-admin="true" className="flex min-h-screen bg-gray-100 dark:bg-zinc-900">
       <AdminMobileNav role={role} userName={session.user.name ?? ''} />
       {/* ── Sidebar ── */}
       <aside className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg dark:bg-zinc-800 z-40 hidden md:flex flex-col">
