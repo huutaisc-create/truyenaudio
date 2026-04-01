@@ -9,6 +9,9 @@ import { vi } from "date-fns/locale";
 import RecentReads from "@/components/home/RecentReads";
 import RankingTabs from "@/components/home/RankingTabs";
 import SectionNav from "@/components/home/SectionNav";
+import ForYouSection from "@/components/home/ForYouSection";
+import { getGenrePrefs, syncGenrePrefsFromDb } from "@/actions/preferences";
+import { auth } from "@/auth";
 
 // ─────────────────────────────────────────────────────
 // SHARED PILL COMPONENTS
@@ -162,7 +165,28 @@ const StoryCard = ({
 export const revalidate = 60;
 
 export default async function Home() {
-  // hotStories: featured (ghim tay) trước, sau đó fill bằng top views
+  // ── Genre prefs: cookie → DB fallback nếu login ──
+  let genrePrefs = await getGenrePrefs()
+  if (genrePrefs.length === 0) {
+    const session = await auth()
+    if (session?.user?.id) {
+      genrePrefs = await syncGenrePrefsFromDb()
+    }
+  }
+  const showPicker = genrePrefs.length === 0
+
+  // ── ForYou stories ──
+  const INCLUDE_STORY = { genres: { take: 1 }, chapters: { orderBy: { index: "desc" as const }, take: 1, select: { index: true } } }
+  const forYouStories = genrePrefs.length > 0
+    ? await db.story.findMany({
+        where: { isHidden: false, genres: { some: { name: { in: genrePrefs } } } },
+        orderBy: { viewCount: 'desc' },
+        take: 8,
+        include: INCLUDE_STORY,
+      })
+    : []
+
+  // ── hotStories: featured (ghim tay) trước, sau đó fill bằng top views ──
   const HOT_TAKE = 8;
   const featuredHot = await db.story.findMany({
     where: { isFeatured: true, isHidden: false },
@@ -182,13 +206,32 @@ export default async function Home() {
     : [];
   const hotStories = [...featuredHot, ...fillHot];
 
+  // ── newStories: ưu tiên genre đã chọn lên trước ──
+  const NEW_INCLUDE = { genres: { take: 1 }, chapters: { orderBy: { index: "desc" as const }, take: 1, select: { index: true, createdAt: true } } }
+  let newStories: any[]
+  if (genrePrefs.length > 0) {
+    const matchNew = await db.story.findMany({
+      where: { isHidden: false, genres: { some: { name: { in: genrePrefs } } } },
+      orderBy: { updatedAt: 'desc' }, take: 15, include: NEW_INCLUDE,
+    })
+    const matchIds = matchNew.map(s => s.id)
+    const fill = 15 - matchNew.length
+    const fillNew = fill > 0 ? await db.story.findMany({
+      where: { isHidden: false, id: { notIn: matchIds.length ? matchIds : ['__none__'] } },
+      orderBy: { updatedAt: 'desc' }, take: fill, include: NEW_INCLUDE,
+    }) : []
+    newStories = [...matchNew, ...fillNew]
+  } else {
+    newStories = await db.story.findMany({
+      where: { isHidden: false }, take: 15, orderBy: { updatedAt: "desc" }, include: NEW_INCLUDE,
+    })
+  }
+
   const [
-    newStories,
     topNominations, topViews, topLikes, topFollows,
     createdStories, completedStories,
     totalStories, totalChapters,
   ] = await Promise.all([
-    db.story.findMany({ where: { isHidden: false }, take: 15, orderBy: { updatedAt: "desc" }, include: { genres: { take: 1 }, chapters: { orderBy: { index: "desc" }, take: 1, select: { index: true, createdAt: true } } } }),
     db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { nominationCount: "desc" }, include: { genres: { take: 1 } } }),
     db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { viewCount: "desc" }, include: { genres: { take: 1 } } }),
     db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { likeCount: "desc" }, include: { genres: { take: 1 } } }),
@@ -223,6 +266,13 @@ export default async function Home() {
                 ))}
               </div>
             </section>
+
+            {/* DÀNH CHO BẠN */}
+            <ForYouSection
+              stories={forYouStories.map(s => ({ id: s.id, title: s.title, slug: s.slug, coverImage: s.coverImage, status: s.status }))}
+              genrePrefs={genrePrefs}
+              showPicker={showPicker}
+            />
 
             {/* XẾP HẠNG */}
             <section id="section-ranking" className="scroll-mt-20" aria-label="Xếp hạng">
