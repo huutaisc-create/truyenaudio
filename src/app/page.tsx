@@ -114,45 +114,42 @@ const StoryCard = ({
         aria-label={`Nghe truyện ${title}`}
         className="absolute top-2 right-2 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black backdrop-blur-sm transition-all shadow-sm"
         style={{
-          background: "var(--hear-bg)",
-          border: "1.5px solid var(--hear-border)",
-          color: "var(--hear-color)",
+          background: "linear-gradient(135deg, #FF7A45, #C93D10)",
+          border: "none",
+          color: "white",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
         }}
       >
-        {/* Headphone 3D */}
+        {/* Headphone 3D — white on cam bg */}
         <svg width="16" height="16" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <defs>
-            <linearGradient id="hph" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#FF7A45"/>
-              <stop offset="100%" stopColor="#C93D10"/>
-            </linearGradient>
             <linearGradient id="hsh" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#7a2a08"/>
-              <stop offset="100%" stopColor="#b04020"/>
+              <stop offset="0%" stopColor="rgba(255,255,255,0.25)"/>
+              <stop offset="100%" stopColor="rgba(255,255,255,0.4)"/>
             </linearGradient>
           </defs>
           <g transform="translate(16,14)">
             {/* Arc */}
-            <path d="M-10 4 Q-10,-12 0,-12 Q10,-12 10,4" fill="none" stroke="url(#hph)" strokeWidth="5" strokeLinecap="round"/>
+            <path d="M-10 4 Q-10,-12 0,-12 Q10,-12 10,4" fill="none" stroke="white" strokeWidth="5" strokeLinecap="round"/>
             {/* Left cup shadow */}
-            <rect x="-13.5" y="2" width="9" height="13" rx="4.5" fill="url(#hsh)" opacity="0.7" transform="translate(1.5,1.5)"/>
+            <rect x="-13.5" y="2" width="9" height="13" rx="4.5" fill="url(#hsh)" transform="translate(1.5,1.5)"/>
             {/* Left cup */}
-            <rect x="-13.5" y="2" width="9" height="13" rx="4.5" fill="url(#hph)"/>
-            <rect x="-11.5" y="4" width="5" height="7.5" rx="2.5" fill="#7a2008" opacity="0.45"/>
-            <rect x="-12.5" y="3" width="7" height="2" rx="1" fill="rgba(255,255,255,0.45)"/>
+            <rect x="-13.5" y="2" width="9" height="13" rx="4.5" fill="white"/>
+            <rect x="-11.5" y="4" width="5" height="7.5" rx="2.5" fill="rgba(180,60,10,0.4)"/>
+            <rect x="-12.5" y="3" width="7" height="2" rx="1" fill="rgba(255,255,255,0.6)"/>
             {/* Right cup shadow */}
-            <rect x="4.5" y="2" width="9" height="13" rx="4.5" fill="url(#hsh)" opacity="0.7" transform="translate(1.5,1.5)"/>
+            <rect x="4.5" y="2" width="9" height="13" rx="4.5" fill="url(#hsh)" transform="translate(1.5,1.5)"/>
             {/* Right cup */}
-            <rect x="4.5" y="2" width="9" height="13" rx="4.5" fill="url(#hph)"/>
-            <rect x="6.5" y="4" width="5" height="7.5" rx="2.5" fill="#7a2008" opacity="0.45"/>
-            <rect x="5.5" y="3" width="7" height="2" rx="1" fill="rgba(255,255,255,0.45)"/>
+            <rect x="4.5" y="2" width="9" height="13" rx="4.5" fill="white"/>
+            <rect x="6.5" y="4" width="5" height="7.5" rx="2.5" fill="rgba(180,60,10,0.4)"/>
+            <rect x="5.5" y="3" width="7" height="2" rx="1" fill="rgba(255,255,255,0.6)"/>
           </g>
         </svg>
         {/* Wave bars */}
         <svg width="14" height="12" viewBox="0 0 14 12" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect x="0"  y="5"  width="2" height="5"  rx="1" fill="currentColor"/>
-          <rect x="3"  y="2"  width="2" height="10" rx="1" fill="currentColor"/>
-          <rect x="6"  y="6"  width="2" height="4"  rx="1" fill="currentColor"/>
+          <rect x="0"  y="5"  width="2" height="5"  rx="1" fill="white"/>
+          <rect x="3"  y="2"  width="2" height="10" rx="1" fill="white"/>
+          <rect x="6"  y="6"  width="2" height="4"  rx="1" fill="white"/>
           <rect x="9"  y="0"  width="2" height="12" rx="1" fill="currentColor"/>
           <rect x="12" y="3"  width="2" height="8"  rx="1" fill="currentColor"/>
         </svg>
