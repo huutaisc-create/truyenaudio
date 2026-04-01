@@ -283,8 +283,8 @@ export async function getStories(query?: string, page = 1, storyType?: string, s
     if (query) {
         conditions.push({
             OR: [
-                { title: { contains: query } },
-                { author: { contains: query } }
+                { title: { contains: query, mode: 'insensitive' } },
+                { author: { contains: query, mode: 'insensitive' } }
             ]
         });
     }
@@ -306,6 +306,27 @@ export async function getStories(query?: string, page = 1, storyType?: string, s
     ]);
 
     return { stories, total, totalPages: Math.ceil(total / take) };
+}
+
+export async function toggleStoryHidden(storyId: string, hide: boolean) {
+    await checkAdmin()
+    await db.story.update({ where: { id: storyId }, data: { isHidden: hide } })
+    revalidatePath('/admin/stories')
+    revalidatePath('/')
+}
+
+export async function toggleFeaturedStory(storyId: string, feature: boolean) {
+    await checkAdmin()
+    if (feature) {
+        // Tính featuredOrder = max hiện tại + 1
+        const agg = await db.story.aggregate({ _max: { featuredOrder: true } })
+        const nextOrder = (agg._max.featuredOrder ?? 0) + 1
+        await db.story.update({ where: { id: storyId }, data: { isFeatured: true, featuredOrder: nextOrder } })
+    } else {
+        await db.story.update({ where: { id: storyId }, data: { isFeatured: false, featuredOrder: 0 } })
+    }
+    revalidatePath('/admin/stories')
+    revalidatePath('/')
 }
 
 // --- CHAPTER ACTIONS ---

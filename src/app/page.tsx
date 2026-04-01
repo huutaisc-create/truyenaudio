@@ -162,13 +162,32 @@ const StoryCard = ({
 export const revalidate = 60;
 
 export default async function Home() {
+  // hotStories: featured (ghim tay) trước, sau đó fill bằng top views
+  const HOT_TAKE = 8;
+  const featuredHot = await db.story.findMany({
+    where: { isFeatured: true, isHidden: false },
+    orderBy: { featuredOrder: 'asc' },
+    take: HOT_TAKE,
+    include: { genres: { take: 1 }, chapters: { orderBy: { index: "desc" }, take: 1, select: { index: true } } },
+  });
+  const featuredIds = featuredHot.map(s => s.id);
+  const remaining = HOT_TAKE - featuredHot.length;
+  const fillHot = remaining > 0
+    ? await db.story.findMany({
+        where: { isHidden: false, id: { notIn: featuredIds.length ? featuredIds : ['__none__'] } },
+        orderBy: { viewCount: 'desc' },
+        take: remaining,
+        include: { genres: { take: 1 }, chapters: { orderBy: { index: "desc" }, take: 1, select: { index: true } } },
+      })
+    : [];
+  const hotStories = [...featuredHot, ...fillHot];
+
   const [
-    hotStories, newStories,
+    newStories,
     topNominations, topViews, topLikes, topFollows,
     createdStories, completedStories,
     totalStories, totalChapters,
   ] = await Promise.all([
-    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { viewCount: "desc" }, include: { genres: { take: 1 }, chapters: { orderBy: { index: "desc" }, take: 1, select: { index: true } } } }),
     db.story.findMany({ where: { isHidden: false }, take: 15, orderBy: { updatedAt: "desc" }, include: { genres: { take: 1 }, chapters: { orderBy: { index: "desc" }, take: 1, select: { index: true, createdAt: true } } } }),
     db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { nominationCount: "desc" }, include: { genres: { take: 1 } } }),
     db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { viewCount: "desc" }, include: { genres: { take: 1 } } }),

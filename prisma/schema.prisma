@@ -86,6 +86,8 @@ model Story {
   storyType       String    @default("ORIGINAL")  // "ORIGINAL" | "CONVERT" | "TRANSLATED"
   isCompleted     Boolean   @default(false)        // dành cho convert/dịch: đã hoàn thành chưa
   isHidden        Boolean   @default(false)        // admin ẩn khỏi public
+  isFeatured      Boolean   @default(false)        // ghim lên mục Truyện Hot trang chủ
+  featuredOrder   Int       @default(0)            // thứ tự ưu tiên hiển thị (nhỏ hơn = lên trước)
   sourceUrl       String?                          // link nguồn gốc (convert/dịch)
   translatorName  String?                          // tên dịch giả / converter
 
