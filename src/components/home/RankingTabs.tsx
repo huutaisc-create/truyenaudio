@@ -51,22 +51,15 @@ export default function RankingTabs({ topNominations, topViews, topLikes, topFol
       className="rounded-xl overflow-hidden"
       style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
     >
-      {/* Header pill + tab title */}
-      <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
-        <div
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full"
-          style={{ background: "var(--pill2-bg, rgba(245,166,35,.12))", border: "1px solid var(--pill2-border)", color: "var(--pill2-color)" }}
-        >
-          <span className="text-sm leading-none" aria-hidden="true">⭐</span>
-          <span className="text-sm font-black uppercase tracking-[.08em]">Xếp Hạng</span>
-        </div>
-      </div>
-
-      {/* Tab bar */}
+      {/* Tab bar — không còn pill header */}
+      <style>{`
+        .ranking-tab-inactive:hover { background: var(--pill2-bg) !important; }
+        .ranking-see-all:hover { background: var(--pill2-bg) !important; color: var(--pill2-color) !important; border-color: var(--pill2-border) !important; }
+      `}</style>
       <div
         role="tablist"
         aria-label="Lọc xếp hạng theo tiêu chí"
-        className="flex items-center gap-2 px-3 py-3"
+        className="flex items-center gap-1.5 px-3 py-3"
         style={{ borderBottom: "1px solid var(--border)" }}
       >
         {TABS.map(tab => (
@@ -76,10 +69,10 @@ export default function RankingTabs({ topNominations, topViews, topLikes, topFol
             aria-selected={active === tab.key}
             aria-controls="ranking-tabpanel"
             onClick={() => setActive(tab.key)}
-            className="flex-1 h-9 px-2 rounded-full text-xs font-black uppercase tracking-wide transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            className={`flex-1 h-8 px-2 rounded-full text-xs font-black uppercase tracking-wide transition-all flex items-center justify-center gap-1 cursor-pointer ${active !== tab.key ? 'ranking-tab-inactive' : ''}`}
             style={active === tab.key
-              ? { background: "var(--ranking-tab-active)", border: "2px solid var(--ranking-tab-active)", color: "var(--bg)" }
-              : { background: "transparent", border: "2px solid var(--ranking-tab-active)", color: "var(--ranking-tab-active)" }
+              ? { background: "var(--pill2-color)", border: "1px solid var(--pill2-border)", color: "var(--bg)" }
+              : { background: "transparent", border: "1px solid var(--pill2-border)", color: "var(--pill2-color)" }
             }
           >
             <span aria-hidden="true">{tab.emoji}</span>
@@ -90,16 +83,8 @@ export default function RankingTabs({ topNominations, topViews, topLikes, topFol
         <Link
           href="/xep-hang"
           aria-label="Xem tất cả bảng xếp hạng"
-          className="shrink-0 h-9 inline-flex items-center gap-1 px-3 rounded-full text-[11px] font-bold transition-all"
-          style={{ border: "1.5px solid var(--ranking-tab-active)", color: "var(--ranking-tab-active)" }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.background = "var(--ranking-tab-active)";
-            (e.currentTarget as HTMLElement).style.color = "var(--bg)";
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.background = "transparent";
-            (e.currentTarget as HTMLElement).style.color = "var(--ranking-tab-active)";
-          }}
+          className="ranking-see-all shrink-0 h-8 inline-flex items-center gap-1 px-3 rounded-full text-[11px] font-bold transition-all"
+          style={{ border: "1px solid var(--pill2-border)", color: "var(--pill2-color)" }}
         >
           Tất cả →
         </Link>

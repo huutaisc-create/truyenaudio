@@ -27,6 +27,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: "/favicon-toi.svg", type: "image/svg+xml" },
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
@@ -46,6 +47,10 @@ export default function RootLayout({
     // ThemeToggle trong Header sẽ đổi attribute này thành "female" khi user bấm
     <html lang="vi" data-theme="male" suppressHydrationWarning>
       <head>
+        {/* Favicon */}
+        <link rel="icon" href="/favicon-toi.svg" type="image/svg+xml" />
+        <link rel="shortcut icon" href="/favicon-toi.svg" />
+
         {/* PWA iOS */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

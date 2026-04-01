@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Menu, BookOpen, X, Home, Compass, TrendingUp, LogOut, ChevronDown, Settings } from 'lucide-react';
+import { User, Menu, X, Home, Compass, TrendingUp, LogOut, ChevronDown, Settings } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSession, signOut } from 'next-auth/react';
@@ -93,21 +93,17 @@ const Header = () => {
           {/* ── Logo ── */}
           <Link
             href="/"
-            className="flex shrink-0 items-center gap-2 group"
-            aria-label="Về trang chủ MêTruyệnChữ"
+            className="flex shrink-0 items-center group"
+            aria-label="Về trang chủ"
           >
-            <div
-              className="flex h-[34px] w-[34px] items-center justify-center rounded-lg group-hover:scale-110 transition-transform"
-              style={{ background: 'var(--accent)' }}
-            >
-              <BookOpen className="h-4 w-4 text-white" aria-hidden="true" />
-            </div>
-            <span
-              className="text-xl font-bold tracking-tight"
-              style={{ fontFamily: 'Georgia, "Playfair Display", serif', color: 'var(--text)' }}
-            >
-              Mê<em className="not-italic" style={{ color: 'var(--accent)' }}>Truyện</em>Chữ
-            </span>
+            <Image
+              src="/logo-chinh.svg"
+              alt="Truyen Audio Của Tôi"
+              width={160}
+              height={50}
+              className="group-hover:scale-105 transition-transform"
+              priority
+            />
           </Link>
 
           {/* ── Search (desktop) ── */}

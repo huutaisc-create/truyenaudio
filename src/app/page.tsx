@@ -46,14 +46,14 @@ const SidebarTitle = ({ emoji, label }: { emoji: string; label: string }) => (
 
 const SeeAllLink = ({ href, label }: { href: string; label: string }) => (
   <>
-    <style>{`.see-all-link:hover { background: var(--accent) !important; color: #fff !important; }`}</style>
+    <style>{`.see-all-link:hover { background: var(--pill2-bg) !important; color: var(--pill2-color) !important; border-color: var(--pill2-border) !important; }`}</style>
     <Link
       href={href}
       aria-label={label}
       className="see-all-link inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold border-[1.5px] transition-all"
       style={{
-        borderColor: "var(--accent)",
-        color: "var(--accent)",
+        borderColor: "var(--pill2-border)",
+        color: "var(--pill2-color)",
         background: "transparent",
       }}
     >
