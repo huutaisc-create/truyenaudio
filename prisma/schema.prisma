@@ -38,6 +38,10 @@ model User {
   chatMessages       ChatMessage[]
   storyRequests      StoryRequest[]
   creditTransactions CreditTransaction[]
+  adminLogs          AdminLog[]          @relation("AdminLogs")
+  userVips           UserVip[]
+  payments           Payment[]
+  fcmTokens          UserFcmToken[]
 }
 
 // --- CREDIT TRANSACTIONS (audit log) ---
@@ -77,6 +81,13 @@ model Story {
   nominationCount Int       @default(0)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  // Admin fields
+  storyType       String    @default("ORIGINAL")  // "ORIGINAL" | "CONVERT" | "TRANSLATED"
+  isCompleted     Boolean   @default(false)        // dành cho convert/dịch: đã hoàn thành chưa
+  isHidden        Boolean   @default(false)        // admin ẩn khỏi public
+  sourceUrl       String?                          // link nguồn gốc (convert/dịch)
+  translatorName  String?                          // tên dịch giả / converter
 
   chapters        Chapter[]
   genres          Genre[]
@@ -244,4 +255,117 @@ model ChatMessage {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([storySlug, createdAt])
+}
+
+// --- ADMIN: Nhật ký hành động ---
+
+model AdminLog {
+  id         String   @id @default(uuid())
+  adminId    String
+  admin      User     @relation("AdminLogs", fields: [adminId], references: [id], onDelete: Cascade)
+  action     String                          // "DELETE_STORY" | "ADJUST_CREDIT" | ...
+  targetType String?                         // "STORY" | "USER" | "COMMENT" | "REVIEW"
+  targetId   String?
+  detail     String?                         // JSON string chi tiết
+  createdAt  DateTime @default(now())
+
+  @@index([adminId, createdAt])
+  @@index([action, createdAt])
+}
+
+// --- ADMIN: Từ khóa cấm (blacklist comment/review) ---
+
+model SpamKeyword {
+  id        String   @id @default(uuid())
+  keyword   String   @unique
+  createdBy String
+  createdAt DateTime @default(now())
+}
+
+// --- VIP SYSTEM ---
+
+model VipPlan {
+  id           String    @id @default(uuid())
+  name         String                          // "VIP 1 tháng"
+  price        Int                             // VNĐ
+  durationDays Int
+  benefits     Json                            // { noAds: bool, offlineUnlimited: bool, premiumVoices: bool }
+  isActive     Boolean   @default(true)
+  sortOrder    Int       @default(0)
+  createdAt    DateTime  @default(now())
+
+  userVips  UserVip[]
+  payments  Payment[]
+}
+
+model UserVip {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId    String
+  plan      VipPlan  @relation(fields: [planId], references: [id])
+  startAt   DateTime
+  endAt     DateTime
+  source    String                            // "MOMO" | "VNPAY" | "ADMIN_GRANT"
+  createdAt DateTime @default(now())
+
+  @@index([userId, endAt])
+}
+
+// --- THANH TOÁN ---
+
+model Payment {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId      String
+  plan        VipPlan  @relation(fields: [planId], references: [id])
+  amount      Int                            // VNĐ
+  gateway     String                         // "MOMO" | "VNPAY"
+  gatewayTxId String?  @unique              // mã giao dịch từ cổng thanh toán
+  status      String   @default("PENDING")  // "PENDING" | "SUCCESS" | "FAILED" | "REFUNDED"
+  rawCallback String?                        // JSON raw response từ gateway
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+// --- DAILY TASK CONFIG ---
+
+model DailyTaskConfig {
+  id           String   @id @default(uuid())
+  taskKey      String   @unique             // "CHECK_IN" | "LISTEN_10" | "WATCH_AD" | "COMMENT" | "REVIEW" | "NOMINATE"
+  label        String                       // "Điểm danh hàng ngày"
+  description  String?
+  creditReward Float
+  isActive     Boolean  @default(true)
+  updatedAt    DateTime @updatedAt
+}
+
+// --- PUSH NOTIFICATION ---
+
+model PushNotification {
+  id         String    @id @default(uuid())
+  title      String
+  body       String
+  targetType String                          // "ALL" | "VIP" | "USER_IDS" | "STORY_FOLLOWERS"
+  targetData String?                         // JSON: danh sách userId hoặc storyId
+  status     String    @default("DRAFT")     // "DRAFT" | "SENT" | "FAILED"
+  sentAt     DateTime?
+  sentCount  Int       @default(0)
+  createdBy  String
+  createdAt  DateTime  @default(now())
+}
+
+model UserFcmToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String                          // "android" | "ios"
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }

@@ -23,6 +23,7 @@ export const dynamicParams = true;
 
 export async function generateStaticParams() {
     const stories = await db.story.findMany({
+        where: { isHidden: false },
         orderBy: { viewCount: 'desc' },
         take: 100,
         select: { slug: true },
@@ -87,10 +88,10 @@ const StoryDetail = async ({
         coverImage: storyData.coverImage,
         author: storyData.author,
         genres: storyData.genres.map(g => g.name),
-        status:
-            storyData.status === 'COMPLETED' ? 'Hoàn thành' :
-            storyData.status === 'TRANSLATED' ? 'Dịch' :
-            storyData.status === 'CONVERTED' ? 'Convert' : 'Đang ra',
+        status: storyData.status === 'COMPLETED' ? 'Hoàn thành' : 'Đang ra',
+        storyType: (storyData as any).storyType as string ?? 'ORIGINAL',
+        translatorName: (storyData as any).translatorName as string | null ?? null,
+        isCompleted: (storyData as any).isCompleted as boolean ?? false,
         chapters: formatNumber(storyData._count.chapters),
         views: formatNumber(storyData.viewCount),
         rating: storyData.ratingScore ?? 0,
@@ -185,8 +186,22 @@ const StoryDetail = async ({
                                             className="text-warm-primary hover:underline"
                                         >
                                             {story.author}
+                                            {story.storyType !== 'ORIGINAL' && story.translatorName && (
+                                                <span className="text-warm-ink-light font-normal"> · {story.translatorName}</span>
+                                            )}
                                         </Link>
                                     </span>
+                                    {/* storyType badge */}
+                                    {story.storyType === 'CONVERT' && (
+                                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                            Convert{story.isCompleted ? ' · Full' : ''}
+                                        </span>
+                                    )}
+                                    {story.storyType === 'TRANSLATED' && (
+                                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                                            Dịch{story.isCompleted ? ' · Full' : ''}
+                                        </span>
+                                    )}
                                     <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-base font-bold bg-green-50 text-green-700 border border-green-200">
                                         <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true" />
                                         {story.status}

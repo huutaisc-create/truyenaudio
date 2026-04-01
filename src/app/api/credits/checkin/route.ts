@@ -2,16 +2,19 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { getAuthUser } from '@/lib/auth-helper'
 import db from '@/lib/db'
+import { getTaskReward } from '@/lib/credits'
 
-const CHECKIN_BASE    = 0.5
-const STREAK_BONUS    = 3.0
-const STREAK_MILESTONE = 7
+const CHECKIN_BASE_DEFAULT = 0.5
+const STREAK_BONUS         = 3.0
+const STREAK_MILESTONE     = 7
 
 export async function POST(req: NextRequest) {
   const authUser = await getAuthUser(req)
   if (!authUser) {
     return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 })
   }
+
+  const CHECKIN_BASE = await getTaskReward('CHECK_IN', CHECKIN_BASE_DEFAULT)
 
   const user = await db.user.findUnique({
     where: { id: authUser.id },

@@ -1,4 +1,5 @@
 import { getStoryBySlug, getChaptersByStoryId, getChapterBySlugAndIndex } from '@/actions/stories';
+import { getStoryInteractions } from '@/actions/interactions';
 import { notFound, redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import db from '@/lib/db';
@@ -39,7 +40,7 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
     redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   }
 
-  const [chaptersResult, content, freshReviews] = await Promise.all([
+  const [chaptersResult, content, freshReviews, interactionsData] = await Promise.all([
     getChaptersByStoryId(storyData.id, 1),
     fetchContentFromR2(chapterData.chapter.contentUrl),
     db.review.findMany({
@@ -51,6 +52,7 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
         user: { select: { name: true, image: true } },
       },
     }),
+    getStoryInteractions(storyData.id),
   ]);
 
   const initialChapters = chaptersResult.chapters.map((c) => ({
@@ -99,6 +101,16 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
       image: session.user.image ?? null,
       role: (session.user as any).role ?? 'USER',
     } : null,
+    initialUserStatus: {
+      isLiked:          interactionsData.userStatus.isLiked,
+      isFollowed:       interactionsData.userStatus.isFollowed,
+      isNominatedToday: interactionsData.userStatus.isNominatedToday,
+      hasReviewed:      interactionsData.userStatus.hasReviewed,
+      commentedToday:   interactionsData.userStatus.commentedToday,
+      nominateSlotsLeft: interactionsData.userStatus.nominateSlotsLeft,
+      reviewSlotsLeft:   interactionsData.userStatus.reviewSlotsLeft,
+      commentSlotsLeft:  interactionsData.userStatus.commentSlotsLeft,
+    },
   };
 
   return <ListeningClient {...props} />;

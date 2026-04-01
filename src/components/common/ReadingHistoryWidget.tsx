@@ -32,9 +32,9 @@ export default function ReadingHistoryWidget() {
         <div
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
           style={{
-            border: "2px solid var(--accent)",
-            color: "var(--accent)",
-            background: "var(--pill-hot-bg)",
+            background: "var(--pill2-bg)",
+            border: "1px solid var(--pill2-border)",
+            color: "var(--pill2-color)",
           }}
         >
           <span

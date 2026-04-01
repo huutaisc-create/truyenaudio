@@ -219,6 +219,20 @@ export async function rewardCredit(
   }
 }
 
+/**
+ * Đọc creditReward của một task từ DailyTaskConfig.
+ * Nếu task chưa có trong DB hoặc isActive = false → trả về defaultAmount.
+ */
+export async function getTaskReward(taskKey: string, defaultAmount: number): Promise<number> {
+  try {
+    const config = await db.dailyTaskConfig.findUnique({ where: { taskKey } })
+    if (config && config.isActive) return config.creditReward
+  } catch {
+    // DB error → fallback
+  }
+  return defaultAmount
+}
+
 function labelForType(type: RewardType): string {
   switch (type) {
     case 'REWARD_COMMENT':    return 'bình luận'

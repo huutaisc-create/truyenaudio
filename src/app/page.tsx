@@ -14,14 +14,18 @@ import SectionNav from "@/components/home/SectionNav";
 // SHARED PILL COMPONENTS
 // ─────────────────────────────────────────────────────
 
-// Pill solid (cam) — dùng cho các section chính: Truyện Hot, Mới, Hoàn Thành
+// Pill outline2 (vàng Nam / tím Nữ) — dùng cho các section chính: Truyện Hot, Mới, Hoàn Thành
 const SectionTitle = ({ emoji, label }: { emoji: string; label: string }) => (
   <div
     className="inline-flex items-center gap-2 px-4 py-2 rounded-full"
-    style={{ background: "var(--accent)" }}
+    style={{
+      background: "var(--pill2-bg)",
+      border: "1px solid var(--pill2-border)",
+      color: "var(--pill2-color)",
+    }}
   >
     <span className="text-sm leading-none" aria-hidden="true">{emoji}</span>
-    <span className="text-sm font-black uppercase tracking-[.08em] text-white">{label}</span>
+    <span className="text-sm font-black uppercase tracking-[.08em]">{label}</span>
   </div>
 );
 
@@ -135,15 +139,15 @@ export default async function Home() {
     createdStories, completedStories,
     totalStories, totalChapters,
   ] = await Promise.all([
-    db.story.findMany({ take: 8, orderBy: { viewCount: "desc" }, include: { genres: { take: 1 }, chapters: { orderBy: { index: "desc" }, take: 1, select: { index: true } } } }),
-    db.story.findMany({ take: 15, orderBy: { updatedAt: "desc" }, include: { genres: { take: 1 }, chapters: { orderBy: { index: "desc" }, take: 1, select: { index: true, createdAt: true } } } }),
-    db.story.findMany({ take: 8, orderBy: { nominationCount: "desc" }, include: { genres: { take: 1 } } }),
-    db.story.findMany({ take: 8, orderBy: { viewCount: "desc" }, include: { genres: { take: 1 } } }),
-    db.story.findMany({ take: 8, orderBy: { likeCount: "desc" }, include: { genres: { take: 1 } } }),
-    db.story.findMany({ take: 8, orderBy: { followCount: "desc" }, include: { genres: { take: 1 } } }),
-    db.story.findMany({ take: 8, orderBy: { createdAt: "desc" }, include: { genres: { take: 1 } } }),
-    db.story.findMany({ take: 8, where: { status: "COMPLETED" }, orderBy: { updatedAt: "desc" }, include: { genres: { take: 1 } } }),
-    db.story.count(),
+    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { viewCount: "desc" }, include: { genres: { take: 1 }, chapters: { orderBy: { index: "desc" }, take: 1, select: { index: true } } } }),
+    db.story.findMany({ where: { isHidden: false }, take: 15, orderBy: { updatedAt: "desc" }, include: { genres: { take: 1 }, chapters: { orderBy: { index: "desc" }, take: 1, select: { index: true, createdAt: true } } } }),
+    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { nominationCount: "desc" }, include: { genres: { take: 1 } } }),
+    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { viewCount: "desc" }, include: { genres: { take: 1 } } }),
+    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { likeCount: "desc" }, include: { genres: { take: 1 } } }),
+    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { followCount: "desc" }, include: { genres: { take: 1 } } }),
+    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { createdAt: "desc" }, include: { genres: { take: 1 } } }),
+    db.story.findMany({ where: { status: "COMPLETED", isHidden: false }, take: 8, orderBy: { updatedAt: "desc" }, include: { genres: { take: 1 } } }),
+    db.story.count({ where: { isHidden: false } }),
     db.chapter.count(),
   ]);
 

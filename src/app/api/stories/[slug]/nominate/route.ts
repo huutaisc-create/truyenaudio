@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-helper'
-import { rewardCredit } from '@/lib/credits'
+import { rewardCredit, getTaskReward } from '@/lib/credits'
 import db from '@/lib/db'
 import { getVnTodayStart, secsUntilVnMidnight } from '@/lib/date-vn'
 
@@ -69,11 +69,12 @@ export async function POST(
     })
   }
 
+  const nominateReward = await getTaskReward('NOMINATE', 0.2)
   const rewardResult = await rewardCredit(
     authUser.id,
     'REWARD_NOMINATION',
     `Đề cử truyện: ${story.title ?? 'Unknown'}`,
-    { amount: 0.2, maxPerDay: MAX_STORIES_PER_DAY, minLength: 0, storyId: story.id, cooldownSeconds: 0 }
+    { amount: nominateReward, maxPerDay: MAX_STORIES_PER_DAY, minLength: 0, storyId: story.id, cooldownSeconds: 0 }
   )
 
   const slotsLeft = remainingSlots - 1

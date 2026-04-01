@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getAuthUser } from '@/lib/auth-helper';
-import { rewardCredit } from '@/lib/credits';
+import { rewardCredit, getTaskReward } from '@/lib/credits';
 import { getVnTodayStart, secsUntilVnMidnight } from '@/lib/date-vn';
 
 const PAGE_SIZE = 20;
@@ -99,11 +99,18 @@ export async function POST(
       }, { status: 400 });
     }
 
-    const story = await db.story.findUnique({
-      where: { slug },
-      select: { id: true, title: true },
-    });
+    const [story, spamKeywords] = await Promise.all([
+      db.story.findUnique({ where: { slug }, select: { id: true, title: true } }),
+      db.spamKeyword.findMany({ select: { keyword: true } }),
+    ]);
     if (!story) return NextResponse.json({ error: 'Story not found' }, { status: 404 });
+
+    // ── SpamKeyword check ──
+    const lowerContent = trimmed.toLowerCase();
+    const hitKeyword = spamKeywords.find(k => lowerContent.includes(k.keyword));
+    if (hitKeyword) {
+      return NextResponse.json({ error: 'Bình luận chứa nội dung không phù hợp.' }, { status: 400 });
+    }
 
     // ── Lấy lịch sử credit hôm nay ──
     const todayStart = getVnTodayStart();
@@ -177,13 +184,14 @@ export async function POST(
     }
 
     // ── Tính credit ──
+    const commentReward = await getTaskReward('COMMENT', 0.2)
     const rewardResult = await rewardCredit(
       authUser.id,
       'REWARD_COMMENT',
       `Bình luận truyện: ${story.title}`,
       {
         content: trimmed,
-        amount: 0.2,
+        amount: commentReward,
         maxPerDay: MAX_STORIES_PER_DAY,
         minLength: 21,
         storyId: story.id,

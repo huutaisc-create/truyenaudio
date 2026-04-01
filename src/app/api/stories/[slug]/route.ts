@@ -17,9 +17,10 @@ export async function GET(
             );
         }
 
-        const story = await prisma.story.findUnique({
+        const story = await prisma.story.findFirst({
             where: {
                 slug: slug,
+                isHidden: false,
             },
             include: {
                 genres: {

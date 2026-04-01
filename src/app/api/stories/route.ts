@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Filter conditions
-    const whereCondition: any = {};
+    const whereCondition: any = { isHidden: false };
     if (search) {
       whereCondition.title = { contains: search };
     }

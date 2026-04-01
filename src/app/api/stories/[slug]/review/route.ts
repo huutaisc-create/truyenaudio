@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-helper'
-import { rewardCredit } from '@/lib/credits'
+import { rewardCredit, getTaskReward } from '@/lib/credits'
 import db from '@/lib/db'
 import { getVnTodayStart, secsUntilVnMidnight } from '@/lib/date-vn'
 
@@ -29,11 +29,18 @@ export async function POST(
     }, { status: 400 })
   }
 
-  const story = await db.story.findUnique({
-    where: { slug },
-    select: { id: true, title: true, slug: true, ratingScore: true, ratingCount: true },
-  })
+  const [story, spamKeywords] = await Promise.all([
+    db.story.findUnique({ where: { slug }, select: { id: true, title: true, slug: true, ratingScore: true, ratingCount: true } }),
+    db.spamKeyword.findMany({ select: { keyword: true } }),
+  ])
   if (!story) return NextResponse.json({ error: 'Story not found' }, { status: 404 })
+
+  // ── SpamKeyword check ──
+  const lowerContent = content.toLowerCase()
+  const hitKeyword = spamKeywords.find(k => lowerContent.includes(k.keyword))
+  if (hitKeyword) {
+    return NextResponse.json({ error: 'Đánh giá chứa nội dung không phù hợp.' }, { status: 400 })
+  }
 
   // ── Đã review all-time → block ──
   const alreadyReviewed = await db.review.findFirst({
@@ -93,11 +100,12 @@ export async function POST(
     }, { status: 201 })
   }
 
+  const reviewReward = await getTaskReward('REVIEW', 0.2)
   const rewardResult = await rewardCredit(
     authUser.id,
     'REWARD_REVIEW',
     `Đánh giá truyện: ${story.title ?? 'Unknown'}`,
-    { content, amount: 0.2, maxPerDay: MAX_STORIES_PER_DAY, minLength: 21, storyId: story.id, cooldownSeconds: 0 }
+    { content, amount: reviewReward, maxPerDay: MAX_STORIES_PER_DAY, minLength: 21, storyId: story.id, cooldownSeconds: 0 }
   )
 
   let creditMessage: string

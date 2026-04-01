@@ -33,7 +33,7 @@ export async function searchStories(params: SearchParams) {
     const limit = 24
     const offset = (page - 1) * limit
 
-    const where: Prisma.StoryWhereInput = {}
+    const where: Prisma.StoryWhereInput = { isHidden: false }
 
     if (keyword) {
         const kw = keyword.toLowerCase()
@@ -182,6 +182,10 @@ function getCachedStory(slug: string) {
                         take: 5,
                         select: { id: true, index: true, title: true, updatedAt: true },
                     },
+                    storyType: true,
+                    translatorName: true,
+                    sourceUrl: true,
+                    isCompleted: true,
                     // reviews fetch riêng trong page.tsx (không cache) → luôn fresh
                     _count: { select: { chapters: true } },
                 },
@@ -241,6 +245,7 @@ const getCachedRelated = unstable_cache(
     async (storyId: string, genreNames: string[], limit: number) => {
         return db.story.findMany({
             where: {
+                isHidden: false,
                 id: { not: storyId },
                 genres: { some: { name: { in: genreNames } } }
             },
@@ -275,7 +280,7 @@ export async function getRelatedStories(storyId: string, genreNames: string[], l
 const getCachedAuthorStories = unstable_cache(
     async (author: string, storyId: string, limit: number) => {
         return db.story.findMany({
-            where: { author, id: { not: storyId } },
+            where: { isHidden: false, author, id: { not: storyId } },
             orderBy: { viewCount: 'desc' },
             take: limit,
             select: {
@@ -567,6 +572,7 @@ const getCachedTopNominations = unstable_cache(
     async (limit: number) => {
         return db.story.findMany({
             take: limit,
+            where: { isHidden: false },
             orderBy: { nominationCount: 'desc' },
             include: { genres: { take: 1 } },
         })

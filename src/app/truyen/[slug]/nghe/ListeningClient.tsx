@@ -9,7 +9,7 @@ import {
   CheckCircle2, List, Info, MessageSquare, Star, Eye, BookOpen, Heart,
   Loader2, CornerDownRight, Trash2, X, Send, Bookmark, Trophy,
 } from 'lucide-react';
-import { toggleFollow, toggleLike, nominateStory, getStoryInteractions } from '@/actions/interactions';
+import { toggleFollow, toggleLike, nominateStory } from '@/actions/interactions';
 import ReviewButton from '@/components/story/ReviewButton';
 
 // ── R2 CDN base URL ──────────────────────────────────────────────────────
@@ -110,6 +110,17 @@ interface CurrentUser {
   role: string;
 }
 
+interface InitialUserStatus {
+  isLiked: boolean;
+  isFollowed: boolean;
+  isNominatedToday: boolean;
+  hasReviewed: boolean;
+  commentedToday: boolean;
+  nominateSlotsLeft: number;
+  reviewSlotsLeft: number;
+  commentSlotsLeft: number;
+}
+
 interface Props {
   slug: string;
   storyId: string;
@@ -122,6 +133,7 @@ interface Props {
   initialChapter: Chapter;
   storyInfo: StoryInfo;
   currentUser: CurrentUser | null;
+  initialUserStatus: InitialUserStatus;
 }
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -217,7 +229,7 @@ type DrawerTab = 'chapters' | 'info' | 'comments';
 export default function ListeningClient({
   slug, storyId, storyTitle, storyCover, author,
   totalChapters, initialChapters, initialChapterIndex, initialChapter,
-  storyInfo, currentUser,
+  storyInfo, currentUser, initialUserStatus,
 }: Props) {
   const [allChapters, setAllChapters] = useState<ChapterMeta[]>(initialChapters);
   const chapPageRef = useRef<number>(1);
@@ -323,9 +335,9 @@ export default function ListeningClient({
   const [commentHardLock, setCommentHardLock] = useState(0); // đếm ngược giây
   const hardLockTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // ── Lock ngày (đã bình luận truyện này hôm nay, reset sau 0h) ──
-  const [commentLocked, setCommentLocked] = useState(false);
+  const [commentLocked, setCommentLocked] = useState(initialUserStatus.commentedToday);
   // [FIX #2] Đã review truyện này chưa (all-time)
-  const [hasReviewed, setHasReviewed] = useState(false);
+  const [hasReviewed, setHasReviewed] = useState(initialUserStatus.hasReviewed);
   // ── Credit toast (like / nominate / comment) ──
   const [creditToast, setCreditToast] = useState<string | null>(null);
   const creditToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -342,43 +354,23 @@ export default function ListeningClient({
     nominationCount: storyInfo.nominationCount,
   });
   const [userStatus, setUserStatus] = useState({
-    isLiked: false,
-    isFollowed: false,
+    isLiked: initialUserStatus.isLiked,
+    isFollowed: initialUserStatus.isFollowed,
     isNominated: false,
   });
   const [interactLoading, setInteractLoading] = useState<'like' | 'follow' | 'nominate' | null>(null);
   // (interactLoading reserved for future use)
-  const [nominateLocked, setNominateLocked] = useState(false);
-  // Slots còn lại để nhận credit hôm nay (null = chưa biết)
-  const [nominateSlotsLeft, setNominateSlotsLeft] = useState<number | null>(null);
-  const [reviewSlotsLeft, setReviewSlotsLeft] = useState<number | null>(null);
+  const [nominateLocked, setNominateLocked] = useState(initialUserStatus.isNominatedToday);
+  // Slots còn lại để nhận credit hôm nay
+  const [nominateSlotsLeft, setNominateSlotsLeft] = useState<number | null>(initialUserStatus.nominateSlotsLeft);
+  const [reviewSlotsLeft, setReviewSlotsLeft] = useState<number | null>(initialUserStatus.reviewSlotsLeft);
   // Dialog xác nhận khi hết credit: lưu loại hành động đang chờ
   const [noCreditConfirm, setNoCreditConfirm] = useState<'comment' | 'nominate' | null>(null);
   const pendingCommentBodyRef = useRef<string>('');
+  // Số lượt nhận credit bình luận còn lại hôm nay (init từ server, cập nhật sau mỗi lần gửi)
+  const [commentSlotsLeft, setCommentSlotsLeft] = useState<number | null>(initialUserStatus.commentSlotsLeft);
 
-  // ── Fetch interaction status & stats mới nhất từ DB khi mount ──
-  useEffect(() => {
-    getStoryInteractions(storyId).then(({ stats, userStatus: us }) => {
-      if (stats) {
-        setInteractStats({
-          likeCount: stats.likeCount,
-          followCount: stats.followCount,
-          nominationCount: stats.nominationCount,
-        });
-      }
-      setUserStatus({
-        isLiked: us.isLiked,
-        isFollowed: us.isFollowed,
-        isNominated: false,
-      });
-      if (us.isNominatedToday) setNominateLocked(true);
-      if (us.commentedToday) setCommentLocked(true);
-      if (us.hasReviewed) setHasReviewed(true);
-      // Init slots còn lại để hiện dialog khi hết credit
-      if (us.nominateSlotsLeft !== undefined) setNominateSlotsLeft(us.nominateSlotsLeft);
-      if (us.reviewSlotsLeft   !== undefined) setReviewSlotsLeft(us.reviewSlotsLeft);
-    });
-  }, [storyId]);
+  // Interaction state được khởi tạo từ server (initialUserStatus) — không cần fetch client-side
 
 
   const currentIdx = currentChapter.index;
@@ -745,8 +737,8 @@ export default function ListeningClient({
 
     // ── Kiểm tra spam trước khi gửi (Lớp 3) ──
     const now = Date.now();
-    const SPAM_WINDOW_MS = 8 * 60 * 1000; // 8 phút
-    const SPAM_LIMIT = 5; // check trước khi push → gửi được 4, lần 5 bị lock
+    const SPAM_WINDOW_MS = 15 * 60 * 1000; // 15 phút
+    const SPAM_LIMIT = 10; // check trước khi push → gửi được 9, lần 10 bị lock
     const HARD_LOCK_SECS = 5 * 60; // 5 phút
     // Đọc từ sessionStorage → survive F5
     const freshTimestamps = getSpamTimestamps().filter(t => now - t < SPAM_WINDOW_MS);
@@ -764,7 +756,7 @@ export default function ListeningClient({
     const body = replyTo ? `@${replyTo.name} ${commentInput.trim()}` : commentInput.trim();
 
     // Hết credit hôm nay → hỏi user trước
-    if (commentSoftWarning === 0) {
+    if (commentSlotsLeft === 0) {
       pendingCommentBodyRef.current = body;
       setNoCreditConfirm('comment');
       return;
@@ -794,13 +786,14 @@ export default function ListeningClient({
         saveSpamTimestamps([...getSpamTimestamps(), Date.now()]);
         // Lớp 2: bật soft cooldown 60s (đã persist lastCommentTs bên trong)
         setCommentSoftWarning(json.remainingSlots ?? null);
+        if (json.remainingSlots !== undefined) setCommentSlotsLeft(json.remainingSlots);
         startCooldown(60);
       } else {
         showCreditToast(json.error || 'Gửi thất bại');
       }
     } catch { showCreditToast('Lỗi kết nối'); }
     finally { setCommentSending(false); }
-  }, [commentInput, commentSending, commentCooldown, commentHardLock, slug, replyTo, currentUser, showCreditToast, startCooldown, startHardLock, commentSoftWarning]);
+  }, [commentInput, commentSending, commentCooldown, commentHardLock, slug, replyTo, currentUser, showCreditToast, startCooldown, startHardLock, commentSlotsLeft]);
 
   // ── Gửi comment sau khi user confirm "vẫn đăng không credit" ──
   const doSendCommentNoCredit = useCallback(async () => {
@@ -821,6 +814,7 @@ export default function ListeningClient({
         setReplyTo(null);
         commentTextareaRef.current?.focus();
         if (json.creditMessage) showCreditToast(json.creditMessage);
+        if (json.remainingSlots !== undefined) setCommentSlotsLeft(json.remainingSlots);
         saveSpamTimestamps([...getSpamTimestamps(), Date.now()]);
         startCooldown(60);
       } else {
@@ -2472,43 +2466,62 @@ export default function ListeningClient({
         )}
 
         {/* ── Input + Nút gửi ── */}
-        <div className="flex gap-2 items-end">
-          {currentUser && getAvatar(currentUser.name, currentUser.image, 24)}
-          <textarea
-            ref={commentTextareaRef}
-            value={commentInput}
-            onChange={e => setCommentInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) handleSendComment(); }}
-            placeholder={
-              !currentUser ? 'Đăng nhập để bình luận...'
-                : commentHardLock > 0 ? 'Tính năng bình luận tạm khóa...'
-                : replyTo ? `Trả lời ${replyTo.name}...`
-                : 'Chia sẻ cảm nhận... (≥20 ký tự để nhận +0.2 credit)'
-            }
-            rows={2}
-            aria-label="Nội dung bình luận"
-            disabled={!currentUser || commentHardLock > 0}
-            className="flex-1 bg-[#1a1612] border border-white/[0.08] rounded-lg px-3 py-2 text-[11px] text-[#f0ebe4] placeholder:text-[#8a7e72] outline-none focus:border-[#e8580a]/50 resize-none disabled:opacity-40"
-          />
-          <button
-            onClick={handleSendComment}
-            disabled={commentSending || !commentInput.trim() || commentCooldown > 0 || commentHardLock > 0}
-            aria-label={
-              commentHardLock > 0 ? 'Đang bị khóa do spam'
-                : commentCooldown > 0 ? `Chờ ${commentCooldown}s`
-                : commentSending ? 'Đang gửi...'
-                : replyTo ? 'Gửi trả lời' : 'Gửi bình luận'
-            }
-            className="px-2.5 py-2 bg-[#e8580a] rounded-lg text-white disabled:opacity-40 hover:bg-[#d4500a] transition-colors shrink-0 min-w-[36px] flex items-center justify-center"
-          >
-            {commentSending
-              ? <Loader2 size={13} className="animate-spin" />
-              : commentHardLock > 0
-              ? <span className="text-[10px] font-mono font-black">{String(Math.floor(commentHardLock / 60)).padStart(2, '0')}:{String(commentHardLock % 60).padStart(2, '0')}</span>
-              : commentCooldown > 0
-              ? <span className="text-[10px] font-mono font-black">{commentCooldown}s</span>
-              : <Send size={13} />}
-          </button>
+        <div className="space-y-1">
+          <div className="flex gap-2 items-end">
+            {currentUser && getAvatar(currentUser.name, currentUser.image, 24)}
+            <textarea
+              ref={commentTextareaRef}
+              value={commentInput}
+              onChange={e => setCommentInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) handleSendComment(); }}
+              placeholder={
+                !currentUser ? 'Đăng nhập để bình luận...'
+                  : commentHardLock > 0 ? 'Tính năng bình luận tạm khóa...'
+                  : replyTo ? `Trả lời ${replyTo.name}...`
+                  : 'Chia sẻ cảm nhận... (≥20 ký tự để nhận +0.2 credit)'
+              }
+              rows={2}
+              aria-label="Nội dung bình luận"
+              disabled={!currentUser || commentHardLock > 0}
+              className="flex-1 bg-[#1a1612] border border-white/[0.08] rounded-lg px-3 py-2 text-[11px] text-[#f0ebe4] placeholder:text-[#8a7e72] outline-none focus:border-[#e8580a]/50 resize-none disabled:opacity-40"
+            />
+            <button
+              onClick={handleSendComment}
+              disabled={commentSending || !commentInput.trim() || commentCooldown > 0 || commentHardLock > 0}
+              aria-label={
+                commentHardLock > 0 ? 'Đang bị khóa do spam'
+                  : commentCooldown > 0 ? `Chờ ${commentCooldown}s`
+                  : commentSending ? 'Đang gửi...'
+                  : replyTo ? 'Gửi trả lời' : 'Gửi bình luận'
+              }
+              className="px-2.5 py-2 bg-[#e8580a] rounded-lg text-white disabled:opacity-40 hover:bg-[#d4500a] transition-colors shrink-0 min-w-[36px] flex items-center justify-center"
+            >
+              {commentSending
+                ? <Loader2 size={13} className="animate-spin" />
+                : commentHardLock > 0
+                ? <span className="text-[10px] font-mono font-black">{String(Math.floor(commentHardLock / 60)).padStart(2, '0')}:{String(commentHardLock % 60).padStart(2, '0')}</span>
+                : commentCooldown > 0
+                ? <span className="text-[10px] font-mono font-black">{commentCooldown}s</span>
+                : <Send size={13} />}
+            </button>
+          </div>
+          {/* Char counter */}
+          {currentUser && !commentHardLock && (
+            <p className={`text-[10px] pl-8 ${
+              commentInput.trim().length === 0
+                ? 'text-[#8a7e72]'
+                : commentInput.trim().length < 21
+                  ? 'text-orange-400'
+                  : 'text-green-500'
+            }`}>
+              {commentInput.trim().length === 0
+                ? `Tối thiểu 21 ký tự · hơn 20 ký tự để nhận +0.2 credit`
+                : commentInput.trim().length < 21
+                  ? `${commentInput.trim().length}/21 ký tự · Cần thêm ${21 - commentInput.trim().length} ký tự nữa`
+                  : `${commentInput.trim().length} ký tự ✓ · Đủ điều kiện nhận +0.2 credit`
+              }
+            </p>
+          )}
         </div>
       </div>
     </div>

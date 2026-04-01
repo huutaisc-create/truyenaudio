@@ -26,7 +26,7 @@ const RankingPage = async ({ searchParams: searchParamsPromise }: { searchParams
 
     // Build Query
     let orderBy: any = { viewCount: 'desc' };
-    let where: any = {};
+    let where: any = { isHidden: false };
 
     switch (tab) {
         case 'hot':
@@ -45,7 +45,7 @@ const RankingPage = async ({ searchParams: searchParamsPromise }: { searchParams
             orderBy = { createdAt: 'desc' };
             break;
         case 'completed':
-            where = { status: 'COMPLETED' };
+            where = { status: 'COMPLETED', isHidden: false };
             orderBy = { viewCount: 'desc' }; // Completed stories sorted by views
             break;
         default:

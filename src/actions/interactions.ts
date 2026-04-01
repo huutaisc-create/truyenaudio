@@ -4,7 +4,7 @@
 
 import db from "@/lib/db";
 import { auth } from "@/auth";
-import { rewardCredit } from "@/lib/credits";
+import { rewardCredit, getTaskReward } from "@/lib/credits";
 import { getVnTodayStart, secsUntilVnMidnight } from "@/lib/date-vn";
 
 const MAX_STORIES_PER_DAY = 5;
@@ -138,12 +138,13 @@ export async function nominateStory(storyId: string) {
     }
 
     // ── Tính credit ──
+    const nominateReward = await getTaskReward('NOMINATE', 0.2)
     const rewardResult = await rewardCredit(
       userId,
       'REWARD_NOMINATION',
       `Đề cử truyện: ${story?.title ?? 'Unknown'}`,
       {
-        amount: 0.2,
+        amount: nominateReward,
         maxPerDay: MAX_STORIES_PER_DAY,
         minLength: 0,
         storyId,
@@ -155,8 +156,8 @@ export async function nominateStory(storyId: string) {
     let creditMessage: string;
     if (rewardResult.rewarded) {
       creditMessage = slotsLeft > 0
-        ? `Bạn nhận được +0.2 credit · Bạn còn ${slotsLeft} lượt đề cử cho truyện khác`
-        : `Bạn nhận được +0.2 credit · Đã dùng hết 5 lượt hôm nay 🎉`;
+        ? `Bạn nhận được +${nominateReward.toFixed(1)} credit · Bạn còn ${slotsLeft} lượt đề cử cho truyện khác`
+        : `Bạn nhận được +${nominateReward.toFixed(1)} credit · Đã dùng hết 5 lượt hôm nay 🎉`;
     } else {
       creditMessage = `Lượt nhận credit hôm nay của bạn đã hết. Cảm ơn bạn đã đề cử`;
     }
@@ -198,12 +199,13 @@ export async function getStoryInteractions(storyId: string) {
     commentedToday: false,
     nominateSlotsLeft: MAX_STORIES_PER_DAY,
     reviewSlotsLeft: MAX_STORIES_PER_DAY,
+    commentSlotsLeft: MAX_STORIES_PER_DAY,
   };
 
   if (userId) {
     const todayStart = getVnTodayStart();
 
-    const [lib, like, history, nominationToday, reviewAllTime, commentedTodayTx, nominateTxsToday, reviewTxsToday] = await Promise.all([
+    const [lib, like, history, nominationToday, reviewAllTime, commentedTodayTx, nominateTxsToday, reviewTxsToday, commentTxsToday] = await Promise.all([
       db.library.findUnique({ where: { userId_storyId: { userId, storyId } } }),
       db.like.findUnique({ where: { userId_storyId: { userId, storyId } } }),
       db.readingHistory.findUnique({
@@ -229,6 +231,11 @@ export async function getStoryInteractions(storyId: string) {
         where: { userId, type: 'REWARD_REVIEW', note: { startsWith: '[story:' }, createdAt: { gte: todayStart } },
         select: { note: true },
       }),
+      // Đếm distinct stories đã nhận credit bình luận hôm nay
+      db.creditTransaction.findMany({
+        where: { userId, type: 'REWARD_COMMENT', note: { startsWith: '[story:' }, createdAt: { gte: todayStart } },
+        select: { note: true },
+      }),
     ]);
 
     userStatus.isFollowed = !!lib;
@@ -240,8 +247,10 @@ export async function getStoryInteractions(storyId: string) {
 
     const nominateDistinct = new Set(nominateTxsToday.map((tx, i) => tx.note?.match(/^\[story:([^\]]+)\]/)?.[1] ?? `__${i}`));
     const reviewDistinct   = new Set(reviewTxsToday.map((tx, i)   => tx.note?.match(/^\[story:([^\]]+)\]/)?.[1] ?? `__${i}`));
-    userStatus.nominateSlotsLeft = Math.max(0, MAX_STORIES_PER_DAY - nominateDistinct.size);
-    userStatus.reviewSlotsLeft   = Math.max(0, MAX_STORIES_PER_DAY - reviewDistinct.size);
+    const commentDistinct  = new Set(commentTxsToday.map((tx, i)  => tx.note?.match(/^\[story:([^\]]+)\]/)?.[1] ?? `__${i}`));
+    userStatus.nominateSlotsLeft  = Math.max(0, MAX_STORIES_PER_DAY - nominateDistinct.size);
+    userStatus.reviewSlotsLeft    = Math.max(0, MAX_STORIES_PER_DAY - reviewDistinct.size);
+    userStatus.commentSlotsLeft   = Math.max(0, MAX_STORIES_PER_DAY - commentDistinct.size);
   }
 
   return { stats: story, userStatus };

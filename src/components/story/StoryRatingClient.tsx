@@ -97,7 +97,7 @@ export default function StoryRatingClient({
                         </span>
                     </>
                 ) : (
-                    <span className="text-base font-bold text-warm-ink-soft">0 đánh giá</span>
+                    <span className="text-base font-bold text-warm-ink-soft">(0)</span>
                 )}
                 <ReviewButton
                     storyId={storyId}
