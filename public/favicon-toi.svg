@@ -1,18 +1,85 @@
 <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-  <rect width="32" height="32" rx="6" fill="#1a1a1a"/>
-  <g transform="translate(16,10)">
-    <path d="M-7 3 Q-7,-9 0,-9 Q7,-9 7,3" fill="none" stroke="#FF6B35" stroke-width="2.5" stroke-linecap="round"/>
-    <rect x="-10" y="0" width="5" height="9" rx="2.5" fill="#FF6B35"/>
-    <rect x="5" y="0" width="5" height="9" rx="2.5" fill="#FF6B35"/>
-    <path d="M-14 2 Q-17,6 -14,10" fill="none" stroke="#FF6B35" stroke-width="1.5" stroke-linecap="round" opacity="0.65"/>
-    <path d="M14 2 Q17,6 14,10" fill="none" stroke="#FF6B35" stroke-width="1.5" stroke-linecap="round" opacity="0.65"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF7A45"/>
+      <stop offset="100%" stop-color="#C93D10"/>
+    </linearGradient>
+    <!-- Cup face gradient (front lit) -->
+    <linearGradient id="cupL" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#d4d4d4"/>
+    </linearGradient>
+    <linearGradient id="cupR" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#d4d4d4"/>
+    </linearGradient>
+    <!-- Cup side/depth gradient (dark face) -->
+    <linearGradient id="sideL" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#a0a0a0"/>
+      <stop offset="100%" stop-color="#c8c8c8"/>
+    </linearGradient>
+    <linearGradient id="sideR" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0%" stop-color="#a0a0a0"/>
+      <stop offset="100%" stop-color="#c8c8c8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="32" height="32" rx="6" fill="url(#bg)"/>
+
+  <!-- ── Headphone centered vertically, shifted down a bit ── -->
+  <g transform="translate(16,16)">
+
+    <!-- Arc shadow (depth) -->
+    <path d="M-10 5 Q-10,-12 0,-12 Q10,-12 10,5"
+          fill="none" stroke="rgba(0,0,0,0.25)" stroke-width="6"
+          stroke-linecap="round" transform="translate(1,1.5)"/>
+    <!-- Arc main -->
+    <path d="M-10 5 Q-10,-12 0,-12 Q10,-12 10,5"
+          fill="none" stroke="white" stroke-width="5"
+          stroke-linecap="round"/>
+    <!-- Arc highlight -->
+    <path d="M-10 5 Q-10,-12 0,-12 Q10,-12 10,5"
+          fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"
+          stroke-linecap="round" transform="translate(-0.5,-0.5)"/>
+
+    <!-- ── LEFT CUP 3D ── -->
+    <!-- depth/side face (offset down-right) -->
+    <rect x="-14.5" y="2.5" width="9" height="13" rx="4.5"
+          fill="url(#sideL)" opacity="0.7" transform="translate(2,2)"/>
+    <!-- main face -->
+    <rect x="-14.5" y="2.5" width="9" height="13" rx="4.5"
+          fill="url(#cupL)"/>
+    <!-- inner recess -->
+    <rect x="-12.5" y="4.5" width="5" height="9" rx="2.5"
+          fill="rgba(180,70,20,0.35)"/>
+    <!-- top highlight -->
+    <rect x="-13.5" y="3.5" width="7" height="2.5" rx="1.2"
+          fill="rgba(255,255,255,0.6)"/>
+
+    <!-- ── RIGHT CUP 3D ── -->
+    <!-- depth/side face -->
+    <rect x="5.5" y="2.5" width="9" height="13" rx="4.5"
+          fill="url(#sideR)" opacity="0.7" transform="translate(2,2)"/>
+    <!-- main face -->
+    <rect x="5.5" y="2.5" width="9" height="13" rx="4.5"
+          fill="url(#cupR)"/>
+    <!-- inner recess -->
+    <rect x="7.5" y="4.5" width="5" height="9" rx="2.5"
+          fill="rgba(180,70,20,0.35)"/>
+    <!-- top highlight -->
+    <rect x="6.5" y="3.5" width="7" height="2.5" rx="1.2"
+          fill="rgba(255,255,255,0.6)"/>
+
   </g>
-  <g transform="translate(16,23)" opacity="0.55">
-    <rect x="-6" y="-2" width="2" height="4" rx="1" fill="#FF6B35"/>
-    <rect x="-3" y="-4" width="2" height="8" rx="1" fill="#FF6B35"/>
-    <rect x="0"  y="-2" width="2" height="4" rx="1" fill="#FF6B35"/>
-    <rect x="3"  y="-5" width="2" height="10" rx="1" fill="#FF6B35"/>
-    <rect x="6"  y="-3" width="2" height="6" rx="1" fill="#FF6B35"/>
+
+  <!-- ── Wave bars centered ── -->
+  <g transform="translate(16,28)" opacity="0.95">
+    <rect x="-7"  y="-2"  width="2.2" height="4"  rx="1.1" fill="white"/>
+    <rect x="-4"  y="-4"  width="2.2" height="8"  rx="1.1" fill="white"/>
+    <rect x="-1"  y="-2"  width="2.2" height="4"  rx="1.1" fill="white"/>
+    <rect x="2"   y="-5"  width="2.2" height="10" rx="1.1" fill="white"/>
+    <rect x="5"   y="-3"  width="2.2" height="6"  rx="1.1" fill="white"/>
   </g>
-  <text x="16" y="31" font-family="Arial,sans-serif" font-size="5.5" font-weight="800" fill="white" text-anchor="middle" letter-spacing="1">MTA</text>
+
 </svg>

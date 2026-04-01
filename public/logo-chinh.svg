@@ -1,33 +1,63 @@
-<svg width="320" height="100" viewBox="0 0 320 100" xmlns="http://www.w3.org/2000/svg">
+<svg width="340" height="58" viewBox="0 0 340 58" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg0" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#1a1a1a"/><stop offset="100%" stop-color="#111"/></linearGradient>
-    <linearGradient id="og0" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#FF6B35"/><stop offset="100%" stop-color="#E8501A"/></linearGradient>
-    <clipPath id="cc0"><rect x="0" y="0" width="320" height="100" rx="14"/></clipPath>
+    <linearGradient id="og" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF6B35"/>
+      <stop offset="100%" stop-color="#E8501A"/>
+    </linearGradient>
   </defs>
-  <rect x="0" y="0" width="320" height="100" rx="14" fill="url(#bg0)"/>
-  <rect x="0" y="0" width="3" height="100" fill="url(#og0)" clip-path="url(#cc0)"/>
-  <rect x="0" y="0" width="320" height="100" rx="14" fill="none" stroke="#333" stroke-width="1"/>
-  <g transform="translate(52,46)">
-    <path d="M-20 6 Q-20,-28 0,-28 Q20,-28 20,6" fill="none" stroke="#FF6B35" stroke-width="5" stroke-linecap="round"/>
-    <path d="M-14 6 Q-14,-19 0,-19 Q14,-19 14,6" fill="none" stroke="#FF8555" stroke-width="1" stroke-linecap="round" opacity="0.35"/>
-    <rect x="-28" y="0" width="13" height="21" rx="6.5" fill="#FF6B35"/>
-    <rect x="-25" y="3" width="7" height="13" rx="3.5" fill="#CC4418" opacity="0.5"/>
-    <rect x="15" y="0" width="13" height="21" rx="6.5" fill="#FF6B35"/>
-    <rect x="18" y="3" width="7" height="13" rx="3.5" fill="#CC4418" opacity="0.5"/>
+
+  <!-- ── Headphone icon ── -->
+  <g transform="translate(24,23)">
+    <path d="M-15 5 Q-15,-20 0,-20 Q15,-20 15,5"
+          fill="none" stroke="url(#og)" stroke-width="4.5" stroke-linecap="round"/>
+    <rect x="-21" y="1" width="10" height="16" rx="5" fill="url(#og)"/>
+    <rect x="-19" y="3.5" width="6" height="9" rx="3" fill="#B03210" opacity="0.4"/>
+    <rect x="11" y="1" width="10" height="16" rx="5" fill="url(#og)"/>
+    <rect x="13" y="3.5" width="6" height="9" rx="3" fill="#B03210" opacity="0.4"/>
   </g>
-  <g transform="translate(52,76)" opacity="0.5">
-    <rect x="-12" y="-3" width="3" height="7" rx="1.5" fill="#FF6B35"/>
-    <rect x="-8" y="-5" width="3" height="11" rx="1.5" fill="#FF6B35"/>
-    <rect x="-4" y="-2" width="3" height="5" rx="1.5" fill="#FF6B35"/>
-    <rect x="0"  y="-7" width="3" height="15" rx="1.5" fill="#FF6B35"/>
-    <rect x="4"  y="-4" width="3" height="9" rx="1.5" fill="#FF6B35"/>
-    <rect x="8"  y="-2" width="3" height="5" rx="1.5" fill="#FF6B35"/>
-    <rect x="12" y="-5" width="3" height="11" rx="1.5" fill="#FF6B35"/>
+
+  <!-- ── Sound bars ── -->
+  <g transform="translate(24,47)" opacity="0.7">
+    <rect x="-11" y="-4"  width="3" height="8"  rx="1.5" fill="#FF6B35"/>
+    <rect x="-7"  y="-6"  width="3" height="12" rx="1.5" fill="#FF6B35"/>
+    <rect x="-3"  y="-3"  width="3" height="6"  rx="1.5" fill="#FF6B35"/>
+    <rect x="1"   y="-8"  width="3" height="14" rx="1.5" fill="#FF6B35"/>
+    <rect x="5"   y="-4"  width="3" height="8"  rx="1.5" fill="#FF6B35"/>
+    <rect x="9"   y="-6"  width="3" height="10" rx="1.5" fill="#FF6B35"/>
   </g>
-  <line x1="96" y1="14" x2="96" y2="86" stroke="#2a2a2a" stroke-width="1"/>
-  <text x="112" y="38" font-family="Arial,sans-serif" font-size="11" font-weight="700" fill="#FF6B35" letter-spacing="2">TRUYEN</text>
-  <text x="165" y="38" font-family="Arial,sans-serif" font-size="11" font-weight="700" fill="#FF6B35" letter-spacing="2" opacity="0.7">· CỦA TÔI</text>
-  <rect x="112" y="41" width="40" height="1.5" rx="1" fill="#FF6B35" opacity="0.5"/>
-  <text x="112" y="72" font-family="Arial,sans-serif" font-size="32" font-weight="800" fill="white" letter-spacing="1">AUDIO</text>
-  <text x="112" y="87" font-family="Arial,sans-serif" font-size="9" fill="white" letter-spacing="1" opacity="0.6">Nghe truyện mọi lúc mọi nơi</text>
+
+  <!-- ── Divider ── -->
+  <line x1="50" y1="6" x2="50" y2="52" stroke="#FF6B35" stroke-width="1" opacity="0.2"/>
+
+  <!-- ══ AUDIO ══ -->
+  <text
+    x="60" y="52"
+    font-family="'Arial Black',Arial,sans-serif"
+    font-size="30" font-weight="900"
+    fill="white" letter-spacing="1">AUDIO</text>
+
+  <!-- ══ TRUYỆN — x=60, aligned with A ══ -->
+  <text
+    x="60" y="19"
+    font-family="'Arial Black',Arial,sans-serif"
+    font-size="12" font-weight="900"
+    fill="#FF6B35" letter-spacing="3">TRUYỆN</text>
+
+  <!-- ══ CỦA TÔI — x=170 ══ -->
+  <text
+    x="170" y="19"
+    font-family="'Arial Black',Arial,sans-serif"
+    font-size="12" font-weight="900"
+    fill="#FF8C5A" letter-spacing="2">CỦA TÔI</text>
+
+  <!-- underline under TRUYỆN -->
+  <rect x="60" y="23" width="28" height="1.2" rx="0.6" fill="#FF6B35" opacity="0.5"/>
+
+  <!-- ══ Tagline — white ══ -->
+  <text
+    x="60" y="35"
+    font-family="Arial,sans-serif"
+    font-size="8.5" font-weight="400"
+    fill="white" letter-spacing="1" opacity="0.7">Nghe mọi lúc mọi nơi</text>
+
 </svg>
