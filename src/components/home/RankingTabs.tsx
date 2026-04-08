@@ -120,7 +120,7 @@ export default function RankingTabs({ topNominations, topViews, topLikes, topFol
               </Link>
 
               {story.status === "COMPLETED" && (
-                <span className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 uppercase z-10">Full</span>
+                <span className="absolute top-0 left-0 bg-red-600 text-white text-[11px] font-black px-2.5 py-1 z-10 uppercase tracking-widest rounded-br-md">FULL</span>
               )}
 
               {/* Rank badge — nằm dưới badge FULL */}

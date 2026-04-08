@@ -36,7 +36,7 @@ export default function RecentReads() {
           style={{ scrollbarWidth: "none" }}
         >
           <style>{`div::-webkit-scrollbar{display:none}`}</style>
-          {history.slice(0, 3).map((item) => (
+          {history.slice(0, 6).map((item) => (
             <Link
               key={item.slug}
               href={`/truyen/${item.slug}/nghe?chuong=${item.chapterIndex || 1}`}

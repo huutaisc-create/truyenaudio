@@ -220,9 +220,7 @@ function ForYouCard({ story, priority }: { story: Story; priority?: boolean }) {
                     </div>
                 </Link>
                 {story.status === 'COMPLETED' && (
-                    <span className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-bold px-2 py-0.5 z-10 uppercase tracking-wider rounded-br-md">
-                        Full
-                    </span>
+                    <span className="absolute top-0 left-0 bg-red-600 text-white text-[11px] font-black px-2.5 py-1 z-10 uppercase tracking-widest rounded-br-md">FULL</span>
                 )}
                 {/* Nút NGHE */}
                 <Link href={`/truyen/${story.slug}/nghe`}
