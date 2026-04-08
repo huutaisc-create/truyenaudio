@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { BookOpen, Settings2 } from 'lucide-react'
+import { BookOpen, Settings2, Headphones } from 'lucide-react'
 import GenrePickerModal from './GenrePickerModal'
 
 interface Story {
@@ -71,7 +71,7 @@ export default function ForYouSection({ stories: initStories, genrePrefs: initPr
                                 border: '1px solid var(--pill2-border)',
                                 color: 'var(--pill2-color)',
                             }}>
-                            <span className="text-sm leading-none" aria-hidden="true">⭐</span>
+                            <Headphones className="h-4 w-4 shrink-0" aria-hidden="true" />
                             <span className="text-sm font-black uppercase tracking-[.08em]">Dành Cho Bạn</span>
                         </div>
 
@@ -195,7 +195,7 @@ function ForYouCard({ story, priority }: { story: Story; priority?: boolean }) {
                 className="relative aspect-[3/4] overflow-hidden rounded-lg shadow-sm transition-all group-hover:shadow-lg group-hover:-translate-y-0.5"
                 style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
             >
-                <Link href={`/truyen/${story.slug}`} className="block absolute inset-0 z-0" aria-label={`Xem truyện ${story.title}`}>
+                <Link href={`/truyen/${story.slug}/nghe`} className="block absolute inset-0 z-0" aria-label={`Nghe truyện ${story.title}`}>
                     {story.coverImage ? (
                         <Image
                             src={story.coverImage}
@@ -224,6 +224,14 @@ function ForYouCard({ story, priority }: { story: Story; priority?: boolean }) {
                         Full
                     </span>
                 )}
+                {/* Nút NGHE */}
+                <Link href={`/truyen/${story.slug}/nghe`}
+                    className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black"
+                    style={{ background: 'linear-gradient(135deg, #FF7A45, #C93D10)', color: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
+                    aria-label={`Nghe truyện ${story.title}`}
+                >
+                    🎧 Nghe
+                </Link>
             </div>
         </div>
     )

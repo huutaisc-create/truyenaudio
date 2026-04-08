@@ -39,8 +39,8 @@ export default function RecentReads() {
           {history.slice(0, 3).map((item) => (
             <Link
               key={item.slug}
-              href={`/truyen/${item.slug}/chuong-${item.chapterIndex || 1}`}
-              aria-label={`Đọc tiếp ${item.title}, chương ${item.chapterIndex || 1}`}
+              href={`/truyen/${item.slug}/nghe?chuong=${item.chapterIndex || 1}`}
+              aria-label={`Nghe tiếp ${item.title}, chương ${item.chapterIndex || 1}`}
               className="flex-none w-[80%] snap-center flex items-center gap-2.5 p-2 rounded-lg transition-colors"
               style={{
                 background: "var(--card)",

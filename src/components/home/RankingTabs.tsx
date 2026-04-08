@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Award, Eye, Heart, Bell } from "lucide-react";
 
 type Story = {
   id: string; title: string; slug: string;
@@ -22,10 +22,10 @@ type Props = {
 const fmt = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n.toString();
 
 const TABS = [
-  { key: "nominations", label: "Đề Cử",    emoji: "🏅" },
-  { key: "views",       label: "Lượt Xem",  emoji: "👁" },
-  { key: "likes",       label: "Yêu Thích", emoji: "❤️" },
-  { key: "follows",     label: "Theo Dõi",  emoji: "🔔" },
+  { key: "nominations", label: "Đề Cử",    icon: <Award  className="h-3.5 w-3.5 shrink-0" /> },
+  { key: "views",       label: "Lượt Xem",  icon: <Eye    className="h-3.5 w-3.5 shrink-0" /> },
+  { key: "likes",       label: "Yêu Thích", icon: <Heart  className="h-3.5 w-3.5 shrink-0" /> },
+  { key: "follows",     label: "Theo Dõi",  icon: <Bell   className="h-3.5 w-3.5 shrink-0" /> },
 ];
 
 export default function RankingTabs({ topNominations, topViews, topLikes, topFollows }: Props) {
@@ -75,7 +75,7 @@ export default function RankingTabs({ topNominations, topViews, topLikes, topFol
               : { background: "transparent", border: "1px solid var(--pill2-border)", color: "var(--pill2-color)" }
             }
           >
-            <span aria-hidden="true">{tab.emoji}</span>
+            <span aria-hidden="true">{tab.icon}</span>
             <span className="hidden sm:inline">{tab.label}</span>
             <span className="sr-only sm:hidden">{tab.label}</span>
           </button>
@@ -99,35 +99,29 @@ export default function RankingTabs({ topNominations, topViews, topLikes, topFol
       >
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {lists[active].slice(0, 8).map((story, i) => (
-            <Link
-              href={`/truyen/${story.slug}`}
-              key={story.id}
-              aria-label={`Hạng ${i + 1}: ${story.title}`}
-              className="group relative rounded-lg overflow-hidden aspect-[3/4] shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
+            <div key={story.id} className="group relative rounded-lg overflow-hidden aspect-[3/4] shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
               style={{ background: "var(--card)", border: "1px solid var(--border)" }}
             >
-              {story.coverImage ? (
-                <Image
-                  src={story.coverImage}
-                  alt={`Ảnh bìa ${story.title}`}
-                  fill
-                  sizes="(max-width: 640px) 45vw, 22vw"
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  priority={i < 2}
-                />
-              ) : (
-                <div
-                  className="w-full h-full flex items-center justify-center"
-                  style={{ background: "var(--card2)" }}
-                >
-                  <BookOpen className="h-8 w-8 opacity-20" aria-hidden="true" style={{ color: "var(--text-muted)" }} />
-                </div>
-              )}
+              <Link href={`/truyen/${story.slug}/nghe`} className="block absolute inset-0 z-0" aria-label={`Nghe hạng ${i + 1}: ${story.title}`}>
+                {story.coverImage ? (
+                  <Image
+                    src={story.coverImage}
+                    alt={`Ảnh bìa ${story.title}`}
+                    fill
+                    sizes="(max-width: 640px) 45vw, 22vw"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    priority={i < 2}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center" style={{ background: "var(--card2)" }}>
+                    <BookOpen className="h-8 w-8 opacity-20" aria-hidden="true" style={{ color: "var(--text-muted)" }} />
+                  </div>
+                )}
+              </Link>
 
               {/* Rank badge */}
-              <div
-                aria-hidden="true"
-                className="absolute top-2 left-2 w-[26px] h-[26px] rounded-full flex items-center justify-center text-xs font-black shadow-md"
+              <div aria-hidden="true"
+                className="absolute top-2 left-2 w-[26px] h-[26px] rounded-full flex items-center justify-center text-xs font-black shadow-md z-10"
                 style={
                   i === 0 ? { background: "var(--accent2)", color: "var(--bg)" }
                   : i === 1 ? { background: "var(--text-muted)", color: "#fff" }
@@ -142,8 +136,16 @@ export default function RankingTabs({ topNominations, topViews, topLikes, topFol
                 <span className="absolute top-0 right-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 uppercase z-10">Full</span>
               )}
 
-              <div
-                className="absolute inset-x-0 bottom-0 p-2 pt-10 flex flex-col justify-end"
+              {/* Nút NGHE */}
+              <Link href={`/truyen/${story.slug}/nghe`}
+                className="absolute bottom-8 right-2 z-10 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black"
+                style={{ background: "linear-gradient(135deg, #FF7A45, #C93D10)", color: "white", boxShadow: "0 2px 8px rgba(0,0,0,0.5)" }}
+                aria-label={`Nghe truyện ${story.title}`}
+              >
+                🎧 Nghe
+              </Link>
+
+              <div className="absolute inset-x-0 bottom-0 p-2 pt-10 flex flex-col justify-end z-0"
                 style={{ background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 55%, transparent 100%)" }}
               >
                 <h3 className="text-xs font-bold text-white line-clamp-2 leading-tight group-hover:text-orange-300 transition-colors">
@@ -151,16 +153,12 @@ export default function RankingTabs({ topNominations, topViews, topLikes, topFol
                 </h3>
                 <div className="flex items-center justify-between mt-1">
                   <span className="text-[10px] text-white/60">{story.genres[0]?.name}</span>
-                  <span
-                    className="text-[10px] font-bold"
-                    style={{ color: "var(--accent2)" }}
-                    aria-hidden="true"
-                  >
+                  <span className="text-[10px] font-bold" style={{ color: "var(--accent2)" }} aria-hidden="true">
                     {statOf(story)}
                   </span>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       </div>
