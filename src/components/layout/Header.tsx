@@ -35,6 +35,7 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showResults, setShowResults] = useState(false);
   const [results, setResults] = useState<any[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { data: session, status } = useSession();
@@ -48,13 +49,18 @@ const Header = () => {
 
 
   React.useEffect(() => {
+    if (searchQuery.trim().length === 0) {
+      setResults([]);
+      setSearchLoading(false);
+      return;
+    }
+    setSearchLoading(true);
     const timer = setTimeout(async () => {
-      if (searchQuery.trim().length > 0) {
-        try {
-          const res = await searchStories({ keyword: searchQuery, page: 1 });
-          if (res && res.data) setResults(res.data.slice(0, 5));
-        } catch (error) { console.error(error); }
-      } else { setResults([]); }
+      try {
+        const res = await searchStories({ keyword: searchQuery, page: 1 });
+        if (res && res.data) setResults(res.data.slice(0, 6));
+      } catch (error) { console.error(error); }
+      finally { setSearchLoading(false); }
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -115,6 +121,7 @@ const Header = () => {
             setShowResults={setShowResults}
             results={results}
             handleSearch={handleSearch}
+            isLoading={searchLoading}
           />
 
           <div className="flex items-center gap-2 lg:gap-3">
@@ -366,6 +373,7 @@ const Header = () => {
           setShowResults={setShowResults}
           results={results}
           handleSearch={handleSearch}
+          isLoading={searchLoading}
         />
       </div>
 

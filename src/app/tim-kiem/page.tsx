@@ -2,7 +2,7 @@
 
 import React, { useState, Suspense } from 'react';
 import { Filter, Search, ChevronDown, Check, BookOpen, User, Star, RotateCcw, Eye, Heart, Bookmark, Award, X } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { formatNumber } from '@/lib/utils';
 
 // --- DATA CONSTANTS ---
@@ -77,8 +77,30 @@ import { searchStories } from '@/actions/stories';
 
 const FilterPage = () => {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const keyword = searchParams.get('tu-khoa');
     const theLoaiParam = searchParams.get('the-loai');
+
+    // Local search input state — pre-fill với keyword từ URL
+    const [localKeyword, setLocalKeyword] = React.useState(keyword || '');
+
+    // Sync khi URL keyword thay đổi (navigate từ header)
+    React.useEffect(() => {
+        setLocalKeyword(keyword || '');
+    }, [keyword]);
+
+    // Khi user gõ vào ô search → update URL → trigger fetch
+    const handleLocalSearch = (val: string) => {
+        setLocalKeyword(val);
+        const params = new URLSearchParams(searchParams.toString());
+        if (val.trim()) {
+            params.set('tu-khoa', val.trim());
+        } else {
+            params.delete('tu-khoa');
+        }
+        params.delete('page');
+        router.replace(`/tim-kiem?${params.toString()}`);
+    };
 
     // Hỗ trợ nhiều genre cách nhau bằng dấu phẩy: ?the-loai=Ngôn+Tình,Sủng
     const theLoaiInitial = theLoaiParam
@@ -482,12 +504,27 @@ const FilterPage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                     {/* --- 2. Main Content (Left Column) --- */}
                     <div className="lg:col-span-3 order-2 lg:order-1">
+                        {/* Search Input */}
+                        <div className="relative mb-5">
+                            <input
+                                type="text"
+                                value={localKeyword}
+                                onChange={(e) => handleLocalSearch(e.target.value)}
+                                placeholder="Tìm kiếm tên truyện, tác giả..."
+                                className="w-full rounded-xl py-3 pl-5 pr-12 text-sm outline-none transition-all border border-zinc-200 bg-white shadow-sm focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                                style={{ color: '#18181b' }}
+                            />
+                            <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 pointer-events-none" />
+                        </div>
+
                         {/* Results Header */}
-                        <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center justify-between mb-4">
                             <h2 className="text-xl font-bold text-zinc-800">
-                                Kết quả <span className="text-zinc-400 font-normal text-base ml-2">({pagination.total} truyện)</span>
+                                {keyword
+                                    ? <>Kết quả cho <span className="text-orange-500">"{keyword}"</span> <span className="text-zinc-400 font-normal text-base ml-1">({pagination.total} truyện)</span></>
+                                    : <>Kết quả <span className="text-zinc-400 font-normal text-base ml-2">({pagination.total} truyện)</span></>
+                                }
                             </h2>
-                            {/* Mobile visual cue or simple sort dropdown could go here if needed, but Sort is in Sidebar now */}
                         </div>
 
                         {/* Grid Results */}

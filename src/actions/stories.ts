@@ -36,12 +36,22 @@ export async function searchStories(params: SearchParams) {
     const where: Prisma.StoryWhereInput = { isHidden: false }
 
     if (keyword) {
-        const kw = keyword.toLowerCase()
+        // normalize: bỏ dấu tiếng Việt để search không dấu
+        const removeAccent = (str: string) =>
+            str.normalize('NFD')
+               .replace(/[\u0300-\u036f]/g, '')
+               .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+
+        const kw        = keyword.trim()
+        const kwNoAccent = removeAccent(kw)
+
+        const buildOr = (term: string): Prisma.StoryWhereInput[] => [
+            { title: { contains: term, mode: 'insensitive' } },
+        ]
+
         where.OR = [
-            { title:  { contains: keyword } },
-            { title:  { contains: kw } },
-            { author: { contains: keyword } },
-            { author: { contains: kw } },
+            ...buildOr(kw),
+            ...(kwNoAccent !== kw ? buildOr(kwNoAccent) : []),
         ]
     }
 

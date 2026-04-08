@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Search, BookOpen, Star } from 'lucide-react';
+import { Search, BookOpen } from 'lucide-react';
 
 interface SearchBoxProps {
     searchQuery: string;
@@ -13,6 +13,7 @@ interface SearchBoxProps {
     results: any[];
     handleSearch: () => void;
     className?: string;
+    isLoading?: boolean;
 }
 
 const SearchBox: React.FC<SearchBoxProps> = ({
@@ -22,7 +23,8 @@ const SearchBox: React.FC<SearchBoxProps> = ({
     setShowResults,
     results,
     handleSearch,
-    className = ""
+    className = "",
+    isLoading = false,
 }) => {
     return (
         <div className={className} role="search">
@@ -100,7 +102,15 @@ const SearchBox: React.FC<SearchBoxProps> = ({
                         </Link>
                     </div>
                     <div className="max-h-[300px] overflow-y-auto">
-                        {results.length > 0 ? (
+                        {isLoading ? (
+                            <div className="flex items-center justify-center gap-2 p-5" style={{ color: 'var(--text-muted)' }}>
+                                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                </svg>
+                                <span className="text-sm">Đang tìm...</span>
+                            </div>
+                        ) : results.length > 0 ? (
                             results.map((result, idx) => (
                                 <Link
                                     key={result.id || idx}
@@ -136,11 +146,6 @@ const SearchBox: React.FC<SearchBoxProps> = ({
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <h4 className="text-sm font-bold truncate" style={{ color: 'var(--text)' }}>{result.title}</h4>
-                                        <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{result.author}</p>
-                                        <div className="flex items-center gap-1 mt-1" style={{ color: 'var(--accent)' }} aria-label={`Điểm: ${result.ratingScore || 5.0}`}>
-                                            <Star className="h-3 w-3 fill-current" aria-hidden="true" />
-                                            <span className="text-[10px] font-bold" style={{ color: 'var(--text)' }}>{result.ratingScore || 5.0}</span>
-                                        </div>
                                     </div>
                                 </Link>
                             ))
@@ -150,7 +155,7 @@ const SearchBox: React.FC<SearchBoxProps> = ({
                                 style={{ color: 'var(--text-muted)' }}
                                 role="status"
                             >
-                                Không tìm thấy...
+                                Không tìm thấy kết quả nào...
                             </div>
                         )}
                     </div>
