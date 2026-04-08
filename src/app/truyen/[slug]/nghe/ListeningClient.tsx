@@ -2645,7 +2645,6 @@ export default function ListeningClient({
               <h1 className="font-serif text-[20px] font-bold text-white leading-tight mb-1">
                 {currentChapter.title || `Chương ${currentIdx}`}
               </h1>
-              <p className="text-[12px] text-[#c0b4a8]">{author}</p>
             </div>
             <div className="px-6 flex flex-col gap-3">
               {DebugPanel}
@@ -2700,7 +2699,6 @@ export default function ListeningClient({
               <h1 className="font-serif text-[26px] font-bold text-white leading-tight mb-1">
                 {currentChapter.title || `Chương ${currentIdx}`}
               </h1>
-              <p className="text-[13px] text-[#c0b4a8]">{author}</p>
             </div>
             {DebugPanel}
             {Controls}

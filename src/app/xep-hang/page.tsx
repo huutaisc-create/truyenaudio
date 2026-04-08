@@ -152,7 +152,6 @@ const RankingPage = async ({ searchParams: searchParamsPromise }: { searchParams
                                             <div className="flex-1 min-w-0 space-y-2 py-1">
                                                 <h3 className="text-lg font-bold text-zinc-800 truncate group-hover:text-brand-primary transition-colors">{story.title}</h3>
                                                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-base text-zinc-500">
-                                                    <span className="flex items-center gap-1"><User className="h-3 w-3" /> {story.author}</span>
                                                     {story.genres.map(g => (
                                                         <span key={g.id} className="flex items-center gap-1 uppercase font-bold text-brand-primary/70 border border-brand-primary/10 px-1 rounded">{g.name}</span>
                                                     ))}
@@ -203,9 +202,6 @@ const RankingPage = async ({ searchParams: searchParamsPromise }: { searchParams
 
                                             <div className="p-4 flex flex-col flex-1 gap-2">
                                                 <h3 className="font-bold text-base text-zinc-900 group-hover:text-brand-primary transition-colors line-clamp-2 leading-tight min-h-[2.5rem]">{story.title}</h3>
-                                                <div className="flex items-center gap-1.5 text-sm text-zinc-600">
-                                                    <span className="flex items-center gap-1 truncate max-w-full"><User className="h-3 w-3 shrink-0" /> {story.author}</span>
-                                                </div>
                                                 <div className="flex flex-wrap gap-1 mt-1">
                                                     {story.genres[0] && (
                                                         <span className="px-2 py-0.5 rounded text-sm font-bold text-zinc-600 bg-zinc-100 border border-zinc-200 uppercase">{story.genres[0].name}</span>

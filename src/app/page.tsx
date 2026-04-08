@@ -434,12 +434,6 @@ export default async function Home() {
                         </h4>
                         <div className="flex items-center gap-1 mt-0.5">
                           <span className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{story.genres[0]?.name}</span>
-                          {story.author && (
-                            <>
-                              <span className="text-xs" style={{ color: "var(--border)" }} aria-hidden="true">·</span>
-                              <span className="text-xs truncate max-w-[55px]" style={{ color: "var(--text-muted)" }}>{story.author}</span>
-                            </>
-                          )}
                         </div>
                       </div>
                       <div className="shrink-0 text-right">

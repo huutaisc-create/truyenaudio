@@ -122,7 +122,7 @@ const StoryDetail = async ({
             <div className="bg-warm-card border-b border-warm-border mb-7">
                 <div className="container mx-auto px-4 py-3 flex items-center gap-2 text-xs text-warm-ink-light">
                     <a href="/" className="text-warm-ink-soft hover:text-warm-primary transition-colors">
-                        Mê Truyện Chữ
+                        Truyện Audio Của Tôi
                     </a>
                     <ChevronRight className="h-3 w-3 text-warm-border" aria-hidden="true" />
                     <span className="font-semibold text-warm-ink-mid truncate">{story.title}</span>
@@ -179,18 +179,6 @@ const StoryDetail = async ({
                                 </h1>
 
                                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-base font-semibold text-warm-ink-soft">
-                                    <span className="flex items-center gap-1.5">
-                                        <User className="h-3.5 w-3.5 text-warm-primary" aria-hidden="true" />
-                                        <Link
-                                            href={`/tim-kiem?tac-gia=${encodeURIComponent(story.author)}`}
-                                            className="text-warm-primary hover:underline"
-                                        >
-                                            {story.author}
-                                            {story.storyType !== 'ORIGINAL' && story.translatorName && (
-                                                <span className="text-warm-ink-light font-normal"> · {story.translatorName}</span>
-                                            )}
-                                        </Link>
-                                    </span>
                                     {/* storyType badge */}
                                     {story.storyType === 'CONVERT' && (
                                         <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
@@ -435,7 +423,7 @@ const StoryDetail = async ({
                                             <h3 className="text-base font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">
                                                 {s.title}
                                             </h3>
-                                            <p className="text-sm text-warm-ink-soft">{s.author}</p>
+
                                             <div className="flex items-center gap-1.5 mt-0.5">
                                                 {s.genres[0] && (
                                                     <span className="text-sm px-1.5 py-0.5 bg-warm-primary-pale text-[#8c3a08] rounded-full font-semibold border border-warm-primary/20">
@@ -480,7 +468,7 @@ const StoryDetail = async ({
                                                 <h3 className="text-base font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">
                                                     {s.title}
                                                 </h3>
-                                                <p className="text-sm text-warm-ink-soft">{s.author}</p>
+    
                                                 <div className="flex items-center gap-1.5 mt-0.5">
                                                     {s.genres.slice(0, 1).map((g: any) => (
                                                         <span key={g.name} className="text-sm px-1.5 py-0.5 bg-warm-primary-pale text-[#8c3a08] rounded-full font-semibold border border-warm-primary/20">

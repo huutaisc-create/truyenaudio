@@ -14,13 +14,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "MêTruyệnChữ - Đọc truyện online miễn phí",
-  description: "Nền tảng đọc và nghe truyện online hàng đầu với hàng ngàn tiểu thuyết chất lượng cao.",
+  title: "Truyện Audio Của Tôi - Nghe truyện audio online miễn phí",
+  description: "Nền tảng nghe truyện audio online hàng đầu với hàng ngàn tiểu thuyết chất lượng cao, không quảng cáo.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "MêTruyệnChữ",
+    title: "Truyện Audio Của Tôi",
   },
   formatDetection: {
     telephone: false,
@@ -55,7 +55,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="MêTruyệnChữ" />
+        <meta name="apple-mobile-web-app-title" content="Truyện Audio Của Tôi" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512.png" />
 
