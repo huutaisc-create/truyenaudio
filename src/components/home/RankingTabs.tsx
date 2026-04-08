@@ -119,9 +119,13 @@ export default function RankingTabs({ topNominations, topViews, topLikes, topFol
                 )}
               </Link>
 
-              {/* Rank badge */}
+              {story.status === "COMPLETED" && (
+                <span className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 uppercase z-10">Full</span>
+              )}
+
+              {/* Rank badge — nằm dưới badge FULL */}
               <div aria-hidden="true"
-                className="absolute top-2 left-2 w-[26px] h-[26px] rounded-full flex items-center justify-center text-xs font-black shadow-md z-10"
+                className="absolute top-6 left-2 w-[26px] h-[26px] rounded-full flex items-center justify-center text-xs font-black shadow-md z-10"
                 style={
                   i === 0 ? { background: "var(--accent2)", color: "var(--bg)" }
                   : i === 1 ? { background: "var(--text-muted)", color: "#fff" }
@@ -132,17 +136,34 @@ export default function RankingTabs({ topNominations, topViews, topLikes, topFol
                 {i + 1}
               </div>
 
-              {story.status === "COMPLETED" && (
-                <span className="absolute top-0 right-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 uppercase z-10">Full</span>
-              )}
-
               {/* Nút NGHE */}
               <Link href={`/truyen/${story.slug}/nghe`}
-                className="absolute bottom-8 right-2 z-10 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black"
-                style={{ background: "linear-gradient(135deg, #FF7A45, #C93D10)", color: "white", boxShadow: "0 2px 8px rgba(0,0,0,0.5)" }}
                 aria-label={`Nghe truyện ${story.title}`}
+                className="absolute top-2 right-2 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black backdrop-blur-sm transition-all shadow-sm"
+                style={{ background: "linear-gradient(135deg, #FF7A45, #C93D10)", border: "none", color: "white", boxShadow: "0 2px 8px rgba(0,0,0,0.5)" }}
               >
-                🎧 Nghe
+                <svg width="16" height="16" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <defs><linearGradient id="hsh2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="rgba(255,255,255,0.25)"/><stop offset="100%" stopColor="rgba(255,255,255,0.4)"/></linearGradient></defs>
+                  <g transform="translate(16,14)">
+                    <path d="M-10 4 Q-10,-12 0,-12 Q10,-12 10,4" fill="none" stroke="white" strokeWidth="5" strokeLinecap="round"/>
+                    <rect x="-13.5" y="2" width="9" height="13" rx="4.5" fill="url(#hsh2)" transform="translate(1.5,1.5)"/>
+                    <rect x="-13.5" y="2" width="9" height="13" rx="4.5" fill="white"/>
+                    <rect x="-11.5" y="4" width="5" height="7.5" rx="2.5" fill="rgba(180,60,10,0.4)"/>
+                    <rect x="-12.5" y="3" width="7" height="2" rx="1" fill="rgba(255,255,255,0.6)"/>
+                    <rect x="4.5" y="2" width="9" height="13" rx="4.5" fill="url(#hsh2)" transform="translate(1.5,1.5)"/>
+                    <rect x="4.5" y="2" width="9" height="13" rx="4.5" fill="white"/>
+                    <rect x="6.5" y="4" width="5" height="7.5" rx="2.5" fill="rgba(180,60,10,0.4)"/>
+                    <rect x="5.5" y="3" width="7" height="2" rx="1" fill="rgba(255,255,255,0.6)"/>
+                  </g>
+                </svg>
+                <svg width="14" height="12" viewBox="0 0 14 12" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <rect x="0" y="5" width="2" height="5" rx="1" fill="white"/>
+                  <rect x="3" y="2" width="2" height="10" rx="1" fill="white"/>
+                  <rect x="6" y="6" width="2" height="4" rx="1" fill="white"/>
+                  <rect x="9" y="0" width="2" height="12" rx="1" fill="currentColor"/>
+                  <rect x="12" y="3" width="2" height="8" rx="1" fill="currentColor"/>
+                </svg>
+                Nghe
               </Link>
 
               <div className="absolute inset-x-0 bottom-0 p-2 pt-10 flex flex-col justify-end z-0"
