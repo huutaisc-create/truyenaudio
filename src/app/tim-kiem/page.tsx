@@ -80,9 +80,14 @@ const FilterPage = () => {
     const keyword = searchParams.get('tu-khoa');
     const theLoaiParam = searchParams.get('the-loai');
 
+    // Hỗ trợ nhiều genre cách nhau bằng dấu phẩy: ?the-loai=Ngôn+Tình,Sủng
+    const theLoaiInitial = theLoaiParam
+        ? theLoaiParam.split(',').map(g => g.trim()).filter(Boolean)
+        : [] as string[]
+
     // Khởi tạo filter với the-loai từ URL nếu có
     const [filters, setFilters] = useState({
-        theLoai: theLoaiParam ? [theLoaiParam] : [] as string[],
+        theLoai: theLoaiInitial,
         boiCanh: [] as string[],
         tinhCach: [] as string[],
         luuPhai: [] as string[],
@@ -110,7 +115,10 @@ const FilterPage = () => {
     React.useEffect(() => {
         if (theLoaiParam !== prevTheLoaiParam.current) {
             prevTheLoaiParam.current = theLoaiParam;
-            setFilters(prev => ({ ...prev, theLoai: theLoaiParam ? [theLoaiParam] : [] }));
+            const genres = theLoaiParam
+                ? theLoaiParam.split(',').map(g => g.trim()).filter(Boolean)
+                : []
+            setFilters(prev => ({ ...prev, theLoai: genres }));
             setPage(1);
         }
     }, [theLoaiParam]);

@@ -1,19 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { saveGenrePrefs } from '@/actions/preferences'
 import { GENRES } from '@/lib/constants'
-import { Sparkles, Check } from 'lucide-react'
+import { Check } from 'lucide-react'
 
 interface Props {
     open: boolean
     onClose: () => void
+    onSave: (genres: string[]) => void   // callback ngay sau khi lưu — không reload
     initialSelected?: string[]
 }
 
-export default function GenrePickerModal({ open, onClose, initialSelected = [] }: Props) {
-    const router = useRouter()
+export default function GenrePickerModal({ open, onClose, onSave, initialSelected = [] }: Props) {
     const [selected, setSelected] = useState<string[]>(initialSelected)
     const [saving, setSaving] = useState(false)
 
@@ -28,10 +27,10 @@ export default function GenrePickerModal({ open, onClose, initialSelected = [] }
     async function handleConfirm() {
         if (selected.length === 0) return
         setSaving(true)
-        await saveGenrePrefs(selected)
+        await saveGenrePrefs(selected)   // set cookie + DB
         setSaving(false)
         onClose()
-        router.refresh()
+        onSave(selected)                 // báo parent cập nhật UI ngay
     }
 
     // Lọc ra những genre thực sự là GENRE (không phải BOI_CANH, TINH_CACH…)
