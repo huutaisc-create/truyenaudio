@@ -158,7 +158,11 @@ const FilterPage = () => {
     };
 
     // Fetch — chạy khi filters, sortBy, timeFilter, keyword, page thay đổi
+    const isFirstRender = React.useRef(true);
     React.useEffect(() => {
+        const delay = isFirstRender.current ? 0 : 300;
+        isFirstRender.current = false;
+
         const timer = setTimeout(async () => {
             setLoading(true);
             try {
@@ -185,7 +189,7 @@ const FilterPage = () => {
             } finally {
                 setLoading(false);
             }
-        }, 300);
+        }, delay);
         return () => clearTimeout(timer);
     }, [filters, sortBy, timeFilter, keyword, page]);
 
