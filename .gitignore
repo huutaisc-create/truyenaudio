@@ -13,6 +13,8 @@
 # testing
 /coverage
 
+.claude/worktrees/
+
 # next.js
 /.next/
 /out/
@@ -58,3 +60,4 @@ prisma/split_result.txt
 prisma/*.db
 
 *.db
+".claude/worktrees/" 
