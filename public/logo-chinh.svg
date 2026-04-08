@@ -1,4 +1,4 @@
-<svg width="340" height="70" viewBox="0 0 340 70" xmlns="http://www.w3.org/2000/svg">
+<svg width="340" height="106" viewBox="0 0 340 106" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="og" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#FF6B35"/>
@@ -6,58 +6,60 @@
     </linearGradient>
   </defs>
 
-  <!-- ── Headphone icon ── -->
-  <g transform="translate(24,24)">
-    <path d="M-15 5 Q-15,-20 0,-20 Q15,-20 15,5"
-          fill="none" stroke="url(#og)" stroke-width="4.5" stroke-linecap="round"/>
-    <rect x="-21" y="1" width="10" height="16" rx="5" fill="url(#og)"/>
-    <rect x="-19" y="3.5" width="6" height="9" rx="3" fill="#B03210" opacity="0.4"/>
-    <rect x="11" y="1" width="10" height="16" rx="5" fill="url(#og)"/>
-    <rect x="13" y="3.5" width="6" height="9" rx="3" fill="#B03210" opacity="0.4"/>
-  </g>
+  <!-- ── Headphone center=(38,52), width≈68px height≈86px ratio~0.8:1 ── -->
+  <g transform="translate(38,52)">
 
-  <!-- ── Sound bars ── -->
-  <g transform="translate(24,50)" opacity="0.7">
-    <rect x="-11" y="-4"  width="3" height="8"  rx="1.5" fill="#FF6B35"/>
-    <rect x="-7"  y="-6"  width="3" height="12" rx="1.5" fill="#FF6B35"/>
-    <rect x="-3"  y="-3"  width="3" height="6"  rx="1.5" fill="#FF6B35"/>
-    <rect x="1"   y="-8"  width="3" height="14" rx="1.5" fill="#FF6B35"/>
-    <rect x="5"   y="-4"  width="3" height="8"  rx="1.5" fill="#FF6B35"/>
-    <rect x="9"   y="-6"  width="3" height="10" rx="1.5" fill="#FF6B35"/>
+    <!-- arc dày -->
+    <path d="M-26 8 Q-26,-42 0,-42 Q26,-42 26,8"
+          fill="none" stroke="url(#og)" stroke-width="8" stroke-linecap="round"/>
+
+    <!-- left earcup -->
+    <rect x="-34" y="5"  width="20" height="40" rx="10" fill="url(#og)"/>
+    <rect x="-32" y="8"  width="12" height="26" rx="6"  fill="#B03210" opacity="0.4"/>
+
+    <!-- right earcup -->
+    <rect x="14"  y="5"  width="20" height="40" rx="10" fill="url(#og)"/>
+    <rect x="16"  y="8"  width="12" height="26" rx="6"  fill="#B03210" opacity="0.4"/>
+
+    <!-- ── Sound bars — giữa 2 chụp tai (gap x=-14..14, center y=25) ── -->
+    <g opacity="0.9">
+      <rect x="-11" y="22" width="3" height="6"  rx="1.5" fill="#FF6B35"/>
+      <rect x="-7"  y="18" width="3" height="14" rx="1.5" fill="#FF6B35"/>
+      <rect x="-3"  y="15" width="3" height="20" rx="1.5" fill="#FF6B35"/>
+      <rect x="1"   y="19" width="3" height="12" rx="1.5" fill="#FF6B35"/>
+      <rect x="5"   y="17" width="3" height="16" rx="1.5" fill="#FF6B35"/>
+      <rect x="9"   y="22" width="3" height="6"  rx="1.5" fill="#FF6B35"/>
+    </g>
   </g>
 
   <!-- ── Divider ── -->
-  <line x1="50" y1="6" x2="50" y2="64" stroke="#FF6B35" stroke-width="1" opacity="0.2"/>
+  <line x1="80" y1="8" x2="80" y2="98" stroke="#FF6B35" stroke-width="1" opacity="0.2"/>
 
   <!-- ══ TRUYỆN ══ -->
-  <text
-    x="60" y="19"
-    font-family="'Arial Black',Arial,sans-serif"
-    font-size="12" font-weight="900"
+  <text x="90" y="28"
+    font-family="Arial,sans-serif"
+    font-size="18" font-weight="700"
     fill="#FF6B35" letter-spacing="3">TRUYỆN</text>
 
   <!-- ══ CỦA TÔI ══ -->
-  <text
-    x="170" y="19"
-    font-family="'Arial Black',Arial,sans-serif"
-    font-size="12" font-weight="900"
+  <text x="200" y="28"
+    font-family="Arial,sans-serif"
+    font-size="18" font-weight="700"
     fill="#FF6B35" letter-spacing="2">CỦA TÔI</text>
 
-  <!-- underline under TRUYỆN -->
-  <rect x="60" y="23" width="28" height="1.2" rx="0.6" fill="#FF6B35" opacity="0.5"/>
+  <!-- underline -->
+  <rect x="90" y="33" width="46" height="1.5" rx="0.6" fill="#FF6B35" opacity="0.5"/>
 
   <!-- ══ AUDIO ══ -->
-  <text
-    x="60" y="52"
+  <text x="90" y="70"
     font-family="'Arial Black',Arial,sans-serif"
     font-size="30" font-weight="900"
     fill="white" letter-spacing="1">AUDIO</text>
 
-  <!-- ══ Tagline — bên dưới AUDIO ══ -->
-  <text
-    x="60" y="68"
+  <!-- ══ Tagline ══ -->
+  <text x="90" y="96"
     font-family="Arial,sans-serif"
-    font-size="14" font-weight="400"
+    font-size="21" font-weight="400"
     fill="#FF6B35" letter-spacing="1" opacity="0.9">Nghe mọi lúc mọi nơi</text>
 
 </svg>

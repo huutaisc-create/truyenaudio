@@ -99,8 +99,8 @@ const Header = () => {
             <Image
               src="/logo-chinh.svg"
               alt="Truyen Audio Của Tôi"
-              width={160}
-              height={50}
+              width={180}
+              height={56}
               className="group-hover:scale-105 transition-transform"
               priority
             />
