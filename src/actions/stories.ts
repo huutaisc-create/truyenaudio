@@ -36,23 +36,16 @@ export async function searchStories(params: SearchParams) {
     const where: Prisma.StoryWhereInput = { isHidden: false }
 
     if (keyword) {
-        // normalize: bỏ dấu tiếng Việt để search không dấu
-        const removeAccent = (str: string) =>
-            str.normalize('NFD')
-               .replace(/[\u0300-\u036f]/g, '')
-               .replace(/đ/g, 'd').replace(/Đ/g, 'D')
-
-        const kw        = keyword.trim()
-        const kwNoAccent = removeAccent(kw)
-
-        const buildOr = (term: string): Prisma.StoryWhereInput[] => [
-            { title: { contains: term, mode: 'insensitive' } },
-        ]
-
-        where.OR = [
-            ...buildOr(kw),
-            ...(kwNoAccent !== kw ? buildOr(kwNoAccent) : []),
-        ]
+        const kw = `%${keyword.trim()}%`
+        const matchingIds = await db.$queryRaw<{ id: string }[]>(
+            Prisma.sql`
+                SELECT id FROM "Story"
+                WHERE "isHidden" = false
+                  AND unaccent(lower(title)) ILIKE unaccent(lower(${kw}))
+            `
+        )
+        const ids = matchingIds.map(r => r.id)
+        where.id = { in: ids.length > 0 ? ids : ['__no_match__'] }
     }
 
     const andConditions: Prisma.StoryWhereInput[] = []
