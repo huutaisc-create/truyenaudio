@@ -11,7 +11,7 @@ export default function RecentReads() {
   if (!history || history.length === 0) return null;
 
   return (
-    <section className="mb-4 lg:hidden" aria-label="Truyện đọc gần đây">
+    <section className="mb-4 lg:hidden" aria-label="Truyện nghe gần đây">
       <div
         className="p-3 rounded-xl mx-0"
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
@@ -27,7 +27,7 @@ export default function RecentReads() {
               color: "var(--text)",
             }}
           >
-            Truyện đọc gần đây
+            Truyện nghe gần đây
           </h2>
           <Clock className="h-4 w-4" style={{ color: "var(--text-soft)" }} aria-hidden="true" />
         </div>

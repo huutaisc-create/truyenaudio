@@ -44,7 +44,7 @@ export default function ReadingHistoryWidget() {
           >
             🕐
           </span>
-          <span className="text-[12px] font-black uppercase tracking-[.1em]">Truyện Đọc Gần Đây</span>
+          <span className="text-[12px] font-black uppercase tracking-[.1em]">Truyện Nghe Gần Đây</span>
         </div>
       </div>
 
