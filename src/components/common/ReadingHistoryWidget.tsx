@@ -53,8 +53,8 @@ export default function ReadingHistoryWidget() {
         {history.slice(0, 5).map((item) => (
           <Link
             key={item.slug}
-            href={`/truyen/${item.slug}/chuong-${item.chapterIndex || 1}`}
-            aria-label={`Đọc tiếp ${item.title}, chương ${item.chapterIndex || 1}`}
+            href={`/truyen/${item.slug}/nghe?chuong=${item.chapterIndex || 1}`}
+            aria-label={`Nghe tiếp ${item.title}, chương ${item.chapterIndex || 1}`}
             className="group flex items-center gap-3 px-3 py-2.5 transition-colors"
             style={{ borderBottom: "1px solid var(--border-soft)" }}
             onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = "var(--card)")}
@@ -91,7 +91,7 @@ export default function ReadingHistoryWidget() {
                 C.{item.chapterIndex || 1}
               </span>
               <span className="block text-xs" style={{ color: "var(--text-muted)" }} aria-hidden="true">
-                Đọc tiếp
+                Nghe tiếp
               </span>
             </div>
           </Link>
