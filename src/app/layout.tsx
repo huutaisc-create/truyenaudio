@@ -59,10 +59,6 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512.png" />
 
-        {/* Preconnect R2 CDN */}
-        <link rel="preconnect" href="https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev" />
-        <link rel="dns-prefetch" href="https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev" />
-
         {/* Khôi phục theme từ localStorage — chạy trước khi React hydrate để tránh flash */}
         <script
           dangerouslySetInnerHTML={{

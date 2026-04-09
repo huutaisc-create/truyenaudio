@@ -14,7 +14,7 @@ import ReviewButton from '@/components/story/ReviewButton';
 
 // ── R2 CDN base URL ──────────────────────────────────────────────────────
 // Đổi URL này khi có custom domain, không cần sửa chỗ nào khác
-const R2_BASE = 'https://pub-e24f7ec645fc49d79de9bf92a252cc29.r2.dev';
+const R2_BASE = '';
 
 // [FIX #3] sessionStorage helpers — spam timestamps survive refresh
 const SPAM_STORAGE_KEY     = 'comment_spam_ts';
