@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git -C \"D:\\\\Webtruyen\\\\webtruyen-app\" log --oneline -3)"
+    ]
+  }
+}
