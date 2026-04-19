@@ -86,6 +86,7 @@ const StoryCard = ({
             sizes="(max-width: 640px) 45vw, (max-width: 768px) 30vw, (max-width: 1024px) 22vw, 18vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
             priority={priority}
+            unoptimized={coverImage.startsWith('/covers/')}
           />
         ) : (
           <div
@@ -415,7 +416,7 @@ export default async function Home() {
                         style={{ background: "var(--card2)", border: "1px solid var(--border)" }}
                       >
                         {story.coverImage ? (
-                          <Image src={story.coverImage} alt={`Ảnh bìa ${story.title}`} fill sizes="36px" className="object-cover" />
+                          <Image src={story.coverImage} alt={`Ảnh bìa ${story.title}`} fill sizes="36px" className="object-cover" unoptimized={story.coverImage.startsWith('/covers/')} />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center" style={{ color: "var(--text-soft)" }}>
                             <BookOpen size={13} aria-hidden="true" />

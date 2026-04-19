@@ -1,0 +1,19 @@
+2026-04-19 17:21:16,220  INFO     Đã kiểm tra/tạo cột tracking upload trong Neon DB.
+2026-04-19 17:21:16,569  INFO     Đã đọc selections.json: 1 truyện sẵn sàng upload.
+2026-04-19 17:21:17,317  INFO       🗜  Compressed → WebP  167KB  (quality=85)
+2026-04-19 17:21:17,970  INFO       🖼  Cover uploaded: /covers/cung-chieu-co-vo-quan-nhan.webp  (167KB)
+2026-04-19 17:21:37,727  ERROR    FAIL cung-chieu-co-vo-quan-nhan batch 15: 413 Client Error: Payload Too Large for url: https://mytruyenaudio.com/api/admin/stories
+2026-04-19 17:21:40,743  ERROR    FAIL xuyen-khong-ta-tro-thanh-sung-the-cua-quyen-than batch 2: 413 Client Error: Payload Too Large for url: https://mytruyenaudio.com/api/admin/stories
+2026-04-19 17:21:42,044  ERROR    FAIL xuyen-sach-toi-tro-thanh-phu-ba batch 1: 413 Client Error: Payload Too Large for url: https://mytruyenaudio.com/api/admin/stories
+2026-04-19 17:21:43,464  ERROR    FAIL xuyen-sach-hanh-trinh-tim-kiem-hanh-phuc-hoan-hao-cua-nu-phu batch 1: 413 Client Error: Payload Too Large for url: https://mytruyenaudio.com/api/admin/stories
+2026-04-19 17:21:44,885  ERROR    FAIL ong-xa-than-bi batch 1: 413 Client Error: Payload Too Large for url: https://mytruyenaudio.com/api/admin/stories
+2026-04-19 17:21:45,349  WARNING  SKIP xuyen-den-thap-nien-70-treu-choc-pho-doan-truong-phuc-hac: thư mục không tồn tại
+2026-04-19 17:21:45,349  WARNING  SKIP chi-muon-hanh-ha-em-ca-ngay-lan-dem-anh-muon-em: thư mục không tồn tại
+2026-04-19 17:21:45,349  WARNING  SKIP dai-duong-tich-chau-ky---phan-tap: thư mục không tồn tại
+2026-04-19 17:21:45,349  WARNING  SKIP quyen-1-xuyen-nhanh-cuu-mang-tat-ca-nam-chu-deu-hac-hoa: thư mục không tồn tại
+2026-04-19 17:21:46,445  ERROR    FAIL yeu-phai-tong-tai-tan-phe batch 1: 413 Client Error: Payload Too Large for url: https://mytruyenaudio.com/api/admin/stories
+2026-04-19 17:21:48,088  ERROR    FAIL xuyen-thanh-tra-xanh-phan-dien-cong-chua-khong-ngan-mot-ai batch 1: 413 Client Error: Payload Too Large for url: https://mytruyenaudio.com/api/admin/stories
+2026-04-19 17:21:57,531  INFO     OK   xuyen-thanh-thanh-nien-tri-thuc-nu-phu-ve-thanh-pho: 599 chương mới
+2026-04-19 17:21:57,981  WARNING  SKIP xuyen-thanh-con-gai-chet-yeu-cua-thien-kim-that-trong-nien-dai-van: thư mục không tồn tại
+2026-04-19 17:21:57,981  WARNING  SKIP xuyen-sach-ta-tro-thanh-chinh-that-danh-da-cua-phan-dien: thư mục không tồn tại
+2026-04-19 17:21:57,981  WARNING  SKIP xuyen-nhanh-nam-chinh-tham-tinh-deu-si-me-toi: thư mục không tồn tại

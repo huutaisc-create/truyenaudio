@@ -1,0 +1,2 @@
+2026-04-19 17:45:40,626  INFO     Đã kiểm tra/tạo cột tracking upload trong Neon DB.
+2026-04-19 17:45:40,992  INFO     Đã đọc selections.json: 1 truyện sẵn sàng upload.

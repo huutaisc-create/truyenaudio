@@ -1,0 +1,37 @@
+2026-04-19 17:15:22,078  INFO     Đã kiểm tra/tạo cột tracking upload trong Neon DB.
+2026-04-19 17:15:22,446  INFO     Đã đọc selections.json: 1 truyện sẵn sàng upload.
+2026-04-19 17:15:23,292  INFO       🗜  Compressed → WebP  167KB  (quality=85)
+2026-04-19 17:15:23,947  WARNING    [!] Cover upload lỗi (attempt 1): <html>
+<head><title>401 Authorization Required</title></head>
+<body>
+<center><h1>401 Authorization Required</h1></center>
+<hr><center>nginx/1.24.0 (Ubuntu)</center>
+</body>
+</html>
+
+2026-04-19 17:15:25,511  WARNING    [!] Cover upload lỗi (attempt 2): <html>
+<head><title>401 Authorization Required</title></head>
+<body>
+<center><h1>401 Authorization Required</h1></center>
+<hr><center>nginx/1.24.0 (Ubuntu)</center>
+</body>
+</html>
+
+2026-04-19 17:15:27,097  WARNING    [!] Cover upload lỗi (attempt 3): <html>
+<head><title>401 Authorization Required</title></head>
+<body>
+<center><h1>401 Authorization Required</h1></center>
+<hr><center>nginx/1.24.0 (Ubuntu)</center>
+</body>
+</html>
+
+2026-04-19 17:15:27,097  ERROR      ✗ Không upload được ảnh bìa cho cung-chieu-co-vo-quan-nhan
+2026-04-19 17:15:27,896  ERROR    FAIL cung-chieu-co-vo-quan-nhan batch 1: 401 Client Error: Unauthorized for url: https://mytruyenaudio.com/api/admin/stories
+2026-04-19 17:15:29,296  ERROR    FAIL xuyen-khong-ta-tro-thanh-sung-the-cua-quyen-than batch 1: 401 Client Error: Unauthorized for url: https://mytruyenaudio.com/api/admin/stories
+2026-04-19 17:15:30,661  ERROR    FAIL xuyen-sach-toi-tro-thanh-phu-ba batch 1: 413 Client Error: Payload Too Large for url: https://mytruyenaudio.com/api/admin/stories
+2026-04-19 17:15:32,380  ERROR    FAIL xuyen-sach-hanh-trinh-tim-kiem-hanh-phuc-hoan-hao-cua-nu-phu batch 1: 413 Client Error: Payload Too Large for url: https://mytruyenaudio.com/api/admin/stories
+2026-04-19 17:15:34,199  ERROR    FAIL ong-xa-than-bi batch 1: 413 Client Error: Payload Too Large for url: https://mytruyenaudio.com/api/admin/stories
+2026-04-19 17:15:34,648  WARNING  SKIP xuyen-den-thap-nien-70-treu-choc-pho-doan-truong-phuc-hac: thư mục không tồn tại
+2026-04-19 17:15:34,649  WARNING  SKIP chi-muon-hanh-ha-em-ca-ngay-lan-dem-anh-muon-em: thư mục không tồn tại
+2026-04-19 17:15:34,655  WARNING  SKIP dai-duong-tich-chau-ky---phan-tap: thư mục không tồn tại
+2026-04-19 17:15:34,656  WARNING  SKIP quyen-1-xuyen-nhanh-cuu-mang-tat-ca-nam-chu-deu-hac-hoa: thư mục không tồn tại

@@ -81,6 +81,7 @@ const RankingColumn = ({ title, stories, countKey, countLabel, accentColor, tab,
                   sizes="(max-width: 640px) 30vw, (max-width: 1024px) 15vw, 8vw"
                   className="object-cover"
                   priority={isPriority}
+                  unoptimized={top1.coverImage.startsWith('/covers/')}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center" style={{ color: "var(--text-soft)" }}>

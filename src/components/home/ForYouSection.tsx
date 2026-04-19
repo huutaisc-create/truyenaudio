@@ -204,6 +204,7 @@ function ForYouCard({ story, priority }: { story: Story; priority?: boolean }) {
                             sizes="(max-width: 640px) 45vw, (max-width: 768px) 30vw, 18vw"
                             className="object-cover transition-transform duration-300 group-hover:scale-105"
                             priority={priority}
+                            unoptimized={story.coverImage.startsWith('/covers/')}
                         />
                     ) : (
                         <div className="flex h-full w-full items-center justify-center" style={{ background: 'var(--card2)' }}>

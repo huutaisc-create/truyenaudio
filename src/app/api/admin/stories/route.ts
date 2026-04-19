@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
             s.book_status === "Ongoing" ? "ONGOING"   :
             s.status || "ONGOING";
 
-        const resolvedCover = s.cover_url || s.coverImage || "";
+        const resolvedCover = (s.cover_url || s.coverImage || "").trim();
 
         // ── Gom tất cả tags theo đúng type ────────────────────
         const buildTags = (names: string[] | string | undefined, type: string) => {
@@ -82,7 +82,8 @@ export async function POST(request: NextRequest) {
                 title:         s.title,
                 author:        s.author        || "Unknown",
                 description:   s.description   || "",
-                coverImage:    resolvedCover,
+                // Chỉ cập nhật coverImage nếu có — tránh batch sau overwrite "" vào DB
+                ...(resolvedCover ? { coverImage: resolvedCover } : {}),
                 status:        resolvedStatus,
                 viewCount:     s.viewCount  ?? s.view_count  ?? 0,
                 likeCount:     s.likeCount  ?? s.like_count  ?? 0,

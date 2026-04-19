@@ -49,6 +49,8 @@ public/models/
 public/piper-wasm/
 public/uploads/
 public/avatars/
+public/chapters/
+public/covers/
 
 prisma/*.db
 prisma/*.db-shm

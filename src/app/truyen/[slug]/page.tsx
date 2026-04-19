@@ -152,6 +152,7 @@ const StoryDetail = async ({
                                             sizes="176px"
                                             className="object-cover"
                                             priority={true}
+                                            unoptimized={story.coverImage.startsWith('/covers/')}
                                         />
                                     </div>
                                 ) : (
@@ -457,7 +458,7 @@ const StoryDetail = async ({
                                         >
                                             <div className="w-10 h-14 rounded-md overflow-hidden shrink-0 shadow-sm relative bg-warm-bg">
                                                 {s.coverImage ? (
-                                                    <Image src={s.coverImage} alt={`Ảnh bìa ${s.title}`} fill sizes="40px" className="object-cover" />
+                                                    <Image src={s.coverImage} alt={`Ảnh bìa ${s.title}`} fill sizes="40px" className="object-cover" unoptimized={s.coverImage.startsWith('/covers/')} />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center">
                                                         <BookOpen className="h-4 w-4 text-warm-ink-light" aria-hidden="true" />
@@ -502,7 +503,7 @@ const StoryDetail = async ({
                                         >
                                             <div className="w-10 h-14 rounded-md overflow-hidden shrink-0 shadow-sm relative bg-warm-bg">
                                                 {s.coverImage ? (
-                                                    <Image src={s.coverImage} alt={`Ảnh bìa ${s.title}`} fill sizes="40px" className="object-cover" />
+                                                    <Image src={s.coverImage} alt={`Ảnh bìa ${s.title}`} fill sizes="40px" className="object-cover" unoptimized={s.coverImage.startsWith('/covers/')} />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center">
                                                         <BookOpen className="h-4 w-4 text-warm-ink-light" aria-hidden="true" />

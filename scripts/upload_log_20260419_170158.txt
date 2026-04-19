@@ -1,0 +1,29 @@
+2026-04-19 17:01:59,547  INFO     Đã kiểm tra/tạo cột tracking upload trong Neon DB.
+2026-04-19 17:01:59,983  INFO     Đã đọc selections.json: 1 truyện sẵn sàng upload.
+2026-04-19 17:02:01,004  INFO       🗜  Compressed → WebP  167KB  (quality=85)
+2026-04-19 17:02:01,652  WARNING    [!] Cover upload lỗi (attempt 1): <html>
+<head><title>401 Authorization Required</title></head>
+<body>
+<center><h1>401 Authorization Required</h1></center>
+<hr><center>nginx/1.24.0 (Ubuntu)</center>
+</body>
+</html>
+
+2026-04-19 17:02:03,290  WARNING    [!] Cover upload lỗi (attempt 2): <html>
+<head><title>401 Authorization Required</title></head>
+<body>
+<center><h1>401 Authorization Required</h1></center>
+<hr><center>nginx/1.24.0 (Ubuntu)</center>
+</body>
+</html>
+
+2026-04-19 17:02:04,904  WARNING    [!] Cover upload lỗi (attempt 3): <html>
+<head><title>401 Authorization Required</title></head>
+<body>
+<center><h1>401 Authorization Required</h1></center>
+<hr><center>nginx/1.24.0 (Ubuntu)</center>
+</body>
+</html>
+
+2026-04-19 17:02:04,914  ERROR      ✗ Không upload được ảnh bìa cho cung-chieu-co-vo-quan-nhan
+2026-04-19 17:02:11,563  ERROR    FAIL cung-chieu-co-vo-quan-nhan: 413 Client Error: Payload Too Large for url: https://mytruyenaudio.com/api/admin/stories

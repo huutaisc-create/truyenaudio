@@ -71,6 +71,7 @@ export default function ReadingHistoryWidget() {
                   fill
                   sizes="36px"
                   className="object-cover"
+                  unoptimized={item.coverImage.startsWith('/covers/')}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center" style={{ color: "var(--text-soft)" }}>

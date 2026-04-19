@@ -60,6 +60,7 @@ export default function RecentReads() {
                     sizes="35px"
                     className="object-cover"
                     alt={`Ảnh bìa ${item.title}`}
+                    unoptimized={item.coverImage.startsWith('/covers/')}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center" style={{ color: "var(--text-soft)" }}>

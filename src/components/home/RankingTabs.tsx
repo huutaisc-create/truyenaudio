@@ -111,6 +111,7 @@ export default function RankingTabs({ topNominations, topViews, topLikes, topFol
                     sizes="(max-width: 640px) 45vw, 22vw"
                     className="object-cover transition-transform duration-300 group-hover:scale-105"
                     priority={i < 2}
+                    unoptimized={story.coverImage.startsWith('/covers/')}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center" style={{ background: "var(--card2)" }}>

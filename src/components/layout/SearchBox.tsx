@@ -134,6 +134,7 @@ const SearchBox: React.FC<SearchBoxProps> = ({
                                                 fill
                                                 sizes="40px"
                                                 className="object-cover"
+                                                unoptimized={result.coverImage.startsWith('/covers/')}
                                             />
                                         ) : (
                                             <BookOpen className="h-5 w-5" style={{ color: 'var(--text-soft)' }} aria-hidden="true" />
