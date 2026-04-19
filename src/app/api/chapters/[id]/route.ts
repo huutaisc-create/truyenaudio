@@ -1,5 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readFile } from "fs/promises";
+import path from "path";
 import db from "@/lib/db";
+
+// Thư mục gốc lưu chapter trên disk (phải khớp với CHAPTERS_STORAGE_PATH trong admin API)
+const CHAPTERS_ROOT = process.env.CHAPTERS_STORAGE_PATH
+    ?? path.join(process.cwd(), "public", "chapters");
+
+/**
+ * Đọc nội dung chapter:
+ *  - Nếu contentUrl là relative path bắt đầu bằng /chapters/ → đọc từ disk
+ *  - Ngược lại (URL tuyệt đối) → fetch HTTP (tương thích chapter cũ trên R2)
+ */
+async function fetchChapterContent(contentUrl: string): Promise<string> {
+    if (contentUrl.startsWith("/chapters/")) {
+        // Đọc từ disk: bỏ prefix "/chapters/" và ghép vào CHAPTERS_ROOT
+        const relativePath = contentUrl.slice("/chapters/".length); // "slug/1.txt"
+        const filePath = path.join(CHAPTERS_ROOT, relativePath);
+        return await readFile(filePath, "utf-8");
+    }
+    // Fetch HTTP (R2 hoặc bất kỳ URL tuyệt đối nào)
+    const res = await fetch(contentUrl, { next: { revalidate: 3600 } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.text();
+}
 
 export async function GET(
     request: NextRequest,
@@ -37,18 +61,13 @@ export async function GET(
             );
         }
 
-        // Fetch content từ R2
+        // Đọc content: disk (chapter mới) hoặc HTTP/R2 (chapter cũ)
         let content = '';
         if (chapter.contentUrl) {
             try {
-                const r2Res = await fetch(chapter.contentUrl, {
-                    next: { revalidate: 3600 } // cache 1 tiếng
-                });
-                if (r2Res.ok) {
-                    content = await r2Res.text();
-                }
+                content = await fetchChapterContent(chapter.contentUrl);
             } catch (e) {
-                console.error('Failed to fetch content from R2:', e);
+                console.error('Failed to fetch chapter content:', chapter.contentUrl, e);
             }
         }
 

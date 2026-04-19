@@ -1,30 +1,24 @@
 // D:\Webtruyen\webtruyen-app\src\app\api\admin\stories\route.ts
 
 import { NextRequest, NextResponse } from "next/server";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
 import db from "@/lib/db";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 const UPLOAD_SECRET = process.env.UPLOAD_SECRET || "df5e8753a931894d842645d812d2b23fe89917d87def1633c8926f2c67728a5c";
 
-const s3 = new S3Client({
-    region: "auto",
-    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-    credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-    },
-    maxAttempts: 3,
-});
+// Thư mục gốc lưu chapter trên disk Contabo
+// Mặc định: <app>/public/chapters/ — Next.js tự serve tại /chapters/...
+// Có thể override bằng env CHAPTERS_STORAGE_PATH (trỏ đến thư mục Nginx serve)
+const CHAPTERS_ROOT = process.env.CHAPTERS_STORAGE_PATH
+    ?? path.join(process.cwd(), "public", "chapters");
 
-async function uploadChapterToR2(slug: string, index: number, content: string): Promise<string> {
-    const key = `chapters/${slug}/${index}.txt`;
-    await s3.send(new PutObjectCommand({
-        Bucket: process.env.R2_BUCKET_NAME!,
-        Key: key,
-        Body: Buffer.from(content, "utf-8"),
-        ContentType: "text/plain; charset=utf-8",
-    }));
-    return `${process.env.R2_PUBLIC_URL}/${key}`;
+async function saveChapterToDisk(slug: string, index: number, content: string): Promise<string> {
+    const dir = path.join(CHAPTERS_ROOT, slug);
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, `${index}.txt`), content, "utf-8");
+    // Trả về relative URL — chapter API sẽ đọc từ disk thay vì fetch HTTP
+    return `/chapters/${slug}/${index}.txt`;
 }
 
 export async function POST(request: NextRequest) {
@@ -132,10 +126,10 @@ export async function POST(request: NextRequest) {
             const newChapters = chapters.filter((c: any) => !existingSet.has(c.index));
 
             for (const c of newChapters) {
-                // Upload content lên R2
+                // Lưu content vào disk Contabo
                 const content = c.content || "";
                 const contentUrl = content
-                    ? await uploadChapterToR2(s.slug, c.index, content)
+                    ? await saveChapterToDisk(s.slug, c.index, content)
                     : null;
 
                 await db.chapter.create({
