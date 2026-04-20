@@ -1,7 +1,7 @@
 {
-  "generated": "2026-04-20T04:18:09.920Z",
+  "generated": "2026-04-20T04:38:23.832Z",
   "total": 1886,
-  "ready": 2,
+  "ready": 3,
   "skipped": 0,
   "selections": [
     {
@@ -58,7 +58,7 @@
     {
       "slug": "365-ngay-hon-nhan",
       "story_id": 765,
-      "title": "Một Năm Hợp Đồng, Cả Đời Yêu Thương",
+      "title": "Sau 365 Ngày Ký Kết, Tổng Tài Đào Hoa Cầu Xin Tôi Đừng Ly Hôn",
       "description": "Dưới danh nghĩa một cuộc hôn nhân sắp đặt, cô thiếu nữ vốn bị coi là ngốc nghếch, an phận đã từng bước lột xác, khám phá sức mạnh tiềm ẩn của bản thân để trở nên mạnh mẽ và thông minh tuyệt đỉnh. Cô không ngại đối mặt với sóng gió, sẵn sàng đấu tranh vì hạnh phúc và khiến vị tổng tài lãnh khạm, đào hoa phải gục ngã dưới chân mình. Từ một giao dịch vô hồn, anh dần trở nên điên cuồng chiếm hữu, ghen tuông và nhận ra mình không thể sống thiếu người vợ \"hợp đồng\" này.",
       "hashtags": [
         "#NgônTình",
@@ -72,7 +72,7 @@
         "Ngôn Tình",
         "Đô Thị"
       ],
-      "ready": false,
+      "ready": true,
       "skipped": false
     },
     {

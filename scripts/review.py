@@ -467,8 +467,10 @@ def upload_story_card(slug: str, title: str, description: str,
     if not genres and category:
         genres = [g.strip() for g in category.split(",") if g.strip()]
 
+    # Slug ưu tiên từ title đã chọn, fallback về folder name
+    resolved_slug = _normalize_slug(title) if title else _normalize_slug(slug)
     story_part = {
-        "slug": _normalize_slug(slug), "title": title or slug, "author": "Unknown",
+        "slug": resolved_slug, "title": title or slug, "author": "Unknown",
         "description": description or "", "cover_url": cover_url,
         "book_status": "Ongoing", "genres": genres,
         "boiCanh": [], "luuPhai": [], "tinhCach": [], "thiGiac": [],

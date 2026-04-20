@@ -1,6 +1,7 @@
 import { getStories, deleteStory } from "@/actions/admin";
 import Link from "next/link";
 import { Plus, Edit, Trash2, EyeOff } from "lucide-react";
+import DeleteStoryButton from "./DeleteStoryButton";
 import { redirect } from 'next/navigation';
 import StoriesSearchInput from "./StoriesSearchInput";
 import ToggleHiddenButton from "./ToggleHiddenButton";
@@ -176,11 +177,11 @@ export default async function AdminStoriesPage({
                                                 <Edit className="h-4 w-4" />
                                             </Link>
                                             {/* Xoá */}
-                                            <form action={handleDelete.bind(null, story.id)}>
-                                                <button type="submit" className="text-red-500 hover:text-red-700">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
-                                            </form>
+                                            <DeleteStoryButton
+                                                storyId={story.id}
+                                                storyTitle={story.title}
+                                                onDelete={handleDelete}
+                                            />
                                         </div>
                                     </td>
                                 </tr>

@@ -482,6 +482,10 @@ def build_payload(story: dict, meta: dict, chapters: list[dict],
         or story["slug"]
     )
 
+    # ── Slug ───────────────────────────────────────────────────────────────────
+    # Ưu tiên slug từ title đã chọn (review.html) để URL khớp tên hiển thị
+    resolved_slug = _normalize_slug(title) if title else _normalize_slug(story["slug"])
+
     # ── Description ────────────────────────────────────────────────────────────
     description = (
         (selection.get("description") if selection else None)
@@ -511,7 +515,7 @@ def build_payload(story: dict, meta: dict, chapters: list[dict],
 
     return {
         "story": {
-            "slug":        _normalize_slug(story["slug"]),
+            "slug":        resolved_slug,
             "title":       title,
             "author":      story.get("author") or "Unknown",
             "description": description,
