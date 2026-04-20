@@ -383,25 +383,24 @@ def read_chapters(story_dir: Path, titles: dict) -> list[dict]:
     """
     import re as _re
 
-    PDCRAW_PATTERN = _re.compile(r'_(\d+)\.txt$')   # ten-truyen_0001.txt
-    SIMPLE_PATTERN = _re.compile(r'^(\d+)$')         # 1.txt
+    # Pattern: {title}_{NNNN}.txt — index là số cuối trước .txt, title là phần còn lại
+    PDCRAW_PATTERN = _re.compile(r'^(.+?)_(\d+)\.txt$', _re.IGNORECASE)
+    SIMPLE_PATTERN = _re.compile(r'^(\d+)$')   # 1.txt, 2.txt
 
     chapters = []
     for txt_file in story_dir.glob("*.txt"):
-        index = None
-
-        # Thử kiểu pdcraw trước: ten-truyen_0001.txt
-        m = PDCRAW_PATTERN.search(txt_file.name)
+        m = PDCRAW_PATTERN.match(txt_file.name)
         if m:
-            index = int(m.group(1))
+            index     = int(m.group(2))
+            # Title lấy thẳng từ tên file, replace _ thành space
+            title_raw = m.group(1).replace("_", " ").strip()
+            title     = titles.get(str(index)) or (title_raw if title_raw else f"Chương {index}")
         else:
-            # Thử kiểu đơn giản: 1.txt
             m2 = SIMPLE_PATTERN.match(txt_file.stem)
-            if m2:
-                index = int(m2.group(1))
-
-        if index is None:
-            continue  # bỏ meta.txt, story_meta.json.txt, ...
+            if not m2:
+                continue   # bỏ meta.json, upload.json, ...
+            index = int(m2.group(1))
+            title = titles.get(str(index)) or f"Chương {index}"
 
         try:
             content = txt_file.read_text(encoding="utf-8", errors="ignore").strip()
@@ -411,21 +410,6 @@ def read_chapters(story_dir: Path, titles: dict) -> list[dict]:
 
         if not content:
             continue
-
-        # Lấy tiêu đề chương:
-        # 1. Từ titles.json nếu có
-        # 2. Từ tên file (bỏ phần _NNNN.txt)
-        # 3. Dòng đầu nếu ngắn
-        # 4. Fallback "Chương N"
-        title = titles.get(str(index))
-        if not title:
-            name_part = PDCRAW_PATTERN.sub("", txt_file.name).strip()  # bỏ _0001.txt
-            name_part = name_part.replace("-", " ").strip()
-            if name_part and name_part.lower() not in ("", txt_file.stem.lower()):
-                title = name_part
-            else:
-                first_line = content.split("\n")[0].strip()
-                title = first_line if (0 < len(first_line) <= 80) else f"Chương {index}"
 
         chapters.append({
             "index":   index,
@@ -439,6 +423,16 @@ def read_chapters(story_dir: Path, titles: dict) -> list[dict]:
 
 
 # ── Payload builder ────────────────────────────────────────────────────────────
+
+def _normalize_slug(s: str) -> str:
+    """đ/Đ không phân giải được bằng NFD — replace thủ công trước."""
+    import unicodedata as _ud, re as _re
+    s = s.replace('đ', 'd').replace('Đ', 'D')
+    s = _ud.normalize('NFD', s)
+    s = ''.join(c for c in s if _ud.category(c) != 'Mn')
+    s = _re.sub(r'[^a-z0-9]+', '-', s.lower())
+    return s.strip('-')
+
 
 def _parse_count(val) -> int:
     """Chuyển '1.2K', '5M', '123,456' thành số nguyên."""
@@ -517,7 +511,7 @@ def build_payload(story: dict, meta: dict, chapters: list[dict],
 
     return {
         "story": {
-            "slug":        story["slug"],
+            "slug":        _normalize_slug(story["slug"]),
             "title":       title,
             "author":      story.get("author") or "Unknown",
             "description": description,

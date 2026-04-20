@@ -1,7 +1,7 @@
 {
-  "generated": "2026-04-19T09:50:04.280Z",
-  "total": 1877,
-  "ready": 1,
+  "generated": "2026-04-20T04:18:09.920Z",
+  "total": 1886,
+  "ready": 2,
   "skipped": 0,
   "selections": [
     {
@@ -22,14 +22,20 @@
     {
       "slug": "1001-đem-tan-hon",
       "story_id": 766,
-      "title": "1001 Đêm Tân Hôn",
-      "description": "Thể loại:\nNgôn tình hiện đại, tổng tài\n\nTỉnh dậy, cô bàng hoàng phát hiện mình phải gả cho một ông già 60 tuổi, bệnh tật đầy thân, đặc biệt là chứng suy thận quái ác. Có nỗi khổ nào hơn thế chăng?\n\nNhưng đêm tân hôn định mệnh, tấm màn nhung vén lên, trước mắt cô không phải một ông lão hấp hối, mà là một chàng trai cường tráng, cơ thể tràn đầy sức sống!\n\nRốt cuộc, cô phải làm một quả phụ trẻ tuổi hay sẽ chìm đắm trong hoan lạc đến chết?\n\n\"Chồng ơi, hay là... tối nay chúng ta tạm nghỉ nhé?\"\n\n\"Em lười vận động nên cơ thể mới yếu ớt như vậy. Ngoan, chúng ta tiếp tục thôi.\"\n\nCô gào thét trong tuyệt vọng: \"Đồ lừa đảo! Anh đã bảo suy thận cơ mà? Nói là 'ở vậy, ở quá' là thế này đấy hả?!\"",
-      "hashtags": [],
+      "title": "Tưởng Gả Cho Lão Già Suy Thận, Đêm Tân Hôn Tôi Khóc Nghẹn Vì \"Chồng\" Quá Khỏe",
+      "description": "Bị gia đình ép gả cho một ông lão suy thận để trừ nợ, Lương Nặc chuẩn bị sẵn tâm lý để làm một quả phụ trẻ tuổi. Ai ngờ, \"chồng già\" trong lời đồn lại biến thành vị tổng tài \"vạn người mê\" với cơ bắp cường tráng và túi tiền không đáy. Từ một cô gái bị khinh rẻ, cô bỗng chốc trở thành thiếu phu nhân được cưng chiều lên tận trời xanh. Kẻ nào dám bắt nạt cô? Anh dẹp bỏ. Kẻ nào dám khinh thường cô? Anh dùng tiền đè bạt mạng. \"Chồng em cái gì cũng thiếu, chỉ có tiền và sức khỏe là dư thừa!\" - Lương Nặc chính thức bước vào hành trình được cưng sủng không lối thoát.",
+      "hashtags": [
+        "#SảngVăn",
+        "#VảMặt",
+        "#SủngTậnTrời",
+        "#TổngTàiBáĐạo",
+        "#NgọtNgào"
+      ],
       "category": "Ngôn Tình",
       "genres": [
         "Ngôn Tình"
       ],
-      "ready": false,
+      "ready": true,
       "skipped": false
     },
     {
@@ -52,9 +58,15 @@
     {
       "slug": "365-ngay-hon-nhan",
       "story_id": 765,
-      "title": "365 Ngày Hôn Nhân",
-      "description": "Bước vào thế giới của \"365 Ngày Hợp Đồng Hôn Nhân\", nơi cuộc sống của Lãnh Tử Tình, một cô gái xinh đẹp với chút ngốc nghếch đáng yêu, giao thoa với Lôi Tuấn Vũ, vị tổng tài tài giỏi nhưng đầy đào hoa, trong một cuộc hôn nhân sắp đặt.\n\nMột bản hợp đồng được ký kết, hứa hẹn một cuộc sống tự do, không ràng buộc, không tình yêu.\nNhưng liệu mọi thứ có diễn ra đúng như kế hoạch?\n\nSống chung dưới một mái nhà, những tình huống dở khóc dở cười, sự xuất hiện của \"người thứ ba\" và những bí mật ẩn giấu dần hé lộ, tất cả đã thay đổi họ.\n\nLãnh Tử Tình, từ một cô gái an phận, dần khám phá sức mạnh tiềm ẩn bên trong. Cô trở nên mạnh mẽ, thông minh, dám đấu tranh cho hạnh phúc của mình, dám yêu, dám hận và không ngại đối mặt với khó khăn.\n\nLôi Tuấn Vũ, từ một tổng tài lạnh lùng chỉ coi hôn nhân là một giao dịch, dần bị thu hút bởi sự ngây thơ, tốt bụng và kiên cường của Tử Tình. Anh ghen tuông, chiếm hữu và nhận ra tình cảm thật sự. Nhưng quá khứ phức tạp và những bí mật gia đình lại trở thành rào cản, khiến anh khó bày tỏ tình cảm và bảo vệ cô.\n\nCuộc hôn nhân hợp đồng này không chỉ là một câu chuyện tình yêu lãng mạn, mà còn là hành trình khám phá bản thân, vượt qua khó khăn và tìm kiếm hạnh phúc thật sự.\nVới văn phong hài hước, kịch tính và những tình huống bất ngờ, truyện hứa hẹn mang đến những giây phút giải trí thú vị và những suy ngẫm sâu sắc về tình yêu và hôn nhân.\n\n**Tags:** Ngôn tình, Hôn nhân hợp đồng, Tổng tài, Hài hước, Kịch tính",
-      "hashtags": [],
+      "title": "Một Năm Hợp Đồng, Cả Đời Yêu Thương",
+      "description": "Dưới danh nghĩa một cuộc hôn nhân sắp đặt, cô thiếu nữ vốn bị coi là ngốc nghếch, an phận đã từng bước lột xác, khám phá sức mạnh tiềm ẩn của bản thân để trở nên mạnh mẽ và thông minh tuyệt đỉnh. Cô không ngại đối mặt với sóng gió, sẵn sàng đấu tranh vì hạnh phúc và khiến vị tổng tài lãnh khạm, đào hoa phải gục ngã dưới chân mình. Từ một giao dịch vô hồn, anh dần trở nên điên cuồng chiếm hữu, ghen tuông và nhận ra mình không thể sống thiếu người vợ \"hợp đồng\" này.",
+      "hashtags": [
+        "#NgônTình",
+        "#TổngTài",
+        "#NữCường",
+        "#SảngVăn",
+        "#HợpĐồngHônNhân"
+      ],
       "category": "Ngôn Tình, Đô Thị",
       "genres": [
         "Ngôn Tình",
@@ -147,6 +159,17 @@
         "Thị giác nữ chủ",
         "Niên đại văn"
       ],
+      "ready": false,
+      "skipped": false
+    },
+    {
+      "slug": "996-phuc-bao-tu-moi-ngay-100-van-bat-đau-than-hao-tai-phu-tuc-vi-chan-ly",
+      "story_id": 2659,
+      "title": "996 phúc báo từ mỗi ngày 100 vạn bắt đầu / Thần hào: Tài phú tức vì chân lý",
+      "description": "",
+      "hashtags": [],
+      "category": "",
+      "genres": [],
       "ready": false,
       "skipped": false
     },
@@ -6205,6 +6228,17 @@
       "skipped": false
     },
     {
+      "slug": "hoa-ngu-tu-phun-tao-bat-đau",
+      "story_id": 2658,
+      "title": "Hoa ngu: Từ phun tào bắt đầu",
+      "description": "",
+      "hashtags": [],
+      "category": "",
+      "genres": [],
+      "ready": false,
+      "skipped": false
+    },
+    {
       "slug": "hoa-pho",
       "story_id": 1469,
       "title": "Họa Phố",
@@ -7413,6 +7447,17 @@
         "Xuyên Không",
         "Cổ Đại"
       ],
+      "ready": false,
+      "skipped": false
+    },
+    {
+      "slug": "khai-cuc-soi-đen-quyen-đon-gian-hoa-sau-lam-ta-hoc-lang-keu",
+      "story_id": 2665,
+      "title": "Khai cục sói đen quyền, đơn giản hoá sau làm ta học lang kêu",
+      "description": "",
+      "hashtags": [],
+      "category": "",
+      "genres": [],
       "ready": false,
       "skipped": false
     },
@@ -11865,6 +11910,17 @@
       "skipped": false
     },
     {
+      "slug": "nien-đai-tu-nong-thon-đen-tu-hop-vien",
+      "story_id": 2662,
+      "title": "Niên đại: Từ nông thôn đến tứ hợp viện",
+      "description": "",
+      "hashtags": [],
+      "category": "",
+      "genres": [],
+      "ready": false,
+      "skipped": false
+    },
+    {
       "slug": "no-ty-troi-sinh-dung-the-ga-tuyet-tu-con-azhevls4cc8ixhzs",
       "story_id": 3592,
       "title": "no-ty-troi-sinh-dung-the-ga-tuyet-tu-con-aZhEVlS4CC8iXhZS",
@@ -12811,6 +12867,17 @@
         "Xuyên Nhanh",
         "Hệ Thống"
       ],
+      "ready": false,
+      "skipped": false
+    },
+    {
+      "slug": "phat-song-truc-tiep-nhat-rac-ruoi-ta-thanh-cuc-canh-sat-khach-quen",
+      "story_id": 2661,
+      "title": "Phát sóng trực tiếp nhặt rác rưởi, ta thành cục cảnh sát khách quen",
+      "description": "",
+      "hashtags": [],
+      "category": "",
+      "genres": [],
       "ready": false,
       "skipped": false
     },
@@ -15756,6 +15823,17 @@
       "skipped": false
     },
     {
+      "slug": "ta-đeu-mau-thanh-tien-đe-nguoi-lam-ta-đi-thi-đai-hoc",
+      "story_id": 2666,
+      "title": "Ta đều mau thành Tiên Đế, ngươi làm ta đi thi đại học?",
+      "description": "",
+      "hashtags": [],
+      "category": "",
+      "genres": [],
+      "ready": false,
+      "skipped": false
+    },
+    {
       "slug": "tac-khe-me-nhi-khoa-ho-thuy-thao-gb-azjz5vs4ccwntlx0",
       "story_id": 3525,
       "title": "tac-khe-me-nhi-khoa-ho-thuy-thao-gb-aZJZ5VS4CCWnTlx0",
@@ -17958,6 +18036,17 @@
       "genres": [
         "Tiên Hiệp"
       ],
+      "ready": false,
+      "skipped": false
+    },
+    {
+      "slug": "thien-đao-tan-truong-sinh",
+      "story_id": 2660,
+      "title": "Thiên Đạo tẫn trường sinh",
+      "description": "",
+      "hashtags": [],
+      "category": "",
+      "genres": [],
       "ready": false,
       "skipped": false
     },
@@ -21178,6 +21267,17 @@
       "skipped": false
     },
     {
+      "slug": "trong-sinh-ta-muon-kien-thuc-gioi-giai-tri-phong-canh",
+      "story_id": 2663,
+      "title": "Trọng sinh, ta muốn kiến thức giới giải trí phong cảnh",
+      "description": "",
+      "hashtags": [],
+      "category": "",
+      "genres": [],
+      "ready": false,
+      "skipped": false
+    },
+    {
       "slug": "trong-sinh-ta-tich-tru-hang-hoa-ban-kiem-tien",
       "story_id": 270,
       "title": "Trọng Sinh, Ta Tích Trữ Hàng Hoá Bán Kiếm Tiền",
@@ -21724,6 +21824,17 @@
         "Điền Văn",
         "Sủng"
       ],
+      "ready": false,
+      "skipped": false
+    },
+    {
+      "slug": "tu-nho-tuc-phu-muon-noi-doi-tong-đuong-bat-đau",
+      "story_id": 2664,
+      "title": "Từ nhỏ tức phụ muốn nối dõi tông đường bắt đầu",
+      "description": "",
+      "hashtags": [],
+      "category": "",
+      "genres": [],
       "ready": false,
       "skipped": false
     },

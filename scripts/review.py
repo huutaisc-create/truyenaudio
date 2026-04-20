@@ -3,16 +3,10 @@
 """
 review.py
 =========
-Scan thư mục data_import/, đọc meta.json + upload.json của từng truyện,
-rồi tạo file review.html để mở bằng trình duyệt.
-
-Trong trình duyệt, bạn chọn:
-  - Tên truyện (1 trong 3 do Gemini đề xuất, hoặc giữ tên gốc)
-  - Mô tả (1 trong 3 phong cách, hoặc dùng mô tả gốc)
-  - Đánh dấu sẵn sàng upload / bỏ qua
-
-Bấm "Export" → tải về selections.json
-upload_to_web.py sẽ đọc file đó để upload đúng tên + mô tả.
+Scan thư mục data_import/, tạo review.html để chọn tên/mô tả truyện.
+Đồng thời khởi động local API server (port 8765) để HTML gọi 2 tính năng:
+  - Kiểm tra trùng chương  (GET /check?slug=xxx)
+  - Xử lý văn bản           (GET /process?slug=xxx&type=codai|hiendai)
 
 Chạy:
   python review.py
@@ -22,21 +16,650 @@ Chạy:
 import os
 import sys
 import json
+import re
 import argparse
+import unicodedata
+import threading
 from pathlib import Path
 from datetime import datetime
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import urlparse, parse_qs
 
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env.upload")
 
-STORIES_DIR = os.getenv("STORIES_DIR", r"D:\Webtruyen\pdcraw\data_import")
+STORIES_DIR  = os.getenv("STORIES_DIR", r"D:\Webtruyen\pdcraw\data_import")
 OUTPUT_HTML  = Path(__file__).parent / "review.html"
+SERVER_PORT  = 8765
 
+# Upload API
+WEB_API_URL      = os.getenv("WEB_API_URL", "")
+UPLOAD_SECRET    = os.getenv("UPLOAD_SECRET", "")
+_BA_USER         = os.getenv("BASIC_AUTH_USER", "")
+_BA_PASS         = os.getenv("BASIC_AUTH_PASS", "")
+_BASIC_AUTH      = (_BA_USER, _BA_PASS) if _BA_USER else None
+BATCH_MAX_BYTES  = int(os.getenv("BATCH_MAX_BYTES", str(15_000_000)))
+
+# Tham chiếu đến thư mục truyện — server dùng
+_STORIES_DIR_PATH: Path | None = None
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  CONTENT CHECK  (logic từ check-trung-chuong-local-v3.py)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _remove_accents(s: str) -> str:
+    if not s: return ""
+    s = unicodedata.normalize('NFD', s)
+    s = "".join(c for c in s if unicodedata.category(c) != 'Mn')
+    return s.replace('đ', 'd').replace('Đ', 'D').lower()
+
+
+def _clean_fingerprint(text: str) -> set:
+    if not text: return set()
+    text = _remove_accents(text)
+    text = re.sub(
+        r'(truyen duoc convert boi|chuc ban doc truyen vui ve|nguon:|website:|'
+        r'truyenfull|metruyenchu|wikidich|tangthuvien|ban dang doc truyen tai|'
+        r'u p l o a d|t r u y e n|arrow_forward_ios|doc them|read more)',
+        '', text, flags=re.IGNORECASE)
+    text = re.sub(r'^(chương|trang|phần|quyển|hoi|hồi|chuong|phan|quyen)\s*\d+.*?\n',
+                  '', text, flags=re.IGNORECASE)
+    words = re.findall(r'[a-z]{2,}', text.lower())
+    STOP = {
+        'va','la','co','cua','da','thi','ma','trong','voi','cho','den','nhu',
+        'nhung','lai','ra','the','nao','nay','mot','hai','ba','bon','nam','sau',
+        'bay','tam','chin','muoi','cai','con','chiec','kia','do','dau','day',
+        'ay','nhe','nhi','chu','vay','roi','cung','tu','luc','khi','can','cu',
+        'chi','ca','cach','duoc','duoi','no','han','le','vi','de','so','nua',
+        'moi','dang','se','khong','chang','chua','tung','nhieu','it','vai',
+        'cac','het','tat','nguoi','ta','chung','ho','ben','tren','ngoai','giua',
+        'canh','phia','truoc','biet','muon','thay','noi','lam','di','xong',
+        'phai','theo','nen','lien','nhanh','cham','rat','qua','hon','nhat',
+        'oi','ao','em','anh','bac','ong','chau',
+    }
+    clean = [w for w in words if w not in STOP]
+    return set(clean[:500]) if clean else set()
+
+
+def _chapter_num(filename: str):
+    # Ưu tiên pattern chuẩn: {title}_{NNNN}.txt
+    m = re.match(r'^.+?_(\d+)\.txt$', filename, re.IGNORECASE)
+    if m: return int(m.group(1))
+    # Fallback: 1.txt, 2.txt
+    m2 = re.match(r'^(\d+)$', Path(filename).stem)
+    if m2: return int(m2.group(1))
+    return None
+
+
+def check_story_content(story_dir: Path) -> dict:
+    """Kiểm tra chương trùng / lỗi / sai số / thiếu — chỉ báo cáo, không sửa file."""
+    all_files = [f for f in os.listdir(story_dir) if f.lower().endswith('.txt')]
+    sorted_files = sorted(all_files, key=lambda fn: (_chapter_num(fn) or 999999))
+
+    pool       = []   # [(filename, fingerprint)]
+    duplicates = []
+    errors     = []
+    misnamed   = []
+    ok_indices = []   # index của các chương hợp lệ (để tính missing)
+    ok_count   = 0
+    last_num   = 0
+
+    for filename in sorted_files:
+        fp_path = story_dir / filename
+        if not fp_path.is_file(): continue
+        num = _chapter_num(filename)
+        if num is None: continue
+
+        try:
+            content = fp_path.read_text(encoding='utf-8', errors='ignore')
+        except Exception:
+            continue
+
+        lines = [l for l in content.split('\n') if l.strip()]
+        if len(lines) < 10:
+            errors.append({'file': filename, 'lines': len(lines)})
+            continue
+
+        fp = _clean_fingerprint(content[:5000])
+
+        is_dup = False
+        for old_fn, old_fp in pool:
+            if not fp or not old_fp: continue
+            inter = fp & old_fp
+            ratio = len(inter) / min(len(fp), len(old_fp))
+            if ratio > 0.98 and len(inter) > 50:
+                duplicates.append({'file': filename, 'matches': old_fn, 'word_count': len(inter)})
+                is_dup = True
+                break
+
+        if not is_dup:
+            if num <= last_num:
+                misnamed.append({'file': filename, 'num': num, 'expected': last_num + 1})
+                last_num += 1
+            else:
+                last_num = num
+            pool.append((filename, fp))
+            ok_indices.append(num)
+            ok_count += 1
+
+    # Tìm chương bị thiếu trong dãy số
+    missing = []
+    if ok_indices:
+        ok_set   = set(ok_indices)
+        min_idx  = min(ok_indices)
+        max_idx  = max(ok_indices)
+        gaps     = sorted(i for i in range(min_idx, max_idx + 1) if i not in ok_set)
+        # Gom các số liên tiếp thành range để hiển thị gọn
+        if gaps:
+            start = gaps[0]
+            prev  = gaps[0]
+            for g in gaps[1:]:
+                if g == prev + 1:
+                    prev = g
+                else:
+                    missing.append({'from': start, 'to': prev,
+                                    'count': prev - start + 1})
+                    start = prev = g
+            missing.append({'from': start, 'to': prev,
+                            'count': prev - start + 1})
+
+    return {
+        'total':      len(sorted_files),
+        'ok':         ok_count,
+        'duplicates': duplicates,
+        'errors':     errors,
+        'misnamed':   misnamed,
+        'missing':    missing,
+        'missing_count': sum(r['count'] for r in missing),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  TEXT PROCESSING  (logic từ xulyvanban-codai-v5.py / xulyvanban-hiendai-v4.py)
+# ══════════════════════════════════════════════════════════════════════════════
+
+_SC_CODAI   = r'[\*\-=\[\]\(\)\{\}<>#@%~/&~\\\$\\\\∞☆]'
+_SC_HIENDAI = r'[\*\-=\[\]\(\)\{\}<>#@%~/&~\\\\∞☆]'
+_TARGET_LINE = "Tuyệt vời, đây là bản chỉnh sửa của đoạn văn bản bạn cung cấp"
+_REINE_LINE  = "Truyện được đăng bởi Reine"
+
+_VN_CHARS = set(
+    "àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡ"
+    "ùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨ"
+    "ÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ"
+)
+_EN_STOPS = {
+    "the","be","to","of","and","a","in","that","have","i","it","for","not","on",
+    "with","he","as","you","do","at","this","but","his","by","from","they","we",
+    "say","her","she","or","an","will","my","one","all","would","there","their",
+    "what","so","up","out","if","about","who","get","which","go","me","when",
+    "make","can","like","time","no","just","him","know","take","people","into",
+    "year","your","good","some","could","them","see","other","than","then","now",
+    "look","only","come","its","over","think","also","back","after","use","two",
+    "how","our","work","first","well","way","even","new","want","because","any",
+    "these","give","day","most","us","chapter","edit","translation","version",
+    "story","sure","here","is","help","please","next","more","should","feel","free","ask",
+}
+_BOT_TRIGGERS = [
+    "here is the edited version","here's the revised version",
+    "let me know if you would like","let me know if you want me to continue",
+]
+_BOT_SENTENCES = [
+    "Mình đã điều chỉnh để văn phong trang trọng và gãy gọn hơn. Bạn có muốn tiếp tục với chương tiếp theo không?",
+    "Gợi ý bước tiếp theo: Bạn có muốn mình tiếp tục chỉnh sửa các chương tiếp theo không?",
+    "Tôi có thể giúp gì thêm cho bạn với bộ truyện này không?",
+    "Hy vọng bản chỉnh sửa này làm bạn hài lòng.",
+    "Chúc bạn đọc truyện vui vẻ!",
+    "Nếu cần chỉnh sửa gì thêm, hãy báo mình nhé.",
+    "Tôi có thể giúp bạn tinh chỉnh đoạn văn này để ngôn ngữ tự nhiên",
+    "Tuy nhiên, nếu bạn muốn điều chỉnh sâu hơn về các quy tắc hành văn",
+    "I'll do my best to forget everything.",
+    "Tôi rất sẵn lòng hỗ trợ bạn biên tập chương tiếp theo này.",
+]
+
+
+def _merge_dotted_words(text: str) -> str:
+    while True:
+        t = re.sub(r'(\w)\s+·\s+(\w)', r'\1 \2', text)
+        if t == text: break
+        text = t
+    while True:
+        t = re.sub(r'(\w)\s*·\s*(\w)', r'\1\2', text)
+        if t == text: break
+        text = t
+    return text
+
+
+def _is_english_line(text: str, style: str) -> bool:
+    if style == 'hiendai' and re.search(r'["""]', text):
+        return False
+    if not set(text).isdisjoint(_VN_CHARS):
+        return False
+    words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+    if not words: return False
+    en = sum(1 for w in words if w in _EN_STOPS)
+    if len(words) > 3 and en / len(words) > 0.4:
+        return True
+    tl = text.lower()
+    return any(t in tl for t in _BOT_TRIGGERS)
+
+
+def _clean_line(line: str, style: str) -> str:
+    sc = _SC_CODAI if style == 'codai' else _SC_HIENDAI
+    # Xóa dòng "Index:1", "Index: 123", "index:1" ... ở đầu chương
+    if re.match(r'^\s*index\s*:\s*\d+\s*$', line, re.IGNORECASE):
+        return ''
+    if re.search(r'\.{2,}', line) and not re.search(r'[\w\d]', line):
+        return ''
+    line = _merge_dotted_words(line)
+    line = re.sub(r'(\w)\.(\w)', r'\1\2', line)
+    if style == 'hiendai':
+        line = re.sub(r'\$(?=\w)', '', line)
+        line = re.sub(r'(?<=\w)\$', '', line)
+    line = re.sub(r'[—–―]', '-', line)
+    line = re.sub(r'\s*[-–—]+\s*', ' ', line)
+    line = re.sub(sc, ' ', line)
+    line = re.sub(re.escape(_TARGET_LINE), ' ', line)
+    line = re.sub(re.escape(_REINE_LINE),  ' ', line)
+    line = re.sub(r'(?i)[\(\s]*\bChương\s+này\s+hết\b[\)\s]*', ' ', line)
+    line = re.sub(r'(?i)[\(\s]*\bTấu\s+chương\s+xong\b[\)\s]*', ' ', line)
+    line = re.sub(r'(?i)[\(\s]*\bTáu\s+chương\s+xong\b[\)\s]*', ' ', line)
+    line = re.sub(r'(?i)[\(\s]*\bHết\s+chương\b[\)\s]*', ' ', line)
+    line = re.sub(r'(?i)Would you like.*', ' ', line)
+    for s in _BOT_SENTENCES:
+        if s in line: line = line.replace(s, ' ')
+    line = re.sub(r'(?i)^\s*Chào bạn[\.,!]?\s*(?:mình|em|tôi|dưới đây|đây là|bạn xem|đã|hãy).*?(?=\bChương\s+\d|$)', ' ', line)
+    line = re.sub(r'(?i)^\s*Bạn xem qua (?:nội dung|bản|chương).*?(?=\bChương\s+\d|$)', ' ', line)
+    line = re.sub(r'(?i)^\s*Dưới đây là.*?(?=\bChương\s+\d|$)', ' ', line)
+    line = re.sub(r'(?i)^\s*Đây là bản (?:chỉnh sửa|edit|lại|nháp|viết lại).*?(?=\bChương\s+\d|$)', ' ', line)
+    line = re.sub(r'(?i)^[\ufeff\s]*Nội dung\s+(?:của|này|chương|tiếp theo).*?(?=\bChương\s+\d|$)', ' ', line)
+    line = re.sub(r'(?i)^\s*Gửi bạn.*?chương.*?(?=\bChương\s+\d|$)', ' ', line)
+    line = re.sub(r'\b0+(\d+)', r'\1', line)
+    line = re.sub(r'\s+', ' ', line).strip()
+    if _is_english_line(line, style):
+        return ' '
+    return line
+
+
+def _file_prefix(filename: str) -> str:
+    fn = filename.lower()
+    if 'trang' in fn: return 'Trang'
+    if 'phan' in fn or 'phần' in fn: return 'Phần'
+    if 'quyen' in fn or 'quyển' in fn: return 'Quyển'
+    return 'Chương'
+
+
+def _process_file(file_path: Path, filename: str, style: str):
+    prefix = _file_prefix(filename)
+    raw_lines = file_path.read_text(encoding='utf-8-sig', errors='ignore').splitlines()
+    if not raw_lines: return
+
+    first = raw_lines[0]
+    if style == 'codai':
+        first = re.sub(r'(?i)<thought>.*?</thought>|thought(ful|s)?', '', first).strip()
+    else:
+        first = re.sub(r'(?i)(thoughtful|thoughts)', '', first).strip()
+
+    nums = re.findall(r'\d+', first)
+    if len(nums) >= 2 and int(nums[0].lstrip('0') or '0') == int(nums[1].lstrip('0') or '0'):
+        if re.match(r'^\s*\d+', first):
+            first = re.sub(r'^\s*\d+\.\s*\d+\s*', f'{prefix} {nums[0]} ', first)
+        elif re.match(rf'^\s*{prefix}', first, re.IGNORECASE):
+            first = re.sub(r'(\s*\d+\s*:\s*)\d+\s*', r'\1', first)
+
+    out = []
+    for i, line in enumerate(raw_lines):
+        src = first if i == 0 else line
+        processed = _clean_line(src, style)
+        if re.search(r'(?i)p[/\s]?s[:\.]', processed):
+            processed = re.sub(r'(?i)p[/\s]?s[:\.].*', '', processed).strip()
+        if "Tôi đã lưu các quy tắc bạn yêu cầu" in processed:
+            part = processed.split("Tôi đã lưu các quy tắc bạn yêu cầu")[0].strip()
+            if part: out.append(part)
+            break
+        if processed.strip() or not line.strip():
+            out.append(processed)
+
+    file_path.write_text('\n'.join(out), encoding='utf-8')
+
+
+def process_story_text(story_dir: Path, style: str) -> dict:
+    """Xử lý văn bản trực tiếp tất cả file .txt trong thư mục."""
+    processed, failed = 0, []
+    for filename in sorted(os.listdir(story_dir)):
+        if not filename.lower().endswith('.txt'):
+            continue
+        try:
+            _process_file(story_dir / filename, filename, style)
+            processed += 1
+        except Exception as e:
+            failed.append({'file': filename, 'error': str(e)})
+    return {'processed': processed, 'failed': failed, 'style': style}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  UPLOAD  (gọi Web API trực tiếp, không cần Neon DB)
+# ══════════════════════════════════════════════════════════════════════════════
+
+_IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"]
+
+def _normalize_slug(s: str) -> str:
+    """đ/Đ không phân giải được bằng NFD — cần replace thủ công trước."""
+    s = s.replace('đ', 'd').replace('Đ', 'D')
+    s = unicodedata.normalize('NFD', s)
+    s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+    s = re.sub(r'[^a-z0-9]+', '-', s.lower())
+    return s.strip('-')
+
+
+def _find_cover(story_dir: Path):
+    for ext in _IMAGE_EXTS:
+        for f in list(story_dir.glob(f"*{ext}")) + list(story_dir.glob(f"*{ext.upper()}")):
+            return f
+    return None
+
+
+def _compress_cover(img_path: Path) -> bytes:
+    from PIL import Image
+    import io
+    img = Image.open(img_path)
+    if img.mode not in ("RGB", "RGBA"):
+        img = img.convert("RGB")
+    if img.width > 800:
+        img = img.resize((800, int(img.height * 800 / img.width)), Image.LANCZOS)
+    quality, buf = 85, io.BytesIO()
+    while quality >= 50:
+        buf.seek(0); buf.truncate()
+        img.save(buf, format="WEBP", quality=quality, method=6)
+        if buf.tell() <= 300_000: break
+        quality -= 5
+    return buf.getvalue()
+
+
+def _upload_cover_api(story_dir: Path, slug: str) -> str:
+    import requests as _req
+    img = _find_cover(story_dir)
+    if not img: return ""
+    try:
+        data = _compress_cover(img)
+    except Exception:
+        return ""
+    base = WEB_API_URL.rstrip("/")
+    api  = base.rsplit("/stories", 1)[0] + "/upload-image" if base.endswith("/stories") \
+           else base.rsplit("/", 1)[0] + "/upload-image"
+    try:
+        r = _req.post(api,
+            headers={"X-Upload-Secret": UPLOAD_SECRET},
+            files={"image": (f"{slug}.webp", data, "image/webp")},
+            data={"slug": slug}, auth=_BASIC_AUTH, timeout=60)
+        if r.status_code == 200 and r.json().get("success"):
+            return r.json()["url"]
+    except Exception:
+        pass
+    return ""
+
+
+def _read_chapters_local(story_dir: Path) -> list[dict]:
+    # Pattern: {title}_{NNNN}.txt  — index là 4 chữ số cuối trước .txt
+    PDCRAW = re.compile(r'^(.+?)_(\d+)\.txt$', re.IGNORECASE)
+    SIMPLE = re.compile(r'^(\d+)$')
+    chapters = []
+    for f in story_dir.glob("*.txt"):
+        m = PDCRAW.match(f.name)
+        if m:
+            idx        = int(m.group(2))
+            # Title = phần trước _NNNN, thay _ thành space
+            title_raw  = m.group(1).replace("_", " ").strip()
+            title      = title_raw if title_raw else f"Chương {idx}"
+        else:
+            m2 = SIMPLE.match(f.stem)
+            if not m2: continue
+            idx   = int(m2.group(1))
+            title = f"Chương {idx}"
+
+        try:
+            content = f.read_text(encoding='utf-8', errors='ignore').strip()
+        except Exception:
+            continue
+        if not content: continue
+        chapters.append({"index": idx, "title": title, "content": content})
+    chapters.sort(key=lambda c: c["index"])
+    return chapters
+
+
+def _split_batches(chapters: list, story_part: dict) -> list[list]:
+    overhead  = len(json.dumps({"story": story_part, "chapters": []}, ensure_ascii=False).encode())
+    effective = BATCH_MAX_BYTES - overhead
+    batches, cur, cur_sz = [], [], 0
+    for ch in chapters:
+        sz = len(json.dumps(ch, ensure_ascii=False).encode())
+        if cur and cur_sz + sz > effective:
+            batches.append(cur); cur = [ch]; cur_sz = sz
+        else:
+            cur.append(ch); cur_sz += sz
+    if cur: batches.append(cur)
+    return batches
+
+
+def upload_story_card(slug: str, title: str, description: str,
+                      genres: list, category: str) -> dict:
+    """Upload 1 truyện từ review card — không cần Neon DB."""
+    import requests as _req
+    import time as _t
+
+    if not WEB_API_URL:
+        return {"success": False, "message": "Chưa cấu hình WEB_API_URL trong .env.upload"}
+
+    story_dir = _STORIES_DIR_PATH / slug
+    if not story_dir.exists():
+        return {"success": False, "message": f"Không tìm thấy thư mục: {slug}"}
+
+    # 1. Upload cover
+    cover_url = _upload_cover_api(story_dir, slug)
+
+    # 2. Đọc chapters
+    chapters = _read_chapters_local(story_dir)
+    if not chapters:
+        return {"success": False, "message": "Không có chapter nào trong thư mục"}
+
+    # 3. Genres
+    if not genres and category:
+        genres = [g.strip() for g in category.split(",") if g.strip()]
+
+    story_part = {
+        "slug": _normalize_slug(slug), "title": title or slug, "author": "Unknown",
+        "description": description or "", "cover_url": cover_url,
+        "book_status": "Ongoing", "genres": genres,
+        "boiCanh": [], "luuPhai": [], "tinhCach": [], "thiGiac": [],
+        "viewCount": 0, "likeCount": 0, "ratingScore": 0.0,
+    }
+
+    # 4. Upload batch
+    batch_queue   = _split_batches(chapters, story_part)
+    total_inserted = 0
+    b_idx          = 0
+
+    while batch_queue:
+        batch = batch_queue.pop(0)
+        b_idx += 1
+        payload = {"story": story_part, "chapters": batch}
+
+        result = None
+        for attempt in range(1, 4):
+            try:
+                r = _req.post(WEB_API_URL, json=payload,
+                    headers={"X-Upload-Secret": UPLOAD_SECRET,
+                             "Content-Type": "application/json"},
+                    auth=_BASIC_AUTH, timeout=120)
+                if r.status_code == 413:
+                    mid = len(batch) // 2
+                    if mid == 0: break
+                    batch_queue.insert(0, batch[mid:])
+                    batch_queue.insert(0, batch[:mid])
+                    b_idx -= 1; result = None; break
+                r.raise_for_status()
+                result = r.json()
+                break
+            except Exception as e:
+                if attempt == 3:
+                    return {"success": False,
+                            "inserted": total_inserted, "total": len(chapters),
+                            "message": f"Batch {b_idx} lỗi: {e}"}
+                _t.sleep(2 ** attempt)
+
+        if result and result.get("success"):
+            total_inserted += result.get("newChapters", 0)
+
+    return {
+        "success":  True,
+        "inserted": total_inserted,
+        "total":    len(chapters),
+        "cover":    cover_url,
+        "message":  f"Đã upload {total_inserted} chương mới / {len(chapters)} tổng",
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  LOCAL HTTP SERVER
+# ══════════════════════════════════════════════════════════════════════════════
+
+class _Handler(BaseHTTPRequestHandler):
+    def log_message(self, *a): pass  # tắt log
+
+    def _cors(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', '*')
+
+    def do_OPTIONS(self):
+        self.send_response(200); self._cors(); self.end_headers()
+
+    def do_GET(self):
+        parsed = urlparse(self.path)
+        params = parse_qs(parsed.query)
+
+        if parsed.path == '/ping':
+            return self._json({'ok': True})
+
+        if parsed.path == '/get-state':
+            return self._json({
+                'selections':    load_prev_selections(),
+                'upload_status': load_upload_status(),
+            })
+
+        slug = params.get('slug', [''])[0]
+        if not slug:
+            return self._json({'error': 'missing slug'}, 400)
+
+        story_dir = _STORIES_DIR_PATH / slug
+        if not story_dir.exists():
+            return self._json({'error': f'Không tìm thấy thư mục: {slug}'}, 404)
+
+        if parsed.path == '/open-folder':
+            try:
+                import subprocess, platform
+                p = platform.system()
+                if p == 'Windows':
+                    subprocess.Popen(['explorer', str(story_dir)])
+                elif p == 'Darwin':
+                    subprocess.Popen(['open', str(story_dir)])
+                else:
+                    subprocess.Popen(['xdg-open', str(story_dir)])
+                self._json({'ok': True})
+            except Exception as e:
+                self._json({'error': str(e)}, 500)
+
+        elif parsed.path == '/check':
+            try:
+                self._json(check_story_content(story_dir))
+            except Exception as e:
+                self._json({'error': str(e)}, 500)
+
+        elif parsed.path == '/process':
+            style = params.get('type', ['codai'])[0]
+            try:
+                self._json(process_story_text(story_dir, style))
+            except Exception as e:
+                self._json({'error': str(e)}, 500)
+        else:
+            self._json({'error': 'not found'}, 404)
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+
+        if parsed.path == '/save-selections':
+            try:
+                length = int(self.headers.get('Content-Length', 0))
+                body   = json.loads(self.rfile.read(length).decode('utf-8'))
+                SELECTIONS_JSON.write_text(
+                    json.dumps(body, ensure_ascii=False, indent=2), encoding='utf-8')
+                self._json({'ok': True})
+            except Exception as e:
+                self._json({'error': str(e)}, 500)
+            return
+
+        if parsed.path != '/upload':
+            return self._json({'error': 'not found'}, 404)
+        try:
+            length = int(self.headers.get('Content-Length', 0))
+            body   = json.loads(self.rfile.read(length).decode('utf-8'))
+        except Exception as e:
+            return self._json({'error': f'Bad request: {e}'}, 400)
+
+        slug = body.get('slug', '').strip()
+        if not slug:
+            return self._json({'error': 'missing slug'}, 400)
+
+        try:
+            result = upload_story_card(
+                slug        = slug,
+                title       = body.get('title', ''),
+                description = body.get('description', ''),
+                genres      = body.get('genres', []),
+                category    = body.get('category', ''),
+            )
+            if result.get('success'):
+                save_upload_status(slug, {
+                    'uploaded_at': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                    'chapters':    result.get('total', 0),
+                    'inserted':    result.get('inserted', 0),
+                    'cover':       result.get('cover', ''),
+                    'title':       body.get('title', ''),
+                })
+            self._json(result)
+        except Exception as e:
+            self._json({'success': False, 'message': str(e)}, 500)
+
+    def _json(self, data, status=200):
+        body = json.dumps(data, ensure_ascii=False).encode('utf-8')
+        self.send_response(status)
+        self._cors()
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+
+def start_local_server(stories_dir: Path, port: int = SERVER_PORT) -> bool:
+    global _STORIES_DIR_PATH
+    _STORIES_DIR_PATH = stories_dir
+    try:
+        srv = HTTPServer(('localhost', port), _Handler)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        print(f"   → Local API server: http://localhost:{port}")
+        return True
+    except OSError:
+        print(f"   ⚠  Port {port} đang bận — nút check/xử lý có thể không hoạt động")
+        return False
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  SCAN STORIES
+# ══════════════════════════════════════════════════════════════════════════════
 
 def scan_stories(stories_dir: Path) -> list[dict]:
-    """Quét tất cả thư mục truyện, đọc meta.json + upload.json."""
     stories = []
-
     if not stories_dir.exists():
         print(f"[!] Không tìm thấy thư mục: {stories_dir}")
         return stories
@@ -46,42 +669,25 @@ def scan_stories(stories_dir: Path) -> list[dict]:
 
     for story_dir in dirs:
         slug = story_dir.name
-
         meta_path   = story_dir / "meta.json"
         upload_path = story_dir / "upload.json"
-
-        # Bỏ qua nếu không có cả 2 file
         if not meta_path.exists() and not upload_path.exists():
             continue
 
-        meta   = {}
-        upload = {}
-
+        meta, upload = {}, {}
         if meta_path.exists():
-            try:
-                meta = json.loads(meta_path.read_text(encoding="utf-8"))
-            except Exception as e:
-                print(f"  [!] {slug}/meta.json lỗi: {e}")
-
+            try: meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            except Exception as e: print(f"  [!] {slug}/meta.json lỗi: {e}")
         if upload_path.exists():
-            try:
-                upload = json.loads(upload_path.read_text(encoding="utf-8"))
-            except Exception as e:
-                print(f"  [!] {slug}/upload.json lỗi: {e}")
+            try: upload = json.loads(upload_path.read_text(encoding="utf-8"))
+            except Exception as e: print(f"  [!] {slug}/upload.json lỗi: {e}")
 
-        # Đếm số chapter file
         chapter_count = len([
             f for f in story_dir.glob("*.txt")
             if f.stem != "meta" and not f.name.startswith(".")
         ])
-
-        # Kiểm tra có ảnh bìa không (jpg/jpeg/png/webp/gif)
-        IMAGE_EXTS = {"*.jpg", "*.jpeg", "*.png", "*.webp", "*.gif"}
-        has_image = any(
-            next(story_dir.glob(ext), None) is not None
-            for ext in IMAGE_EXTS
-        )
-
+        IMAGE_EXTS = {"*.jpg","*.jpeg","*.png","*.webp","*.gif"}
+        has_image  = any(next(story_dir.glob(ext), None) is not None for ext in IMAGE_EXTS)
         has_meta   = meta_path.exists()
         has_upload = upload_path.exists()
         is_ready   = has_meta and has_upload and has_image
@@ -98,14 +704,17 @@ def scan_stories(stories_dir: Path) -> list[dict]:
             "has_upload_json":has_upload,
             "has_image":      has_image,
             "is_ready":       is_ready,
-            # Từ upload.json
-            "ten_truyen":     upload.get("ten_truyen") or [],   # [{loai, ten, ghi_chu}]
-            "van_an":         upload.get("van_an") or [],        # [{phong_cach, noi_dung, hashtag}]
+            "ten_truyen":     upload.get("ten_truyen") or [],
+            "van_an":         upload.get("van_an") or [],
         })
 
     print(f"Đã đọc {len(stories)} truyện có dữ liệu.")
     return stories
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  HTML TEMPLATE
+# ══════════════════════════════════════════════════════════════════════════════
 
 HTML_TEMPLATE = r"""<!DOCTYPE html>
 <html lang="vi">
@@ -118,6 +727,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     --bg: #0f1117; --surface: #1a1d27; --card: #21253a;
     --border: #2e3352; --accent: #f97316; --accent2: #3b82f6;
     --text: #ffffff; --muted: #c0c8d8; --green: #22c55e; --red: #ef4444;
+    --purple: #a78bfa; --amber: #f59e0b;
     --radius: 12px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -139,7 +749,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     background: var(--accent); color: white; transition: opacity .2s;
   }
   .btn-export:hover { opacity: .85; }
-  .btn-export:disabled { opacity: .4; cursor: not-allowed; }
 
   /* ── Filter bar ── */
   .filter-bar {
@@ -175,19 +784,18 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   }
   .card-header:hover { background: rgba(255,255,255,.03); }
 
-  .story-num { font-size: 17px; color: var(--muted); min-width: 28px; padding-top: 2px; }
+  .story-num  { font-size: 17px; color: var(--muted); min-width: 28px; padding-top: 2px; }
   .story-info { flex: 1; }
-  .story-original { font-size: 18px; color: var(--muted); }
-  .story-title-preview { font-size: 21px; font-weight: 600; color: var(--text); margin: 2px 0; }
+  .story-original     { font-size: 18px; color: var(--muted); }
+  .story-title-preview{ font-size: 21px; font-weight: 600; color: var(--text); margin: 2px 0; }
   .story-meta { font-size: 17px; color: var(--muted); display: flex; gap: 12px; margin-top: 4px; flex-wrap: wrap; }
-  .story-meta span { display: flex; align-items: center; gap: 3px; }
   .badge {
     display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 16px; font-weight: 600;
     background: var(--border); color: var(--muted);
   }
-  .badge.green { background: rgba(34,197,94,.15); color: var(--green); }
-  .badge.red   { background: rgba(239,68,68,.15);  color: var(--red); }
-  .badge.blue  { background: rgba(59,130,246,.15); color: var(--accent2); }
+  .badge.green  { background: rgba(34,197,94,.15);  color: var(--green); }
+  .badge.red    { background: rgba(239,68,68,.15);   color: var(--red); }
+  .badge.blue   { background: rgba(59,130,246,.15);  color: var(--accent2); }
 
   .card-status { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 90px; }
   .status-icon { font-size: 20px; }
@@ -208,15 +816,15 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
     cursor: pointer; transition: all .2s; background: var(--surface);
   }
-  .option-item:hover { border-color: var(--accent); background: rgba(249,115,22,.05); }
-  .option-item.selected { border-color: var(--accent); background: rgba(249,115,22,.1); }
+  .option-item:hover   { border-color: var(--accent); background: rgba(249,115,22,.05); }
+  .option-item.selected{ border-color: var(--accent); background: rgba(249,115,22,.1); }
   .option-item input[type=radio] { margin-top: 3px; accent-color: var(--accent); flex-shrink: 0; }
   .option-content { flex: 1; }
   .option-tag {
     display: inline-block; font-size: 16px; font-weight: 700; padding: 1px 7px;
     border-radius: 10px; margin-bottom: 4px; background: rgba(59,130,246,.2); color: var(--accent2);
   }
-  .option-tag.original { background: rgba(139,92,246,.2); color: #a78bfa; }
+  .option-tag.original { background: rgba(139,92,246,.2); color: var(--purple); }
   .option-main { font-size: 20px; font-weight: 600; color: var(--text); }
   .option-note { font-size: 18px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
   .option-hashtags { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 4px; }
@@ -226,17 +834,68 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   }
 
   /* ── Action buttons ── */
-  .card-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .card-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
   .btn-ready {
     flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--green);
-    background: rgba(34,197,94,.1); color: var(--green); cursor: pointer; font-weight: 600; transition: all .2s;
+    background: rgba(34,197,94,.1); color: var(--green); cursor: pointer; font-weight: 600;
+    font-size: 19px; transition: all .2s;
   }
-  .btn-ready:hover { background: rgba(34,197,94,.2); }
+  .btn-ready:hover  { background: rgba(34,197,94,.2); }
+  .btn-ready.active {
+    background: var(--green); color: #000; border-color: var(--green); cursor: default;
+  }
   .btn-skip {
     padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
-    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+    background: transparent; color: var(--muted); cursor: pointer; font-size: 19px; transition: all .2s;
   }
   .btn-skip:hover { border-color: var(--red); color: var(--red); }
+  .btn-check {
+    padding: 8px 14px; border-radius: 8px; border: 1px solid var(--accent2);
+    background: rgba(59,130,246,.1); color: var(--accent2); cursor: pointer;
+    font-size: 19px; font-weight: 600; transition: all .2s;
+  }
+  .btn-check:hover    { background: rgba(59,130,246,.2); }
+  .btn-check.loading  { opacity: .6; cursor: wait; }
+  .btn-process {
+    padding: 8px 14px; border-radius: 8px; border: 1px solid var(--purple);
+    background: rgba(139,92,246,.1); color: var(--purple); cursor: pointer;
+    font-size: 19px; font-weight: 600; transition: all .2s;
+  }
+  .btn-process:hover { background: rgba(139,92,246,.2); }
+
+  /* ── Tool result panel ── */
+  .tool-result {
+    display: none; margin-top: 12px; padding: 14px; border-radius: 8px;
+    background: rgba(0,0,0,.35); border: 1px solid var(--border); font-size: 18px; line-height: 1.7;
+  }
+  .tool-result.show { display: block; }
+  .tr-ok    { color: var(--green); }
+  .tr-warn  { color: var(--amber); }
+  .tr-err   { color: var(--red); }
+  .tr-item  { padding: 2px 0 2px 14px; color: var(--muted); font-size: 16px;
+               border-bottom: 1px solid rgba(255,255,255,.04); }
+  .tr-title { font-weight: 700; margin-bottom: 6px; }
+  .proc-btn {
+    padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: 600; transition: all .2s;
+  }
+  .proc-codai   { border: 1px solid var(--accent);  background: rgba(249,115,22,.1); color: var(--accent); }
+  .proc-hiendai { border: 1px solid var(--purple);  background: rgba(139,92,246,.1); color: var(--purple); }
+  .proc-cancel  { border: 1px solid var(--border); background: transparent;         color: var(--muted); }
+  .proc-codai:hover   { background: rgba(249,115,22,.25); }
+  .proc-hiendai:hover { background: rgba(139,92,246,.25); }
+  .proc-cancel:hover  { border-color: var(--red); color: var(--red); }
+  .btn-upload {
+    padding: 8px 14px; border-radius: 8px; border: 1px solid var(--green);
+    background: rgba(34,197,94,.1); color: var(--green); cursor: pointer;
+    font-size: 19px; font-weight: 600; transition: all .2s;
+  }
+  .btn-upload:hover    { background: rgba(34,197,94,.2); }
+  .btn-upload:disabled { opacity: .5; cursor: wait; }
+  .btn-upload.uploaded {
+    border-color: var(--accent2); background: rgba(59,130,246,.1);
+    color: var(--accent2); font-size: 17px;
+  }
+  .btn-upload.uploaded:hover { background: rgba(59,130,246,.2); }
 
   /* ── Genres display ── */
   .genres-list { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -263,7 +922,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
     <span class="progress-text" id="progressText">0 / 0 đã chọn</span>
   </div>
-  <button class="btn-export" id="btnExport" onclick="exportSelections()">⬇ Export selections.json</button>
+  <button class="btn-export" onclick="exportSelections()">⬇ Export selections.json</button>
 </div>
 
 <div class="filter-bar" id="filterBar">
@@ -282,32 +941,61 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
 <script>
 const STORIES = __STORIES_DATA__;
-const PREV_SELECTIONS = __PREV_SELECTIONS__;  // {} hoặc map slug→{title,description,hashtags,ready,skipped}
+const PREV_SELECTIONS = __PREV_SELECTIONS__;
+const UPLOAD_STATUS = __UPLOAD_STATUS__;
+const API = 'http://localhost:__SERVER_PORT__';
 
-const state = {};   // slug → { title, description, hashtags, status: 'done'|'skip'|null }
+const state = {};
 
-function init() {
+function applyState(selections, uploadStatus) {
   STORIES.forEach(s => {
-    const prev = PREV_SELECTIONS[s.slug];
+    const prev = selections[s.slug];
+    const up   = uploadStatus[s.slug] || null;
     if (prev) {
+      let descIdx = null;
+      if (prev.description) {
+        const fi = s.van_an.findIndex(v => v.noi_dung === prev.description);
+        descIdx = fi >= 0 ? fi : (prev.description === s.description_raw ? 'raw' : null);
+      }
+      let titleIdx = null;
+      if (prev.title) {
+        const ti = s.ten_truyen.findIndex(t => t.ten === prev.title);
+        titleIdx = ti >= 0 ? ti : 'original';
+      }
       state[s.slug] = {
         title:       prev.title       || null,
         description: prev.description || null,
         hashtags:    prev.hashtags    || [],
         status:      prev.skipped ? 'skip' : prev.ready ? 'done' : null,
+        uploaded:    up,
+        descIdx, titleIdx,
       };
     } else {
-      state[s.slug] = { title: null, description: null, hashtags: [], status: null };
+      state[s.slug] = {
+        title: null, description: null, hashtags: [], status: null,
+        uploaded: up, descIdx: null, titleIdx: null,
+      };
     }
   });
+}
+
+async function init() {
+  // Fetch state mới nhất từ server (tránh dùng data bake cứng trong HTML)
+  try {
+    const res  = await fetch(`${API}/get-state`);
+    const data = await res.json();
+    applyState(data.selections || {}, data.upload_status || {});
+  } catch(e) {
+    // Server chưa kịp start hoặc offline → dùng data bake sẵn
+    applyState(PREV_SELECTIONS, UPLOAD_STATUS);
+  }
   buildSourceFilters();
   renderAll();
   updateProgress();
 }
 
 function renderAll() {
-  const list = document.getElementById('storyList');
-  list.innerHTML = STORIES.map((s, i) => renderCard(s, i)).join('');
+  document.getElementById('storyList').innerHTML = STORIES.map((s, i) => renderCard(s, i)).join('');
 }
 
 function renderCard(s, i) {
@@ -323,21 +1011,20 @@ function renderCard(s, i) {
   const selectedTitle = st.title || s.original_title;
   const genres = s.category ? s.category.split(',').map(g => g.trim()).filter(Boolean) : [];
 
-  // Title options
   const titleOptions = [
-    ...s.ten_truyen.map((t, idx) => `
-      <label class="option-item ${st.title === t.ten ? 'selected' : ''}" onclick="selectTitle('${esc(s.slug)}', '${esc(t.ten)}')">
-        <input type="radio" name="title_${esc(s.slug)}" value="${esc(t.ten)}" ${st.title === t.ten ? 'checked' : ''}>
+    ...s.ten_truyen.map((t, ti) => `
+      <label class="option-item ${st.titleIdx === ti ? 'selected' : ''}" onclick="selectTitle('${esc(s.slug)}', ${ti})">
+        <input type="radio" name="title_${esc(s.slug)}" value="${ti}" ${st.titleIdx === ti ? 'checked' : ''}>
         <div class="option-content">
           <span class="option-tag">${esc(t.loai)}</span>
           <div class="option-main">${esc(t.ten)}</div>
           <div class="option-note">${esc(t.ghi_chu)}</div>
         </div>
       </label>`),
-    `<label class="option-item ${(!st.title || st.title === s.original_title) ? 'selected' : ''}"
-       onclick="selectTitle('${esc(s.slug)}', '${esc(s.original_title)}')">
-      <input type="radio" name="title_${esc(s.slug)}" value="${esc(s.original_title)}"
-        ${(!st.title || st.title === s.original_title) ? 'checked' : ''}>
+    `<label class="option-item ${st.titleIdx === 'original' || st.titleIdx === null ? 'selected' : ''}"
+       onclick="selectTitle('${esc(s.slug)}', 'original')">
+      <input type="radio" name="title_${esc(s.slug)}" value="original"
+        ${st.titleIdx === 'original' || st.titleIdx === null ? 'checked' : ''}>
       <div class="option-content">
         <span class="option-tag original">Tên gốc</span>
         <div class="option-main">${esc(s.original_title)}</div>
@@ -345,14 +1032,13 @@ function renderCard(s, i) {
     </label>`
   ].join('');
 
-  // Description options
   const descOptions = [
-    ...s.van_an.map((v, idx) => {
+    ...s.van_an.map((v, di) => {
       const tags = (v.hashtag || []).map(h => `<span class="hashtag">${esc(h)}</span>`).join('');
       return `
-        <label class="option-item ${st.description === v.noi_dung ? 'selected' : ''}"
-          onclick="selectDesc('${esc(s.slug)}', ${JSON.stringify(v.noi_dung)}, ${JSON.stringify(v.hashtag || [])})">
-          <input type="radio" name="desc_${esc(s.slug)}" value="${idx}" ${st.description === v.noi_dung ? 'checked' : ''}>
+        <label class="option-item ${st.descIdx === di ? 'selected' : ''}"
+          onclick="selectDesc('${esc(s.slug)}', ${di})">
+          <input type="radio" name="desc_${esc(s.slug)}" value="${di}" ${st.descIdx === di ? 'checked' : ''}>
           <div class="option-content">
             <span class="option-tag">${esc(v.phong_cach)}</span>
             <div class="option-note">${esc(v.noi_dung)}</div>
@@ -361,9 +1047,9 @@ function renderCard(s, i) {
         </label>`;
     }),
     s.description_raw ? `
-      <label class="option-item ${st.description === s.description_raw ? 'selected' : ''}"
-        onclick="selectDesc('${esc(s.slug)}', ${JSON.stringify(s.description_raw)}, [])">
-        <input type="radio" name="desc_${esc(s.slug)}" value="raw" ${st.description === s.description_raw ? 'checked' : ''}>
+      <label class="option-item ${st.descIdx === 'raw' ? 'selected' : ''}"
+        onclick="selectDesc('${esc(s.slug)}', 'raw')">
+        <input type="radio" name="desc_${esc(s.slug)}" value="raw" ${st.descIdx === 'raw' ? 'checked' : ''}>
         <div class="option-content">
           <span class="option-tag original">Mô tả gốc</span>
           <div class="option-note">${esc(s.description_raw)}</div>
@@ -389,8 +1075,8 @@ function renderCard(s, i) {
       <div class="card-status">
         <span class="status-icon">${statusIcon}</span>
         ${statusBadge}
-        ${s.is_ready       ? '<span class="badge green">🟢 Đủ điều kiện</span>' : ''}
-        ${s.has_upload_json ? '<span class="badge blue">Gemini ✓</span>' : '<span class="badge" title="Thiếu upload.json">❌ No Gemini</span>'}
+        ${s.is_ready        ? '<span class="badge green">🟢 Đủ điều kiện</span>' : ''}
+        ${s.has_upload_json ? '<span class="badge blue">Gemini ✓</span>'        : '<span class="badge" title="Thiếu upload.json">❌ No Gemini</span>'}
         ${s.has_image       ? '' : '<span class="badge" title="Thiếu ảnh bìa">🖼️ No image</span>'}
       </div>
     </div>
@@ -409,9 +1095,20 @@ function renderCard(s, i) {
         <div class="option-list">${descOptions}</div>` : ''}
 
       <div class="card-actions">
-        <button class="btn-ready" onclick="markReady('${esc(s.slug)}')">✅ Sẵn sàng upload</button>
-        <button class="btn-skip"  onclick="markSkip('${esc(s.slug)}')">⏭ Bỏ qua</button>
+        <button class="btn-ready ${st.status === 'done' ? 'active' : ''}"
+          onclick="markReady('${esc(s.slug)}')">
+          ${st.status === 'done' ? '✅ Đã đánh dấu' : '☑ Sẵn sàng upload'}
+        </button>
+        <button class="btn-skip"    onclick="markSkip('${esc(s.slug)}')">⏭ Bỏ qua</button>
+        <button class="btn-check"   onclick="checkDuplicate('${esc(s.slug)}', this)">🔍 Kiểm tra trùng</button>
+        <button class="btn-process" onclick="showProcessMenu('${esc(s.slug)}')">✏️ Xử lý văn bản</button>
+        ${st.uploaded
+          ? `<button class="btn-upload uploaded" id="uploadBtn_${esc(s.slug)}" onclick="uploadStory('${esc(s.slug)}', this)" title="Upload lại">✅ Đã upload (${esc(st.uploaded.uploaded_at)})</button>`
+          : `<button class="btn-upload" id="uploadBtn_${esc(s.slug)}" onclick="uploadStory('${esc(s.slug)}', this)">🚀 Upload</button>`
+        }
       </div>
+
+      <div class="tool-result" id="toolResult_${esc(s.slug)}"></div>
     </div>
   </div>`;
 }
@@ -423,109 +1120,206 @@ function esc(s) {
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/\n/g,' ');
 }
 
+function showResult(slug, html) {
+  const el = document.getElementById('toolResult_' + slug);
+  if (!el) return;
+  el.innerHTML = html;
+  el.classList.add('show');
+}
+
+// ── Mở thư mục ──────────────────────────────────────────────────────────────
+async function openFolder(slug) {
+  try {
+    await fetch(`${API}/open-folder?slug=${encodeURIComponent(slug)}`);
+  } catch(e) {}
+}
+
+// ── Kiểm tra trùng ──────────────────────────────────────────────────────────
+async function checkDuplicate(slug, btn) {
+  if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+  showResult(slug, '<span style="color:var(--muted)">⏳ Đang kiểm tra...</span>');
+  try {
+    const res = await fetch(`${API}/check?slug=${encodeURIComponent(slug)}`);
+    if (!res.ok) {
+      showResult(slug, `<span class="tr-err">❌ Lỗi server: ${res.status}</span>`);
+      return;
+    }
+    const d = await res.json();
+    if (d.error) { showResult(slug, `<span class="tr-err">❌ ${d.error}</span>`); return; }
+
+    let html = `<div class="tr-title" style="display:flex;align-items:center;justify-content:space-between">
+      <span>📊 Kết quả kiểm tra — ${d.total} file .txt</span>
+      <button onclick="openFolder('${slug}')" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--muted);cursor:pointer;font-size:15px">📂 Mở thư mục</button>
+    </div>`;
+    html += `<div class="tr-ok">✅ OK: ${d.ok} chương</div>`;
+
+    if (d.duplicates.length) {
+      html += `<div class="tr-err" style="margin-top:8px">🔁 Trùng lặp: ${d.duplicates.length} chương</div>`;
+      d.duplicates.slice(0,20).forEach(x =>
+        html += `<div class="tr-item">${x.file} → giống ${x.matches} (${x.word_count} từ trùng)</div>`
+      );
+      if (d.duplicates.length > 20) html += `<div class="tr-item">... và ${d.duplicates.length-20} chương nữa</div>`;
+    }
+    if (d.errors.length) {
+      html += `<div class="tr-warn" style="margin-top:8px">⚠️ Nghi lỗi crawl (&lt;10 dòng): ${d.errors.length} chương</div>`;
+      d.errors.slice(0,10).forEach(x =>
+        html += `<div class="tr-item">${x.file} — ${x.lines} dòng</div>`
+      );
+    }
+    if (d.misnamed.length) {
+      html += `<div class="tr-warn" style="margin-top:8px">🔢 Sai số thứ tự: ${d.misnamed.length} chương</div>`;
+      d.misnamed.slice(0,10).forEach(x =>
+        html += `<div class="tr-item">${x.file} — số ${x.num}, cần ${x.expected}</div>`
+      );
+    }
+    if (d.missing && d.missing.length) {
+      html += `<div class="tr-err" style="margin-top:8px">🕳 Thiếu chương: ${d.missing_count} chương</div>`;
+      d.missing.slice(0, 15).forEach(x => {
+        const range = x.from === x.to ? `#${x.from}` : `#${x.from} → #${x.to} (${x.count} chương)`;
+        html += `<div class="tr-item">${range}</div>`;
+      });
+      if (d.missing.length > 15) html += `<div class="tr-item">... và nhiều khoảng nữa</div>`;
+    }
+    if (!d.duplicates.length && !d.errors.length && !d.misnamed.length && !d.missing_count)
+      html += `<div class="tr-ok" style="margin-top:4px">🎉 Không phát hiện vấn đề!</div>`;
+
+    showResult(slug, html);
+  } catch(e) {
+    showResult(slug,
+      '<span class="tr-err">❌ Không kết nối được server (localhost:__SERVER_PORT__). ' +
+      'Đảm bảo review.py đang chạy.</span>');
+  } finally {
+    if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
+  }
+}
+
+// ── Xử lý văn bản ───────────────────────────────────────────────────────────
+function showProcessMenu(slug) {
+  showResult(slug, `
+    <div class="tr-title">✏️ Chọn loại văn bản để xử lý (sẽ sửa trực tiếp file gốc):</div>
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <button class="proc-btn proc-codai"   onclick="processText('${slug}','codai')">📜 Cổ đại</button>
+      <button class="proc-btn proc-hiendai" onclick="processText('${slug}','hiendai')">🏙 Hiện đại</button>
+      <button class="proc-btn proc-cancel"  onclick="document.getElementById('toolResult_${slug}').classList.remove('show')">✕ Hủy</button>
+    </div>`
+  );
+}
+
+async function processText(slug, type) {
+  const label = type === 'codai' ? 'Cổ đại' : 'Hiện đại';
+  showResult(slug, `<span style="color:var(--muted)">⏳ Đang xử lý văn bản (${label})…</span>`);
+  try {
+    const res = await fetch(`${API}/process?slug=${encodeURIComponent(slug)}&type=${type}`);
+    if (!res.ok) {
+      showResult(slug, `<span class="tr-err">❌ Lỗi server: ${res.status}</span>`);
+      return;
+    }
+    const d = await res.json();
+    if (d.error) { showResult(slug, `<span class="tr-err">❌ ${d.error}</span>`); return; }
+
+    let html = `<div class="tr-title">✏️ Xử lý văn bản (${label}) — hoàn tất</div>`;
+    html += `<div class="tr-ok">✅ Đã xử lý: ${d.processed} file</div>`;
+    if (d.failed && d.failed.length) {
+      html += `<div class="tr-err" style="margin-top:8px">❌ Lỗi: ${d.failed.length} file</div>`;
+      d.failed.forEach(x => html += `<div class="tr-item">${x.file}: ${x.error}</div>`);
+    }
+    showResult(slug, html);
+  } catch(e) {
+    showResult(slug,
+      '<span class="tr-err">❌ Không kết nối được server (localhost:__SERVER_PORT__).</span>');
+  }
+}
+
+// ── Upload lên server ────────────────────────────────────────────────────────
+async function uploadStory(slug, btn) {
+  const s  = STORIES.find(x => x.slug === slug);
+  const st = state[slug];
+  const title = st.title || s.original_title;
+
+  if (!confirm(`Upload "${title}" lên server?\n(${s.chapter_count} chương)`)) return;
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang upload…'; }
+  showResult(slug, '<span style="color:var(--muted)">⏳ Đang upload lên server… (có thể mất vài phút)</span>');
+
+  const genres = [];
+  if (s.category) s.category.split(',').forEach(g => { if (g.trim()) genres.push(g.trim()); });
+
+  try {
+    const res = await fetch(`${API}/upload`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        slug,
+        title,
+        description: st.description || s.description_raw || '',
+        genres,
+        category: s.category || '',
+      })
+    });
+    const d = await res.json();
+    if (d.success) {
+      // Lưu vào state ngay
+      const now = new Date().toLocaleString('vi-VN', {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'});
+      state[slug].uploaded = { uploaded_at: now, chapters: d.total, inserted: d.inserted, cover: d.cover||'' };
+      if (st.status !== 'done') markReady(slug);
+
+      let html = `<div class="tr-title">🚀 Upload hoàn tất!</div>`;
+      html += `<div class="tr-ok">✅ ${d.message}</div>`;
+      if (d.cover) html += `<div style="color:var(--muted);font-size:16px;margin-top:4px">🖼 Cover: ${d.cover}</div>`;
+      showResult(slug, html);
+
+      // Đổi nút thành "Đã upload"
+      if (btn) {
+        btn.classList.add('uploaded');
+        btn.textContent = `✅ Đã upload (${now})`;
+        btn.disabled = false;
+        return;
+      }
+    } else {
+      showResult(slug, `<span class="tr-err">❌ ${d.message || d.error || 'Lỗi không xác định'}</span>`);
+    }
+  } catch(e) {
+    showResult(slug,
+      `<span class="tr-err">❌ Không kết nối được server (localhost:__SERVER_PORT__): ${e.message}</span>`);
+  } finally {
+    if (btn && !btn.classList.contains('uploaded')) {
+      btn.disabled = false; btn.textContent = '🚀 Upload';
+    }
+  }
+}
+
+// ── Existing functions ───────────────────────────────────────────────────────
 function toggleCard(slug) {
-  const body = document.getElementById('body_' + slug);
-  body.classList.toggle('open');
+  document.getElementById('body_' + slug).classList.toggle('open');
 }
-
-function selectTitle(slug, title) {
-  state[slug].title = title;
-  const card = document.getElementById('card_' + slug);
-  card.querySelector('.story-title-preview').textContent = title;
-}
-
-function selectDesc(slug, desc, hashtags) {
-  state[slug].description = desc;
-  state[slug].hashtags = hashtags;
-}
-
-function markReady(slug) {
+function selectTitle(slug, idx) {
   const s = STORIES.find(x => x.slug === slug);
-  // Auto-select defaults nếu chưa chọn
-  if (!state[slug].title) state[slug].title = s.ten_truyen.length ? s.ten_truyen[0].ten : s.original_title;
-  if (!state[slug].description && s.van_an.length) state[slug].description = s.van_an[0].noi_dung;
-  if (!state[slug].description && s.description_raw) state[slug].description = s.description_raw;
-
-  state[slug].status = 'done';
-  refreshCard(slug);
-  updateProgress();
-  showToast('✅ Đã đánh dấu: ' + state[slug].title);
+  state[slug].titleIdx = idx;
+  state[slug].title = idx === 'original' ? s.original_title : s.ten_truyen[idx].ten;
+  document.getElementById('card_' + slug).querySelector('.story-title-preview').textContent = state[slug].title;
+  // Cập nhật selected class mà không cần refreshCard
+  document.querySelectorAll(`[name="title_${slug}"]`).forEach(r => r.closest('.option-item').classList.remove('selected'));
+  const sel = document.querySelector(`[name="title_${slug}"][value="${idx}"]`);
+  if (sel) sel.closest('.option-item').classList.add('selected');
 }
-
-function markSkip(slug) {
-  state[slug].status = 'skip';
-  refreshCard(slug);
-  updateProgress();
-}
-
-function refreshCard(slug) {
+function selectDesc(slug, idx) {
   const s = STORIES.find(x => x.slug === slug);
-  const i = STORIES.indexOf(s);
-  const card = document.getElementById('card_' + slug);
-  const parent = card.parentNode;
-  const temp = document.createElement('div');
-  temp.innerHTML = renderCard(s, i);
-  parent.replaceChild(temp.firstElementChild, card);
+  state[slug].descIdx = idx;
+  if (idx === 'raw') {
+    state[slug].description = s.description_raw;
+    state[slug].hashtags    = [];
+  } else {
+    state[slug].description = s.van_an[idx].noi_dung;
+    state[slug].hashtags    = s.van_an[idx].hashtag || [];
+  }
+  // Cập nhật selected class mà không cần refreshCard
+  document.querySelectorAll(`[name="desc_${slug}"]`).forEach(r => r.closest('.option-item').classList.remove('selected'));
+  const sel = document.querySelector(`[name="desc_${slug}"][value="${idx}"]`);
+  if (sel) sel.closest('.option-item').classList.add('selected');
 }
-
-function updateProgress() {
-  const done  = Object.values(state).filter(s => s.status === 'done').length;
-  const total = STORIES.length;
-  const pct   = total ? Math.round(done / total * 100) : 0;
-  document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('progressText').textContent = `${done} / ${total} đã chọn`;
-}
-
-let currentFilter = 'all';
-let currentSource = 'all';   // 'all' | 'PD' | 'Wiki' | ...
-
-function buildSourceFilters() {
-  const sources = [...new Set(STORIES.map(s => (s.source || '').trim()).filter(Boolean))].sort();
-  const wrap = document.getElementById('sourceFilters');
-  wrap.innerHTML = sources.map(src =>
-    `<button class="filter-btn src-btn" data-src="${src}" onclick="setSource('${src}', this)">${src}</button>`
-  ).join('');
-}
-
-function setSource(src, btn) {
-  currentSource = (currentSource === src) ? 'all' : src;   // toggle
-  document.querySelectorAll('.src-btn').forEach(b => b.classList.remove('active'));
-  if (currentSource !== 'all') btn.classList.add('active');
-  applyFilters();
-}
-
-function setFilter(f, btn) {
-  currentFilter = f;
-  document.querySelectorAll('.filter-btn:not(.src-btn)').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  applyFilters();
-}
-
-function filterSearch(q) {
-  applyFilters(q);
-}
-
-function applyFilters(searchQ) {
-  const q = (searchQ || document.querySelector('.search-input').value || '').toLowerCase();
-  document.querySelectorAll('.story-card').forEach(card => {
-    const slug   = card.dataset.slug;
-    const title  = card.dataset.title.toLowerCase();
-    const st     = state[slug];
-    const story  = STORIES.find(x => x.slug === slug);
-    let show = true;
-    if (currentFilter === 'ready'   && !story.is_ready)      show = false;
-    if (currentFilter === 'done'    && st.status !== 'done') show = false;
-    if (currentFilter === 'skip'    && st.status !== 'skip') show = false;
-    if (currentFilter === 'pending' && st.status !== null)   show = false;
-    if (currentSource !== 'all'     && (story.source || '').trim() !== currentSource) show = false;
-    if (q && !slug.includes(q) && !title.includes(q))       show = false;
-    card.classList.toggle('hidden', !show);
-  });
-}
-
-function exportSelections() {
+function buildSelectionsPayload() {
   const result = STORIES.map(s => {
-    const st = state[s.slug];
+    const st     = state[s.slug];
     const genres = s.category ? s.category.split(',').map(g => g.trim()).filter(Boolean) : [];
     return {
       slug:        s.slug,
@@ -534,37 +1328,116 @@ function exportSelections() {
       description: st.description || s.description_raw || '',
       hashtags:    st.hashtags || [],
       category:    s.category,
-      genres:      genres,
+      genres,
       ready:       st.status === 'done',
       skipped:     st.status === 'skip',
     };
   });
+  const done    = result.filter(r => r.ready).length;
+  const skipped = result.filter(r => r.skipped).length;
+  return { generated: new Date().toISOString(), total: result.length, ready: done, skipped, selections: result };
+}
 
-  const skip = result.filter(r => r.skipped).map(r => r.slug);
-  const done = result.filter(r => r.ready).length;
+async function autoSave() {
+  try {
+    await fetch(`${API}/save-selections`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(buildSelectionsPayload()),
+    });
+  } catch(e) {}
+}
 
-  const output = {
-    generated: new Date().toISOString(),
-    total: result.length,
-    ready: done,
-    skipped: skip.length,
-    selections: result,
-  };
+function markReady(slug) {
+  const s  = STORIES.find(x => x.slug === slug);
+  const st = state[slug];
+  // Title mặc định
+  if (st.titleIdx === null) {
+    if (s.ten_truyen.length) { st.titleIdx = 0; st.title = s.ten_truyen[0].ten; }
+    else                     { st.titleIdx = 'original'; st.title = s.original_title; }
+  }
+  // Desc mặc định
+  if (st.descIdx === null) {
+    if (s.van_an.length)    { st.descIdx = 0; st.description = s.van_an[0].noi_dung; st.hashtags = s.van_an[0].hashtag || []; }
+    else if (s.description_raw) { st.descIdx = 'raw'; st.description = s.description_raw; }
+  }
+  st.status = 'done';
+  refreshCard(slug); updateProgress();
+  autoSave();
+  showToast('✅ Đã đánh dấu: ' + st.title);
+}
+function markSkip(slug) {
+  state[slug].status = 'skip';
+  refreshCard(slug); updateProgress();
+  autoSave();
+}
+function refreshCard(slug) {
+  const s    = STORIES.find(x => x.slug === slug);
+  const i    = STORIES.indexOf(s);
+  const card = document.getElementById('card_' + slug);
+  const temp = document.createElement('div');
+  temp.innerHTML = renderCard(s, i);
+  card.parentNode.replaceChild(temp.firstElementChild, card);
+}
+function updateProgress() {
+  const done  = Object.values(state).filter(s => s.status === 'done').length;
+  const total = STORIES.length;
+  document.getElementById('progressFill').style.width = (total ? Math.round(done/total*100) : 0) + '%';
+  document.getElementById('progressText').textContent  = `${done} / ${total} đã chọn`;
+}
 
-  const blob = new Blob([JSON.stringify(output, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'selections.json';
+let currentFilter = 'all', currentSource = 'all';
+
+function buildSourceFilters() {
+  const sources = [...new Set(STORIES.map(s => (s.source||'').trim()).filter(Boolean))].sort();
+  document.getElementById('sourceFilters').innerHTML = sources.map(src =>
+    `<button class="filter-btn src-btn" data-src="${src}" onclick="setSource('${src}', this)">${src}</button>`
+  ).join('');
+}
+function setSource(src, btn) {
+  currentSource = (currentSource === src) ? 'all' : src;
+  document.querySelectorAll('.src-btn').forEach(b => b.classList.remove('active'));
+  if (currentSource !== 'all') btn.classList.add('active');
+  applyFilters();
+}
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn:not(.src-btn)').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+function filterSearch(q) { applyFilters(q); }
+function applyFilters(searchQ) {
+  const q = (searchQ || document.querySelector('.search-input').value || '').toLowerCase();
+  document.querySelectorAll('.story-card').forEach(card => {
+    const slug  = card.dataset.slug;
+    const title = card.dataset.title.toLowerCase();
+    const st    = state[slug];
+    const story = STORIES.find(x => x.slug === slug);
+    let show = true;
+    if (currentFilter === 'ready'   && !story.is_ready)      show = false;
+    if (currentFilter === 'done'    && st.status !== 'done')  show = false;
+    if (currentFilter === 'skip'    && st.status !== 'skip')  show = false;
+    if (currentFilter === 'pending' && st.status !== null)    show = false;
+    if (currentSource !== 'all' && (story.source||'').trim() !== currentSource) show = false;
+    if (q && !slug.includes(q) && !title.includes(q))        show = false;
+    card.classList.toggle('hidden', !show);
+  });
+}
+
+function exportSelections() {
+  const output = buildSelectionsPayload();
+  const blob   = new Blob([JSON.stringify(output, null, 2)], { type: 'application/json' });
+  const url    = URL.createObjectURL(blob);
+  const a      = Object.assign(document.createElement('a'), { href: url, download: 'selections.json' });
   a.click();
   URL.revokeObjectURL(url);
-  showToast(`✅ Đã export ${done} truyện sẵn sàng upload!`);
+  showToast(`✅ Đã export ${output.ready} truyện sẵn sàng upload!`);
 }
 
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
@@ -574,13 +1447,37 @@ init();
 </html>"""
 
 
-SELECTIONS_JSON = Path(__file__).parent / "selections.json"
+# ══════════════════════════════════════════════════════════════════════════════
+#  SELECTIONS RESTORE
+# ══════════════════════════════════════════════════════════════════════════════
+
+SELECTIONS_JSON    = Path(__file__).parent / "selections.json"
+UPLOAD_STATUS_JSON = Path(__file__).parent / "upload_status.json"
+_upload_status_lock = threading.Lock()
+
+
+def load_upload_status() -> dict:
+    if not UPLOAD_STATUS_JSON.exists(): return {}
+    try:
+        return json.loads(UPLOAD_STATUS_JSON.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def save_upload_status(slug: str, data: dict):
+    """Ghi ngay vào upload_status.json (thread-safe)."""
+    with _upload_status_lock:
+        try:
+            status = load_upload_status()
+            status[slug] = data
+            UPLOAD_STATUS_JSON.write_text(
+                json.dumps(status, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception as e:
+            print(f"  [!] Không ghi được upload_status.json: {e}")
 
 
 def load_prev_selections() -> dict:
-    """Đọc selections.json (nếu có) → dict keyed by slug để restore state."""
-    if not SELECTIONS_JSON.exists():
-        return {}
+    if not SELECTIONS_JSON.exists(): return {}
     try:
         data = json.loads(SELECTIONS_JSON.read_text(encoding="utf-8"))
         result = {}
@@ -600,17 +1497,26 @@ def load_prev_selections() -> dict:
         return {}
 
 
-def generate_html(stories: list[dict], prev_selections: dict) -> str:
-    stories_json    = json.dumps(stories, ensure_ascii=False, indent=2)
-    prev_sel_json   = json.dumps(prev_selections, ensure_ascii=False, indent=2)
+def generate_html(stories: list[dict], prev_selections: dict,
+                  upload_status: dict, port: int) -> str:
+    stories_json  = json.dumps(stories,        ensure_ascii=False, indent=2)
+    prev_sel_json = json.dumps(prev_selections, ensure_ascii=False, indent=2)
+    up_status_json = json.dumps(upload_status,  ensure_ascii=False, indent=2)
     return (HTML_TEMPLATE
-            .replace("__STORIES_DATA__", stories_json)
-            .replace("__PREV_SELECTIONS__", prev_sel_json))
+            .replace("__STORIES_DATA__",    stories_json)
+            .replace("__PREV_SELECTIONS__", prev_sel_json)
+            .replace("__UPLOAD_STATUS__",   up_status_json)
+            .replace("__SERVER_PORT__",     str(port)))
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MAIN
+# ══════════════════════════════════════════════════════════════════════════════
 
 def main():
     parser = argparse.ArgumentParser(description="Generate review.html từ data_import/")
-    parser.add_argument("--dir", help="Override STORIES_DIR")
+    parser.add_argument("--dir",  help="Override STORIES_DIR")
+    parser.add_argument("--port", type=int, default=SERVER_PORT, help="Port cho local API server")
     args = parser.parse_args()
 
     stories_dir = Path(args.dir) if args.dir else Path(STORIES_DIR)
@@ -620,28 +1526,43 @@ def main():
     print(f"{'═'*55}\n")
 
     stories = scan_stories(stories_dir)
-
     if not stories:
         print("[!] Không có truyện nào để review.")
         return
 
     prev_selections = load_prev_selections()
     if prev_selections:
-        print(f"↩ Restore {len(prev_selections)} selections từ selections.json")
+        print(f"↩  Restore {len(prev_selections)} selections từ selections.json")
 
-    html = generate_html(stories, prev_selections)
+    upload_status = load_upload_status()
+    if upload_status:
+        print(f"📦 Upload status: {len(upload_status)} truyện đã upload trước đó")
+
+    # Khởi động local API server
+    start_local_server(stories_dir, args.port)
+
+    html = generate_html(stories, prev_selections, upload_status, args.port)
     OUTPUT_HTML.write_text(html, encoding="utf-8")
 
     print(f"\n✅ Đã tạo: {OUTPUT_HTML}")
-    print(f"   → Mở file đó bằng Chrome/Edge để review\n")
+    print(f"   → Mở file đó bằng Chrome/Edge để review")
+    print(f"   → Server đang chạy tại localhost:{args.port} — GIỮ CỬA SỔ NÀY MỞ\n")
 
-    # Tự mở trình duyệt nếu chạy trên Windows
     try:
         import webbrowser
         webbrowser.open(OUTPUT_HTML.as_uri())
         print("   → Đang mở trình duyệt...")
     except Exception:
         pass
+
+    # Giữ process sống để server hoạt động (dùng sleep loop — tương thích Windows)
+    print("\n[Ctrl+C để thoát]\n")
+    try:
+        import time
+        while True:
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        print("\n👋 Đã tắt server.")
 
 
 if __name__ == "__main__":

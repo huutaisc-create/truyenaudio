@@ -38,6 +38,12 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // ── Normalize slug (đ/Đ không phân giải được bằng NFD) ─
+        const resolvedSlug = s.slug
+            .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
         // ── Normalize status ───────────────────────────────────
         const resolvedStatus =
             s.book_status === "Full"    ? "COMPLETED" :
@@ -77,7 +83,7 @@ export async function POST(request: NextRequest) {
 
         // ── Upsert Story ───────────────────────────────────────
         const story = await db.story.upsert({
-            where:  { slug: s.slug },
+            where:  { slug: resolvedSlug },
             update: {
                 title:         s.title,
                 author:        s.author        || "Unknown",
@@ -96,7 +102,7 @@ export async function POST(request: NextRequest) {
                 }),
             },
             create: {
-                slug:          s.slug,
+                slug:          resolvedSlug,
                 title:         s.title,
                 author:        s.author        || "Unknown",
                 description:   s.description   || "",
@@ -130,7 +136,7 @@ export async function POST(request: NextRequest) {
                 // Lưu content vào disk Contabo
                 const content = c.content || "";
                 const contentUrl = content
-                    ? await saveChapterToDisk(s.slug, c.index, content)
+                    ? await saveChapterToDisk(resolvedSlug, c.index, content)
                     : null;
 
                 await db.chapter.create({
