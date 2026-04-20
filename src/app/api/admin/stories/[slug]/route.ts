@@ -1,9 +1,15 @@
 // D:\Webtruyen\webtruyen-app\src\app\api\admin\stories\[slug]\route.ts
 
 import { NextRequest, NextResponse } from "next/server";
+import { rm } from "fs/promises";
+import path from "path";
 import db from "@/lib/db";
 
 const UPLOAD_SECRET = "df5e8753a931894d842645d812d2b23fe89917d87def1633c8926f2c67728a5c";
+
+const CHAPTERS_ROOT = process.env.CHAPTERS_STORAGE_PATH
+    ?? path.join(process.cwd(), "public", "chapters");
+const COVERS_ROOT = path.join(process.cwd(), "public", "covers");
 
 export async function DELETE(
     request: NextRequest,
@@ -35,9 +41,13 @@ export async function DELETE(
         // Xóa story — onDelete: Cascade tự xóa chapters, reviews, history, library...
         await db.story.delete({ where: { slug } });
 
+        // Xóa file trên disk (không throw nếu không tồn tại)
+        await rm(path.join(CHAPTERS_ROOT, slug), { recursive: true, force: true });
+        await rm(path.join(COVERS_ROOT, `${slug}.webp`), { force: true });
+
         return NextResponse.json({
             success: true,
-            message: `Deleted '${story.title}' and all its data`,
+            message: `Deleted '${story.title}' — DB + chapters + cover`,
         });
 
     } catch (error: any) {
