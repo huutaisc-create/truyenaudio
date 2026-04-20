@@ -1,25 +1,7 @@
 import React from 'react';
 import { getChapterBySlugAndIndex, getChaptersByStoryId, getStoryBySlug } from '@/actions/stories';
+import { fetchChapterContent } from '@/lib/chapterContent';
 import ReadingClient from './ReadingClient';
-
-// Helper: fetch content từ R2 — retry 1 lần nếu lỗi
-async function fetchContentFromR2(contentUrl: string | null): Promise<string> {
-    if (!contentUrl) return '';
-    for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-            const res = await fetch(contentUrl, {
-                next: { revalidate: 3600 },
-                signal: AbortSignal.timeout(8000), // 8s timeout
-            });
-            if (!res.ok) continue;
-            const text = await res.text();
-            if (text.trim()) return text; // chỉ return nếu có content thật
-        } catch {}
-        // Thử lại sau 500ms
-        if (attempt === 0) await new Promise(r => setTimeout(r, 500));
-    }
-    return '';
-}
 
 const ReadingPage = async ({ params: paramsPromise }: { params: Promise<{ slug: string; chapter: string }> }) => {
     const params = await paramsPromise;
@@ -42,7 +24,7 @@ const ReadingPage = async ({ params: paramsPromise }: { params: Promise<{ slug: 
         import('@/auth'),
         getStoryBySlug(params.slug),
         next !== null ? getChapterBySlugAndIndex(params.slug, next) : Promise.resolve(null),
-        fetchContentFromR2(chapter.contentUrl),
+        fetchChapterContent(chapter.contentUrl),
     ]);
 
     const session = await auth();
@@ -63,7 +45,7 @@ const ReadingPage = async ({ params: paramsPromise }: { params: Promise<{ slug: 
 
     // Fetch next chapter content từ R2 nếu có
     const nextChapterContent = nextData
-        ? await fetchContentFromR2(nextData.chapter.contentUrl)
+        ? await fetchChapterContent(nextData.chapter.contentUrl)
         : '';
 
     const sanitizedChapter = {

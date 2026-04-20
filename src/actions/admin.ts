@@ -5,6 +5,7 @@ import { auth } from '@/auth'
 import { revalidatePath } from 'next/cache'
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { ALL_ADMIN_ROLES } from '@/lib/admin-guard'
+import { fetchChapterContent } from '@/lib/chapterContent'
 
 async function checkAdmin() {
     const session = await auth()
@@ -985,9 +986,8 @@ export async function searchInStoryChapters(storyId: string, searchText: string)
     for (const ch of chapters) {
         if (!ch.contentUrl) continue;
         try {
-            const res = await fetch(ch.contentUrl);
-            if (!res.ok) continue;
-            const text = await res.text();
+            const text = await fetchChapterContent(ch.contentUrl);
+            if (!text) continue;
             const regex = new RegExp(searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
             const matches = text.match(regex);
             if (matches && matches.length > 0) {
@@ -999,7 +999,7 @@ export async function searchInStoryChapters(storyId: string, searchText: string)
                 results.push({ id: ch.id, title: ch.title, index: ch.index, matchCount: matches.length, preview });
             }
         } catch (e) {
-            // skip chapter nếu fetch lỗi
+            // skip chapter nếu lỗi
         }
     }
 
@@ -1020,26 +1020,37 @@ export async function replaceInStoryChapters(storyId: string, searchText: string
     });
 
     let replaced = 0;
-    const r2Base = process.env.R2_PUBLIC_URL!;
+    const r2Base = process.env.R2_PUBLIC_URL ?? '';
+    const chaptersRoot = process.env.CHAPTERS_STORAGE_PATH
+        ?? require('path').join(process.cwd(), 'public', 'chapters');
 
     for (const ch of chapters) {
         if (!ch.contentUrl) continue;
         try {
-            const res = await fetch(ch.contentUrl);
-            if (!res.ok) continue;
-            const original = await res.text();
+            const original = await fetchChapterContent(ch.contentUrl);
+            if (!original) continue;
             const regex = new RegExp(searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
             if (!regex.test(original)) continue;
 
             const updated = original.replace(regex, replaceText);
-            const key = ch.contentUrl.replace(r2Base + '/', '');
 
-            await s3.send(new PutObjectCommand({
-                Bucket: process.env.R2_BUCKET_NAME!,
-                Key: key,
-                Body: Buffer.from(updated, 'utf-8'),
-                ContentType: 'text/plain; charset=utf-8',
-            }));
+            if (ch.contentUrl.startsWith('/chapters/')) {
+                // Disk chapter → ghi thẳng vào file
+                const { writeFile } = await import('fs/promises');
+                const path = await import('path');
+                const relativePath = ch.contentUrl.slice('/chapters/'.length);
+                const filePath = path.join(chaptersRoot, relativePath);
+                await writeFile(filePath, updated, 'utf-8');
+            } else {
+                // R2 chapter → upload lên S3
+                const key = ch.contentUrl.replace(r2Base + '/', '');
+                await s3.send(new PutObjectCommand({
+                    Bucket: process.env.R2_BUCKET_NAME!,
+                    Key: key,
+                    Body: Buffer.from(updated, 'utf-8'),
+                    ContentType: 'text/plain; charset=utf-8',
+                }));
+            }
             replaced++;
         } catch (e) {
             console.error(`replaceInChapter ${ch.id}:`, e);

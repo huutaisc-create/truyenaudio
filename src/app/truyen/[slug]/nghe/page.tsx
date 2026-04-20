@@ -3,22 +3,12 @@ import { getStoryInteractions } from '@/actions/interactions';
 import { notFound, redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import db from '@/lib/db';
+import { fetchChapterContent } from '@/lib/chapterContent';
 import ListeningClient from './ListeningClient';
 
 interface Props {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ chuong?: string }>;
-}
-
-async function fetchContentFromR2(contentUrl: string | null): Promise<string> {
-  if (!contentUrl) return '';
-  try {
-    const res = await fetch(contentUrl, { next: { revalidate: 3600 } });
-    if (!res.ok) return '';
-    return await res.text();
-  } catch {
-    return '';
-  }
 }
 
 export default async function ListeningPage({ params: paramsPromise, searchParams: spPromise }: Props) {
@@ -42,7 +32,7 @@ export default async function ListeningPage({ params: paramsPromise, searchParam
 
   const [chaptersResult, content, freshReviews, interactionsData] = await Promise.all([
     getChaptersByStoryId(storyData.id, 1),
-    fetchContentFromR2(chapterData.chapter.contentUrl),
+    fetchChapterContent(chapterData.chapter.contentUrl),
     db.review.findMany({
       where: { storyId: storyData.id },
       orderBy: { createdAt: 'desc' },

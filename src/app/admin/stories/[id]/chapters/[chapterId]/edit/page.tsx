@@ -3,21 +3,13 @@ import db from "@/lib/db";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { fetchChapterContent } from "@/lib/chapterContent";
 
 async function getChapter(id: string) {
     const chapter = await db.chapter.findUnique({ where: { id } });
     if (!chapter) notFound();
 
-    // Fetch content từ R2
-    let content = '';
-    if (chapter.contentUrl) {
-        try {
-            const res = await fetch(chapter.contentUrl, { cache: 'no-store' });
-            if (res.ok) content = await res.text();
-        } catch {
-            content = '';
-        }
-    }
+    const content = await fetchChapterContent(chapter.contentUrl);
 
     return { ...chapter, content };
 }

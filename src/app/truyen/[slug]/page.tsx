@@ -18,18 +18,8 @@ import { auth } from '@/auth';
 import { notFound } from 'next/navigation';
 import { formatNumber } from '@/lib/utils';
 
-export const revalidate = 60;
-export const dynamicParams = true;
+export const dynamic = 'force-dynamic';
 
-export async function generateStaticParams() {
-    const stories = await db.story.findMany({
-        where: { isHidden: false },
-        orderBy: { viewCount: 'desc' },
-        take: 100,
-        select: { slug: true },
-    });
-    return stories.map(s => ({ slug: s.slug }));
-}
 
 const StoryDetail = async ({
     params,

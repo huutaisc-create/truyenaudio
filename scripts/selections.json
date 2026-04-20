@@ -1,6 +1,6 @@
 {
-  "generated": "2026-04-20T04:38:23.832Z",
-  "total": 1886,
+  "generated": "2026-04-20T04:52:40.782Z",
+  "total": 1887,
   "ready": 3,
   "skipped": 0,
   "selections": [
@@ -22,7 +22,7 @@
     {
       "slug": "1001-đem-tan-hon",
       "story_id": 766,
-      "title": "Tưởng Gả Cho Lão Già Suy Thận, Đêm Tân Hôn Tôi Khóc Nghẹn Vì \"Chồng\" Quá Khỏe",
+      "title": "Tân Hôn Thiên Dạ",
       "description": "Bị gia đình ép gả cho một ông lão suy thận để trừ nợ, Lương Nặc chuẩn bị sẵn tâm lý để làm một quả phụ trẻ tuổi. Ai ngờ, \"chồng già\" trong lời đồn lại biến thành vị tổng tài \"vạn người mê\" với cơ bắp cường tráng và túi tiền không đáy. Từ một cô gái bị khinh rẻ, cô bỗng chốc trở thành thiếu phu nhân được cưng chiều lên tận trời xanh. Kẻ nào dám bắt nạt cô? Anh dẹp bỏ. Kẻ nào dám khinh thường cô? Anh dùng tiền đè bạt mạng. \"Chồng em cái gì cũng thiếu, chỉ có tiền và sức khỏe là dư thừa!\" - Lương Nặc chính thức bước vào hành trình được cưng sủng không lối thoát.",
       "hashtags": [
         "#SảngVăn",
@@ -23239,6 +23239,17 @@
       "slug": "vong-du-dung-hop-hien-thuc-khai-phuc-truoc-nap-phi-ngan-ty",
       "story_id": 2641,
       "title": "Võng du dung hợp hiện thực! Khai phục trước nạp phí ngàn tỷ!",
+      "description": "",
+      "hashtags": [],
+      "category": "",
+      "genres": [],
+      "ready": false,
+      "skipped": false
+    },
+    {
+      "slug": "vong-du-khai-cuc-quat-quat-nhac-thuc-tinh-duy-nhat-sss-thien-phu",
+      "story_id": 2667,
+      "title": "Võng du: Khai cục Quát Quát Nhạc, thức tỉnh duy nhất SSS thiên phú",
       "description": "",
       "hashtags": [],
       "category": "",
