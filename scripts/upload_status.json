@@ -1,16 +1,79 @@
 {
   "1001-đem-tan-hon": {
-    "uploaded_at": "2026-04-20 11:52",
+    "uploaded_at": "2026-04-20 14:04",
     "chapters": 520,
-    "inserted": 520,
+    "inserted": 0,
     "cover": "/covers/1001-đem-tan-hon.webp",
     "title": "Tân Hôn Thiên Dạ"
   },
   "365-ngay-hon-nhan": {
-    "uploaded_at": "2026-04-20 11:38",
+    "uploaded_at": "2026-04-20 14:06",
     "chapters": 350,
     "inserted": 350,
     "cover": "/covers/365-ngay-hon-nhan.webp",
     "title": "Sau 365 Ngày Ký Kết, Tổng Tài Đào Hoa Cầu Xin Tôi Đừng Ly Hôn"
+  },
+  "ac-ma-ca-ca": {
+    "uploaded_at": "2026-04-20 14:20",
+    "chapters": 241,
+    "inserted": 241,
+    "cover": "/covers/ac-ma-ca-ca.webp",
+    "title": "Ác Mộng Mang Tên Anh Trai"
+  },
+  "ac-ma-phap-tac": {
+    "uploaded_at": "2026-04-20 15:24",
+    "chapters": 902,
+    "inserted": 902,
+    "cover": "/covers/ac-ma-phap-tac.webp",
+    "title": "Quy Tắc Của Ác Ma: Kẻ Khờ Làm Chủ Thế Giới"
+  },
+  "ac-mong-kinh-tap": {
+    "uploaded_at": "2026-04-20 17:07",
+    "chapters": 1740,
+    "inserted": 1740,
+    "cover": "/covers/ac-mong-kinh-tap.webp",
+    "title": "Hành Trình Sống Sót Trong Ác Mộng"
+  },
+  "ai-bao-nu-nhi-khong-lam-nen-viec-lon": {
+    "uploaded_at": "2026-04-20 17:08",
+    "chapters": 702,
+    "inserted": 702,
+    "cover": "/covers/ai-bao-nu-nhi-khong-lam-nen-viec-lon.webp",
+    "title": "Trình Gia Khuê Tú: Nho Phục Thừa Gia"
+  },
+  "ai-ma-tin-su-ton-chi-la-pham-nhan-chu": {
+    "uploaded_at": "2026-04-20 17:09",
+    "chapters": 990,
+    "inserted": 990,
+    "cover": "/covers/ai-ma-tin-su-ton-chi-la-pham-nhan-chu.webp",
+    "title": "Sử Thượng Đệ Nhất Phế Tông"
+  },
+  "ai-phi-tram-la-đac-cong": {
+    "uploaded_at": "2026-04-20 17:26",
+    "chapters": 200,
+    "inserted": 200,
+    "cover": "/covers/ai-phi-tram-la-đac-cong.webp",
+    "title": "Phi Tần Đặc Công: Một Tay Che Cả Triều Đình"
+  },
+  "ai-phi-tuyet-sac-cua-than-bi-vuong-gia": {
+    "uploaded_at": "2026-04-20 17:42",
+    "chapters": 322,
+    "inserted": 322,
+    "cover": "/covers/ai-phi-tuyet-sac-cua-than-bi-vuong-gia.webp",
+    "title": "Tuyệt Sắc Hòa Thân"
+  },
+  "am-duong-mien": {
+    "uploaded_at": "2026-04-20 17:44",
+    "chapters": 809,
+    "inserted": 809,
+    "cover": "/covers/am-duong-mien.webp",
+    "title": "Tửu Thần Xuyên Không: Phế Tài Nghịch Thiên Càn Quét Ngũ Hành"
+  },
+  "an-ca-ky-vi-tu": {
+    "uploaded_at": "2026-04-20 17:57",
+    "chapters": 231,
+    "inserted": 231,
+    "cover": "/covers/an-ca-ky-vi-tu.webp",
+    "title": "Y Sư Thanh Ca"
   }
 }

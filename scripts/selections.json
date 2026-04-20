@@ -1,8 +1,8 @@
 {
-  "generated": "2026-04-20T04:52:40.782Z",
-  "total": 1887,
-  "ready": 3,
-  "skipped": 0,
+  "generated": "2026-04-20T10:45:30.042Z",
+  "total": 1890,
+  "ready": 8,
+  "skipped": 2,
   "selections": [
     {
       "slug": "100-cach-cung-vo",
@@ -16,13 +16,13 @@
         "Sắc",
         "Sủng"
       ],
-      "ready": true,
-      "skipped": false
+      "ready": false,
+      "skipped": true
     },
     {
       "slug": "1001-đem-tan-hon",
       "story_id": 766,
-      "title": "Tân Hôn Thiên Dạ",
+      "title": "Vợ Trẻ Của Tổng Tài \"Bệnh Hoạn\"",
       "description": "Bị gia đình ép gả cho một ông lão suy thận để trừ nợ, Lương Nặc chuẩn bị sẵn tâm lý để làm một quả phụ trẻ tuổi. Ai ngờ, \"chồng già\" trong lời đồn lại biến thành vị tổng tài \"vạn người mê\" với cơ bắp cường tráng và túi tiền không đáy. Từ một cô gái bị khinh rẻ, cô bỗng chốc trở thành thiếu phu nhân được cưng chiều lên tận trời xanh. Kẻ nào dám bắt nạt cô? Anh dẹp bỏ. Kẻ nào dám khinh thường cô? Anh dùng tiền đè bạt mạng. \"Chồng em cái gì cũng thiếu, chỉ có tiền và sức khỏe là dư thừa!\" - Lương Nặc chính thức bước vào hành trình được cưng sủng không lối thoát.",
       "hashtags": [
         "#SảngVăn",
@@ -222,44 +222,62 @@
       "category": "",
       "genres": [],
       "ready": false,
-      "skipped": false
+      "skipped": true
     },
     {
       "slug": "ac-ma-ca-ca",
       "story_id": 142,
-      "title": "Ác Ma Ca Ca",
-      "description": "\"Ác mộng\" không chỉ là một câu chuyện, mà là một vòng xoáy nghiệt ngã cuốn lấy Tạ Hải Nhạc, cô gái bất hạnh chìm trong bóng tối của người anh trai ác ma, Tạ Thư Dật.\n\nMang trên mình khát khao về một mái ấm bình yên, Hải Nhạc lại bị đẩy vào bi kịch bởi những mưu toan và hận thù từ quá khứ.\n\nTạ Thư Dật, với vẻ ngoài lạnh lùng tàn nhẫn, ẩn sâu bên trong là một tình yêu chiếm hữu đến cuồng dại dành cho em gái. Nhưng thứ tình yêu畸形 ấy chỉ mang đến cho Hải Nhạc những vết thương không thể lành.\n\n**Một câu chuyện:**\n*   **Giàu cảm xúc:** Đi sâu vào nội tâm nhân vật, đặc biệt là Hải Nhạc, lột tả những giằng xé, mâu thuẫn và khát khao thầm kín.\n*   **U ám và ám ảnh:** Sự pha trộn giữa lãng mạn và bi kịch tạo nên một không khí nghẹt thở.\n*   **Đa chiều và phức tạp:** Nhân vật không đơn thuần là tốt hay xấu, mà mang trong mình những nỗi đau và tổn thương riêng.\n\nDù vẫn còn một vài tiếc nuối về nhịp truyện nhanh và sự thiếu chiều sâu của nhân vật phụ, \"Ác mộng\" vẫn là một tác phẩm **đáng đọc** dành cho những ai yêu thích thể loại ngôn tình bi kịch, nơi tình yêu, thù hận và những giằng xé nội tâm con người được phơi bày trần trụi.\n\n**Tags:** Ngôn tình, Hắc bang, Ngược luyến, Gia tộc, Thù hận, Cưỡng bức.",
-      "hashtags": [],
+      "title": "Ác Mộng Mang Tên Anh Trai",
+      "description": "Hắn là ác ma mang huyết thống cao quý, nàng là thiếu nữ bất hạnh giữa dòng xoáy thù hận. Một đoạn tình cảm畸 hình khởi nguồn từ chấp niệm chiếm hữu, trải qua bao đau đớn, biệt ly và những vết thương không thể chữa lành. Giữa những giằng xé nội tâm và bi kịch gia môn, nàng chính là \"Hải Chi Lệ\" – giọt lệ giữa biển khơi mà hắn hận không thể khảm sâu vào cốt tủy. Thiên đường xa tận chân trời, mà luyện ngục lại ở ngay dưới mái hiên, liệu chân tình có thể hóa giải được thâm thù đại hận?",
+      "hashtags": [
+        "#NgônTình",
+        "#TrangTrọng",
+        "#NgượcLuyến",
+        "#GiaTộc",
+        "#ThùHận"
+      ],
       "category": "Ngôn Tình",
       "genres": [
         "Ngôn Tình"
       ],
-      "ready": false,
+      "ready": true,
       "skipped": false
     },
     {
       "slug": "ac-ma-phap-tac",
       "story_id": 1266,
-      "title": "Ác Ma Pháp Tắc",
-      "description": "Đỗ Duy La Lâm, nhân vật chính của câu chuyện, là trưởng tử của Lôi Mông Bá Tước, một nhân vật quyền lực trong đế chế La Lan. Tuy nhiên, Đỗ Duy lại mang tiếng là một kẻ ngốc, không có tài cán gì. Bị gia tộc xa lánh, Đỗ Duy bị đẩy đến một vùng đất xa xôi, bắt đầu một cuộc sống mới. Tuy nhiên, Đỗ Duy không hề đơn giản như vẻ bề ngoài. \n\nẨn sau vẻ ngoài ngốc nghếch là một trí tuệ sắc bén, một tinh thần lực mạnh mẽ và một kho tàng kiến thức uyên bác từ thế giới khác. Đỗ Duy không cam tâm chấp nhận số phận, quyết tâm thay đổi bản thân và khám phá những bí mật ẩn giấu trong thế giới mới này. \n\nĐỗ Duy bắt đầu bằng việc nghiên cứu ma pháp, nhưng lại phát hiện mình không có thiên phú. Không nản lòng, Đỗ Duy chuyển sang nghiên cứu dược tề học, khám phá ra những khả năng kỳ diệu của nó. Đồng thời, Đỗ Duy cũng dần dần khám phá ra những bí mật về gia tộc La Lâm, về thế giới mà anh đang sống. \n\nTrên hành trình của mình, Đỗ Duy gặp gỡ nhiều người, từ những kỵ sĩ trung thành, những ma pháp sư tài năng đến những kẻ thù nguy hiểm. Đỗ Duy phải sử dụng trí tuệ, sự lạnh lùng và cả sự hài hước của mình để vượt qua những thử thách, bảo vệ bản thân và tìm ra con đường đi cho riêng mình. \n\nVăn phong của truyện trần thuật, tỉ mỉ trong miêu tả bối cảnh, tâm lý nhân vật, kết hợp yếu tố hài hước nhẹ nhàng. Cốt truyện lôi cuốn, kết hợp yếu tố trinh thám, đấu trí và phiêu lưu giả tưởng. Cảm xúc chủ đạo của truyện là sự tò mò, hứng thú, pha lẫn một chút hài hước và kịch tính. \n\n Tags: Giả tưởng, Lịch sử, Hài hước, Đấu trí, Phiêu lưu, Ma pháp, Cường giả, Xuyên không",
-      "hashtags": [],
+      "title": "Quy Tắc Của Ác Ma: Kẻ Khờ Làm Chủ Thế Giới",
+      "description": "Kẻ khờ khạo nhất đế quốc? Thiên tài ma pháp ngu ngốc? Đó chỉ là lớp vỏ bọc hoàn hảo của Đỗ Duy. Không có thiên phú ma pháp thì đã sao? Hắn dùng dược tề khuynh đảo đại lục, dùng trí tuệ thượng giới để bẻ gãy mọi quy tắc tu luyện thông thường. Từ một đứa trẻ bị ruồng bỏ, hắn thu phục kỵ sĩ rồng, đối đầu với Long tộc, khiến cả Giáo hội và Ma pháp công hội phải run sợ. Trên hành trình này, Đỗ Duy chính là quy tắc, là bóng tối mà ngay cả ánh sáng cũng không thể chạm tới.",
+      "hashtags": [
+        "#DịGiới",
+        "#VôĐịchLưu",
+        "#MaPháp",
+        "#CườngGiả",
+        "#PhiêuLưu"
+      ],
       "category": "Tiên Hiệp, Huyền Huyễn",
       "genres": [
         "Tiên Hiệp",
         "Huyền Huyễn"
       ],
-      "ready": false,
+      "ready": true,
       "skipped": false
     },
     {
       "slug": "ac-mong-kinh-tap",
       "story_id": 1547,
-      "title": "Ác Mộng Kinh Tập",
-      "description": "Truyện đưa người đọc dấn thân vào một hành trình đầy rẫy bất an và hoài nghi, nơi ranh giới giữa thực tại và ác mộng trở nên mờ nhạt đến đáng sợ. Mở đầu bằng sự biến mất khó hiểu của những con người bình thường, câu chuyện nhanh chóng dẫn lối đến một thế giới song song, nơi những quy luật tự nhiên bị đảo lộn và sự sống chỉ là một đặc ân tạm bợ.Không khí bao trùm là sự căng thẳng tột độ, mỗi chi tiết nhỏ đều có thể ẩn chứa một hiểm nguy chết người, mỗi hành động đều phải cân nhắc kỹ lưỡng. Người đọc sẽ liên tục bị đặt vào trạng thái cảnh giác cao độ, đồng hành cùng các nhân vật trong cuộc chiến sinh tồn khắc nghiệt. Cảm giác sợ hãi không đến từ những màn hù dọa rẻ tiền, mà từ sự quỷ dị ngấm ngầm, từ những hiện tượng phi lý dần dần được hé lộ, và từ chính bản chất khó lường của con người khi đứng trước lằn ranh sinh tử.Phong cách truyện mạch lạc nhưng luôn chứa đựng những cú lật ngoạn mục, những tiết lộ bất ngờ khiến người đọc không thể đoán trước. Văn phong sắc sảo, chi tiết, đôi khi pha lẫn chút hài hước đen tối, tạo nên một sự tương phản thú vị giữa bối cảnh u ám và những màn đối đáp đầy châm biếm. Ngôn ngữ được sử dụng khéo léo để xây dựng một thế giới đầy bí ẩn, nơi những câu chuyện quá khứ đan xen với hiện tại, tạo thành một mạng lưới phức tạp của sự lừa dối và sự thật.Giang Thành, nhân vật chính của chúng ta, là một bác sĩ tâm lý với vẻ ngoài điềm tĩnh đến lạnh lùng. Anh là một người đàn ông tinh tế, sắc sảo, với khả năng quan sát và phân tích vượt trội. Dù thường xuyên đối mặt với những tình huống kinh hoàng nhất, Giang Thành hiếm khi để lộ cảm xúc, mà luôn giữ một vẻ mặt bình thản, thậm chí có phần bất cần. Anh không chỉ thông minh trong việc giải mã các manh mối và quy tắc của Mộng Giới, mà còn là một bậc thầy trong nghệ thuật thao túng tâm lý. Giang Thành không ngại ngần lợi dụng nỗi sợ hãi và sự ngờ vực của người khác để đạt được mục đích của mình, dù là để sống sót hay để khám phá chân tướng. Đặc biệt, Giang Thành sở hữu một khiếu hài hước đen tối, thường xuyên buông ra những câu nói châm biếm, độc địa, khiến những người xung quanh không khỏi 'ngẹn họng' hoặc rơi vào tình thế dở khóc dở cười. Chính sự phức tạp và khó lường trong tính cách của Giang Thành đã tạo nên một sức hút đặc biệt cho câu chuyện. Anh không phải là một anh hùng theo nghĩa truyền thống, mà là một kẻ sống sót lọc lõi, đôi khi ích kỷ nhưng lại vô cùng hiệu quả.Mỗi nhiệm vụ trong Mộng Giới là một chương mới, với bối cảnh và quy tắc riêng biệt, nhưng đều xoay quanh những cái chết bí ẩn và những sự thật bị che giấu. Từ căn biệt thự ma ám với lịch sử tà giáo, nơi những nạn nhân bị giam cầm và tra tấn, cho đến học viện nghệ thuật u ám với những truyền thuyết về nữ sinh múa ba lê và những nhân viên bảo vệ không cằm, mỗi nơi đều là một mê cung chết chóc đòi hỏi sự tỉnh táo và nhạy bén đến tột độ.Các nhân vật phụ được xây dựng đa chiều, mỗi người mang một quá khứ, một động cơ và một cách ứng phó riêng với ác mộng. Từ Mập Mạp hiền lành, trung thành nhưng dễ bị lừa, đến Phiền Lực vạm vỡ nhưng tham lam, hay Trần Hiểu Manh và Trương Nhân Nhân với vẻ ngoài ngây thơ nhưng ẩn chứa sự xảo quyệt đáng sợ, mỗi người đều góp phần tạo nên một bức tranh xã hội thu nhỏ đầy chân thực về bản chất con người khi đứng trước cái chết.Sự căng thẳng liên tục được duy trì qua những màn suy luận sắc bén, những cuộc đối đầu tâm lý kịch tính và những cái chết ghê rợn không báo trước. Câu chuyện không chỉ dừng lại ở việc giải mã các bí ẩn siêu nhiên, mà còn đào sâu vào những khía cạnh đen tối nhất của tâm lý con người, về sự lừa dối, sự ích kỷ, và khát vọng sinh tồn mãnh liệt. Người đọc sẽ được chứng kiến cách Giang Thành vận dụng trí tuệ và sự lạnh lùng để sống sót, đồng thời vén màn những âm mưu phức tạp của cả ma quỷ và con người.Các tình tiết được đan xen một cách khéo léo, tạo nên một cảm giác mơ hồ giữa sự thật và giả dối. Những thông tin ban đầu tưởng chừng là chân lý lại có thể bị lật đổ hoàn toàn chỉ bằng một chi tiết nhỏ. Điều này đòi hỏi người đọc phải luôn đặt câu hỏi, không ngừng suy nghĩ và phân tích cùng với Giang Thành. Cảm giác cô độc, bất lực khi đối mặt với những thế lực siêu nhiên và sự phản bội từ chính đồng đội càng làm tăng thêm chiều sâu cảm xúc cho truyện.Giữa những màn cân não và sợ hãi, câu chuyện vẫn không thiếu những khoảnh khắc hài hước đầy châm biếm, chủ yếu đến từ những màn đối đáp 'cà khịa' của Giang Thành và phản ứng 'bất lực' của Mập Mạp. Những chi tiết này không làm giảm đi sự căng thẳng mà ngược lại, giúp truyện trở nên cân bằng hơn, mang đến những giây phút giải tỏa nhẹ nhàng trước khi lại lao vào những tình huống nguy hiểm mới.Truyện không tiết lộ rõ ràng về bản chất thực sự của Mộng Giới hay mục đích cuối cùng của nó, mà chỉ tập trung vào trải nghiệm của các nhân vật trong từng nhiệm vụ. Điều này giữ vững sự bí ẩn, để lại nhiều không gian cho trí tưởng tượng của người đọc. Cuối cùng, đây là một câu chuyện đầy mê hoặc, kịch tính và sâu sắc, đủ sức níu chân bất kỳ ai yêu thích thể loại kinh dị tâm lý và trinh thám. Tags: ác mộng, siêu nhiên, bí ẩn, sinh tồn, tâm lý học, kinh dị, thao túng, hài đen, trinh thám",
-      "hashtags": [],
+      "title": "Hành Trình Sống Sót Trong Ác Mộng",
+      "description": "Mộng cảnh sơ khai, thực hư nan phân. Giữa vạn trượng thâm uyên của Mộng Giới, có một người nam tử thanh lãnh, lấy nhân tâm làm bàn cờ, lấy nỗi sợ làm quân tử. Giang Thành – một vị y sĩ tâm lý với thủ đoạn sắc sảo, đi xuyên qua những huyết án mịt mờ và những truyền thuyết quỷ quyệt nhất. Hắn không cầu làm anh hùng cứu thế, chỉ nguyện làm kẻ sống sót lọc lõi giữa lằn ranh sinh tử. Một kiếp luân hồi trong ác mộng, rốt cuộc là chân tướng tìm ta, hay ta đang tự tay dệt nên một màn kinh tập vạn cổ?",
+      "hashtags": [
+        "#KinhDịTâm",
+        "#TrangTrọng",
+        "#MộngGiới",
+        "#ĐấuTrí",
+        "#HánViệt"
+      ],
       "category": "",
       "genres": [],
-      "ready": false,
+      "ready": true,
       "skipped": false
     },
     {
@@ -402,15 +420,21 @@
     {
       "slug": "ai-phi-tuyet-sac-cua-than-bi-vuong-gia",
       "story_id": 139,
-      "title": "Ái Phi Tuyệt Sắc Của Thần Bí Vương Gia",
-      "description": "Giữa chốn cung đình thâm sâu, nơi âm mưu giăng kín, quận chúa Tây Việt - Hoa Tịch Nhan, mang vẻ đẹp khuynh quốc khuynh thành, bất ngờ bị đẩy vào vòng xoáy chính trị nghiệt ngã. Số phận trớ trêu buộc nàng phải lên đường hòa thân, gả đến Bắc Mạc quốc hùng mạnh.\n\nNhưng Tịch Nhan, với trí tuệ sắc sảo và bản lĩnh hơn người, nào cam chịu an bài? Nàng quyết tâm dùng chính sự thông minh và vẻ đẹp của mình để xoay chuyển càn khôn, bảo vệ bản thân và những người thân yêu.\n\nLiệu con đường phía trước có trải đầy hoa hồng? Hay nàng sẽ phải đối mặt với:\n\n*   Những âm mưu thâm độc, những cuộc đấu đá quyền lực đẫm máu?\n*   Và cả những mối tình đầy rẫy bất ngờ?\n\nNàng gặp gỡ Hoàng Phủ Thanh Vũ, vị Thất hoàng tử tài hoa ẩn chứa vô vàn bí mật. Ban đầu đến với nhau bằng những toan tính riêng, nhưng dần dà, giữa họ lại nảy sinh những rung động chân thật. Song, mối tình ấy lại bị cản trở bởi quá khứ, bởi những thế lực đen tối đang rình rập, và bởi cả những bóng hình khác...\n\n*   Hoàng Phủ Thanh Thần, em trai Thanh Vũ, luôn trao cho Tịch Nhan ánh mắt nồng nàn khó đoán. Sự quan tâm ấy rốt cuộc mang ý nghĩa gì?\n*   Nam Cung Ngự, sư huynh luôn âm thầm bảo vệ nàng từ thuở ấu thơ, nay trở lại với thân phận bí ẩn, càng khiến mọi chuyện thêm phần rối ren?\n\n**Điểm đặc sắc:**\n\n*   Văn phong cuốn hút, giàu hình ảnh và cảm xúc.\n*   Xây dựng nhân vật đa diện, khắc họa bức tranh cung đình sống động.\n*   Đi sâu vào tâm lý nhân vật, đặc biệt là những giằng xé nội tâm của nữ chính.\n*   Cảm xúc đan xen: căng thẳng, hồi hộp, lãng mạn và bi thương.\n\nHãy cùng Hoa Tịch Nhan bước vào cuộc chiến sinh tồn đầy cam go, trải nghiệm những cung bậc cảm xúc mãnh liệt, và tìm kiếm câu trả lời cuối cùng cho định mệnh của chính mình.\n\n**Tags:** Cung Đấu, Tranh Quyền Đoạt Vị, Ngôn Tình, Huyền Huyễn, H, Hòa Thân, Sủng Ngọt, Gương Vỡ Lại Lành",
-      "hashtags": [],
+      "title": "Tuyệt Sắc Hòa Thân",
+      "description": "Một dải lụa đào, một chuyến xe hòa thân, tưởng chừng là dấu chấm hết cho cuộc đời của vị quận chúa tài sắc. Nhưng không, đó chính là khởi đầu cho một hành trình chinh phục đỉnh cao quyền lực. Với bản lĩnh hơn người và vẻ đẹp làm vũ khí, nàng không cam chịu làm quân cờ, mà tự mình trở thành người chơi cờ. Từ Tây Việt đến Bắc Mạc, đi đến đâu nàng cũng khiến những kẻ quyền thế phải cúi đầu, khiến những nam nhân kiêu ngạo nhất cũng phải si mê. Đối mặt với âm mưu thâm độc hay những thế lực đen tối, nàng dùng sự thông minh tột đỉnh để dẹp tan tất cả, viết lại định mệnh của chính mình giữa chốn cung đình rực lửa.",
+      "hashtags": [
+        "#NữCường",
+        "#VôĐịch",
+        "#SảngVăn",
+        "#SủngNgọt",
+        "#HòaThân"
+      ],
       "category": "Ngôn Tình, Sắc",
       "genres": [
         "Ngôn Tình",
         "Sắc"
       ],
-      "ready": false,
+      "ready": true,
       "skipped": false
     },
     {
@@ -449,15 +473,20 @@
     {
       "slug": "am-duong-mien",
       "story_id": 1293,
-      "title": "Âm Dương Miện",
-      "description": "Cơ Động, một Tửu Thần từ thế giới khác, bất ngờ xuyên không đến Ngũ Hành đại lục, trở thành một tiểu khất cái mồ côi. Mang trong mình kiến thức pha chế rượu vô song, Cơ Động quyết tâm thay đổi số phận và tìm kiếm một cuộc sống mới. Thế giới Ngũ Hành mở ra trước mắt Cơ Động với những điều kỳ diệu về ma pháp, những cuộc tranh đấu quyền lực và những bí ẩn chưa được khám phá. \n\nQuyết tâm của Cơ Động được thử thách khi nhận ra thân thể mới của mình mang thuộc tính Âm Dương Cân Bằng, một điều kiện hiếm gặp nhưng lại bị coi là phế thải trong giới tu luyện. Không chịu khuất phục trước số phận, Cơ Động quyết định dấn thân vào con đường tu luyện Âm Dương Ma Sư, một con đường đầy chông gai và thử thách.  \n\nMay mắn thay, Cơ Động gặp gỡ Dương Bỉnh Thiên, viện trưởng của Ly Hỏa học viện, người nhìn thấy tiềm năng của Cơ Động và tạo điều kiện cho Cơ Động được học tập và tu luyện. Tại Ly Hỏa học viện, Cơ Động phải đối mặt với những khó khăn trong việc hòa nhập, những ánh mắt kỳ thị và sự cạnh tranh khốc liệt.  \n\nTuy nhiên, với sự kiên trì, trí thông minh và tài năng pha chế rượu độc đáo, Cơ Động dần dần khẳng định được vị thế của mình. Bên cạnh đó, sự xuất hiện của Liệt Diễm, một nhân vật bí ẩn và mạnh mẽ, đã mở ra một chương mới trong cuộc đời Cơ Động. \n\nCuộc hành trình của Cơ Động không chỉ là con đường tu luyện sức mạnh, mà còn là hành trình khám phá bản thân, tìm kiếm tình yêu và bảo vệ những người quan trọng. Thế giới Ngũ Hành rộng lớn với những bí mật ẩn giấu, những thế lực đen tối và những cuộc chiến tranh khốc liệt đang chờ đợi Cơ Động. Liệu Cơ Động có thể vượt qua mọi thử thách và trở thành một Âm Dương Ma Sư thực thụ, hay sẽ chìm đắm trong thế giới đầy rẫy những nguy hiểm và cạm bẫy này? \n\nCảm xúc chủ đạo của truyện là sự kiên trì, nỗ lực vượt khó, tình bạn và khát vọng vươn lên. Văn phong truyện trôi chảy, dễ đọc, pha trộn giữa yếu tố hài hước và nghiêm túc, tạo nên một câu chuyện hấp dẫn và lôi cuốn. \n\n Tags: Huyền huyễn, Dị giới, Xuyên không, Tu luyện, Pha chế rượu, Âm Dương Ngũ Hành",
-      "hashtags": [],
+      "title": "Tửu Thần Xuyên Không: Phế Tài Nghịch Thiên Càn Quét Ngũ Hành",
+      "description": "Tửu Thần Cơ Động từ thế giới hiện đại bất ngờ xuyên không, tái sinh trong thân xác một tiểu khất cái tại Ngũ Hành đại lục. Giữa một thế giới lấy ma lực làm trọng, nàng lại mang trong mình thuộc tính Âm Dương Cân Bằng bị coi là phế thải. Thế nhưng, đằng sau sự kỳ thị của người đời là một thiên phú cổ kim chưa từng có. Từ Ly Hỏa học viện đến những tầng sâu của Địa Tâm thế giới, Cơ Động từng bước lột xác, dùng đôi tay pha chế rượu thần thánh để xoay chuyển định mệnh. Sự xuất hiện của nữ thần bí ẩn Liệt Diễm cùng những âm mưu đen tối nơi Thánh Tà đảo đang dần hé mở, liệu vị Bạo Quân tương lai sẽ làm gì để bảo vệ tình yêu và đối đầu với Hắc Ám Thiên Cơ?",
+      "hashtags": [
+        "#HuyềnHuyễn",
+        "#XuyênKhông",
+        "#TuLuyện",
+        "#BíẨn"
+      ],
       "category": "Tiên Hiệp, Huyền Huyễn",
       "genres": [
         "Tiên Hiệp",
         "Huyền Huyễn"
       ],
-      "ready": false,
+      "ready": true,
       "skipped": false
     },
     {
@@ -474,14 +503,19 @@
     {
       "slug": "an-ca-ky-vi-tu",
       "story_id": 1481,
-      "title": "An Ca Ký Vi Từ",
-      "description": "Bước vào thế giới **Y Sư**, nơi những con người khoác áo blouse trắng không chỉ là ân nhân cứu mạng, mà còn mang trong mình những khát vọng, nỗi đau và bí mật thầm kín...\n\nCâu chuyện xoay quanh Quý Hàng, vị Phó khoa Ngoại thần kinh trẻ tuổi, tài năng ngút trời. Anh sống và làm việc theo những nguyên tắc thép, một con người tài giỏi, lạnh lùng, có chút độc đoán, nhưng tận tâm với nghề và hết lòng bảo vệ những người mình trân trọng.\n\nCuộc sống tưởng chừng hoàn hảo của Quý Hàng bị xáo trộn bởi sự xuất hiện của An Ký Viễn, cậu em trai tài giỏi nhưng đầy nổi loạn. Ký Viễn mang trong tim những vết sẹo quá khứ, khao khát được công nhận, khiến mối quan hệ vốn đã phức tạp giữa hai anh em càng thêm rối ren khi những bí mật dần hé lộ...\n\nBên cạnh đó, Kiều Thạc, người học trò trung thành và tận tâm của Quý Hàng, đóng vai trò quan trọng không kém. Tính cách phóng khoáng, có phần tùy tiện của Kiều Thạc tạo nên sự tương phản thú vị với vẻ ngoài nghiêm nghị của Quý Hàng, nhưng ẩn sâu bên trong là một trái tim ấm áp và lòng trắc ẩn sâu sắc.\n\n**Y Sư** không chỉ là một câu chuyện về y học, mà còn là khúc ca về tình người, về những lựa chọn nghiệt ngã và hành trình trưởng thành đầy gian nan. Truyện sử dụng văn phong lôi cuốn, giàu hình ảnh, khắc họa rõ nét thế giới nội tâm phức tạp của các nhân vật.\n\nDù có sử dụng nhiều thuật ngữ y học chuyên ngành, đòi hỏi sự kiên nhẫn tìm hiểu, nhưng chúng được giải thích cặn kẽ, giúp người đọc dễ dàng theo dõi câu chuyện. Yếu tố 18+ được thể hiện một cách tế nhị, tập trung khai thác khía cạnh cảm xúc và tâm lý nhân vật, hứa hẹn mang đến những trải nghiệm đọc sâu sắc và đầy ám ảnh.\n\n**Tags:** Y học, tình cảm, thầy trò, đam mỹ, hiện đại, trưởng thành, 18+",
-      "hashtags": [],
+      "title": "Y Sư Thanh Ca",
+      "description": "Thanh y bạch mã, nhất thế y sư. Chốn bệnh viện thâm sâu như hải, Quý Hàng vị phó khoa lãnh đạm tựa băng sương, thủ pháp tinh diệu, tâm tư kiên định. An Ký Viễn thiếu niên tài tuấn, mang theo vạn dặm u sầu cùng tâm tình phản nghịch quay về, khiến mặt hồ tĩnh lặng dậy sóng. Kiều Thạc bên cạnh khi thì phóng khoáng tùy tâm, khi thì chân thành ấm áp, dệt nên những mối tơ vương khó dứt. Giữa sinh tử mong manh, họ cùng viết nên khúc ca về tình người, về sự trưởng thành sau những lần vấp ngã. Một đời y đức, một kiếp tình thâm, dẫu là lựa chọn đau đớn cũng chẳng hối tiếc.",
+      "hashtags": [
+        "#ĐamMỹ",
+        "#ThầyTrò",
+        "#TrangTrọng",
+        "#NhânVăn"
+      ],
       "category": "Đam Mỹ",
       "genres": [
         "Đam Mỹ"
       ],
-      "ready": false,
+      "ready": true,
       "skipped": false
     },
     {
@@ -7454,6 +7488,17 @@
       "slug": "khai-cuc-soi-đen-quyen-đon-gian-hoa-sau-lam-ta-hoc-lang-keu",
       "story_id": 2665,
       "title": "Khai cục sói đen quyền, đơn giản hoá sau làm ta học lang kêu",
+      "description": "",
+      "hashtags": [],
+      "category": "",
+      "genres": [],
+      "ready": false,
+      "skipped": false
+    },
+    {
+      "slug": "khai-cuc-than-cap-muc-tu-dung-vo-chung-đao-thuc-hop-ly-đi-vo-đao-thong-than-tu-t",
+      "story_id": 2669,
+      "title": "Khai cục thần cấp mục từ, dùng võ chứng đạo thực hợp lý đi / Võ đạo thông thần: Từ trời đãi kẻ cần cù bắt đầu",
       "description": "",
       "hashtags": [],
       "category": "",
@@ -20988,6 +21033,17 @@
       "skipped": false
     },
     {
+      "slug": "trong-sinh-09-ta-vi-tai-phu-chi-vuong",
+      "story_id": 2668,
+      "title": "Trọng sinh 09: Ta vì tài phú chi vương",
+      "description": "",
+      "hashtags": [],
+      "category": "",
+      "genres": [],
+      "ready": false,
+      "skipped": false
+    },
+    {
       "slug": "trong-sinh-80-nu-thay-tuong",
       "story_id": 278,
       "title": "Trọng Sinh 80: Nữ Thầy Tướng",
@@ -22458,6 +22514,17 @@
       "slug": "van-hao-to-chuc-cai-nay-to-chuc-no-đung-đan-sao",
       "story_id": 1612,
       "title": "【 văn hào tổ chức 】 cái này tổ chức nó đứng đắn sao",
+      "description": "",
+      "hashtags": [],
+      "category": "",
+      "genres": [],
+      "ready": false,
+      "skipped": false
+    },
+    {
+      "slug": "van-kiem-trieu-tong",
+      "story_id": 2670,
+      "title": "Vạn kiếm triều tông",
       "description": "",
       "hashtags": [],
       "category": "",

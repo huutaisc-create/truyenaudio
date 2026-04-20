@@ -333,11 +333,13 @@ export async function getChapterBySlugAndIndex(slug: string, index: number) {
                 data: { viewCount: { increment: 1 } }
             }).catch(e => console.error("Failed to increment chapter view", e)),
             db.chapter.findFirst({
-                where: { storyId: story.id, index: index - 1 },
+                where: { storyId: story.id, index: { lt: index } },
+                orderBy: { index: 'desc' },
                 select: { index: true }
             }),
             db.chapter.findFirst({
-                where: { storyId: story.id, index: index + 1 },
+                where: { storyId: story.id, index: { gt: index } },
+                orderBy: { index: 'asc' },
                 select: { index: true }
             })
         ]);

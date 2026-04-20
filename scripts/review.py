@@ -20,10 +20,16 @@ import re
 import argparse
 import unicodedata
 import threading
+import subprocess
 from pathlib import Path
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
+
+# ── Crawl subprocess tracking ─────────────────────────────────────────────────
+_crawl_procs: dict = {}   # slug → subprocess.Popen
+_crawl_logs:  dict = {}   # slug → list[str]
+_crawl_lock   = threading.Lock()
 
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env.upload")
@@ -94,7 +100,7 @@ def _chapter_num(filename: str):
 
 def check_story_content(story_dir: Path) -> dict:
     """Kiểm tra chương trùng / lỗi / sai số / thiếu — chỉ báo cáo, không sửa file."""
-    all_files = [f for f in os.listdir(story_dir) if f.lower().endswith('.txt')]
+    all_files = [f for f in os.listdir(story_dir) if _chapter_num(f) is not None]
     sorted_files = sorted(all_files, key=lambda fn: (_chapter_num(fn) or 999999))
 
     pool       = []   # [(filename, fingerprint)]
@@ -116,9 +122,9 @@ def check_story_content(story_dir: Path) -> dict:
         except Exception:
             continue
 
-        lines = [l for l in content.split('\n') if l.strip()]
-        if len(lines) < 10:
-            errors.append({'file': filename, 'lines': len(lines)})
+        file_size = fp_path.stat().st_size
+        if file_size < 3 * 1024:  # dưới 3KB
+            errors.append({'file': filename, 'size_kb': round(file_size / 1024, 2)})
             continue
 
         fp = _clean_fingerprint(content[:5000])
@@ -308,6 +314,18 @@ def _process_file(file_path: Path, filename: str, style: str):
         elif re.match(rf'^\s*{prefix}', first, re.IGNORECASE):
             first = re.sub(r'(\s*\d+\s*:\s*)\d+\s*', r'\1', first)
 
+    # Xóa dòng tiêu đề chương đầu file: "Chương 1: Tên...", "Chương 1 Tên...", "CHƯƠNG 1. Tên..."
+    # Chỉ xóa nếu nó là dòng đầu tiên có nội dung (bỏ qua các dòng trắng đầu)
+    _CHAPTER_TITLE_RE = re.compile(
+        r'^\s*(chương|trang|phần|quyển)\s+\d+\s*[:\.\-–—]?\s*\S',
+        re.IGNORECASE
+    )
+    _first_content_idx = next((i for i, l in enumerate(raw_lines) if l.strip()), None)
+    if _first_content_idx is not None and _CHAPTER_TITLE_RE.match(raw_lines[_first_content_idx]):
+        raw_lines[_first_content_idx] = ''
+        if _first_content_idx == 0:
+            first = ''  # cập nhật luôn biến first vì vòng lặp dùng first cho i==0
+
     out = []
     for i, line in enumerate(raw_lines):
         src = first if i == 0 else line
@@ -328,7 +346,7 @@ def process_story_text(story_dir: Path, style: str) -> dict:
     """Xử lý văn bản trực tiếp tất cả file .txt trong thư mục."""
     processed, failed = 0, []
     for filename in sorted(os.listdir(story_dir)):
-        if not filename.lower().endswith('.txt'):
+        if _chapter_num(filename) is None:   # chỉ xử lý file chương _XXXX.txt
             continue
         try:
             _process_file(story_dir / filename, filename, style)
@@ -584,11 +602,67 @@ class _Handler(BaseHTTPRequestHandler):
                 self._json(process_story_text(story_dir, style))
             except Exception as e:
                 self._json({'error': str(e)}, 500)
+
+        elif parsed.path == '/crawl-log':
+            with _crawl_lock:
+                proc  = _crawl_procs.get(slug)
+                lines = list(_crawl_logs.get(slug, []))
+                running = proc is not None and proc.poll() is None
+            self._json({'lines': lines, 'running': running})
+
         else:
             self._json({'error': 'not found'}, 404)
 
     def do_POST(self):
         parsed = urlparse(self.path)
+
+        if parsed.path == '/crawl-missing':
+            try:
+                length = int(self.headers.get('Content-Length', 0))
+                body   = json.loads(self.rfile.read(length).decode('utf-8'))
+            except Exception as e:
+                return self._json({'error': f'Bad request: {e}'}, 400)
+
+            slug    = body.get('slug', '').strip()
+            url     = body.get('url', '').strip()
+            missing = body.get('missing', [])  # list of int (gợi ý từ check)
+
+            if not slug or not url:
+                return self._json({'error': 'Thiếu slug / url'}, 400)
+
+            script = Path(__file__).parent / 'crawl_missing.py'
+            # Truyền missing-hint để hiện gợi ý trong CMD, user tự nhập xác nhận
+            hint_str = ','.join(str(i) for i in missing) if missing else ''
+            cmd_args = [
+                sys.executable, str(script),
+                '--slug',          slug,
+                '--url',           url,
+                '--stories-dir',   str(_STORIES_DIR_PATH),
+            ]
+            if hint_str:
+                cmd_args += ['--missing-hint', hint_str]
+
+            import platform, tempfile
+            try:
+                if platform.system() == 'Windows':
+                    # Ghi ra .bat tạm để tránh vấn đề quoting trong cmd /k
+                    inner_cmd = subprocess.list2cmdline(cmd_args)
+                    bat_path  = Path(tempfile.gettempdir()) / f'crawl_{slug}.bat'
+                    bat_path.write_text(
+                        f'@echo off\nchcp 65001 >nul\n{inner_cmd}\npause\n',
+                        encoding='utf-8'
+                    )
+                    subprocess.Popen(
+                        ['cmd', '/k', str(bat_path)],
+                        creationflags=subprocess.CREATE_NEW_CONSOLE,
+                    )
+                else:
+                    # Linux/macOS — thử x-terminal-emulator hoặc xterm
+                    term = 'x-terminal-emulator'
+                    subprocess.Popen([term, '-e', subprocess.list2cmdline(cmd_args)])
+                return self._json({'ok': True, 'message': f'Đã mở cửa sổ CMD — nhập index trong cửa sổ đó.'})
+            except Exception as e:
+                return self._json({'error': f'Không mở được CMD: {e}'}, 500)
 
         if parsed.path == '/save-selections':
             try:
@@ -898,6 +972,14 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     color: var(--accent2); font-size: 17px;
   }
   .btn-upload.uploaded:hover { background: rgba(59,130,246,.2); }
+  .btn-header-upload {
+    padding: 3px 12px; border-radius: 6px; border: none;
+    background: #16a34a; color: #fff; cursor: pointer;
+    font-size: 13px; font-weight: 700; transition: background .15s;
+    white-space: nowrap;
+  }
+  .btn-header-upload:hover    { background: #15803d; }
+  .btn-header-upload:disabled { opacity: .5; cursor: wait; }
 
   /* ── Genres display ── */
   .genres-list { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -933,6 +1015,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   <button class="filter-btn" onclick="setFilter('pending', this)">⏳ Chưa chọn</button>
   <button class="filter-btn" onclick="setFilter('done', this)">✅ Đã chọn</button>
   <button class="filter-btn" onclick="setFilter('skip', this)">⏭ Bỏ qua</button>
+  <button class="filter-btn" onclick="setFilter('uploaded', this)">🚀 Đã upload</button>
   <span style="width:1px;background:var(--border);align-self:stretch;margin:0 4px"></span>
   <span id="sourceFilters"></span>
   <input class="search-input" type="text" placeholder="🔍 Tìm theo tên..." oninput="filterSearch(this.value)" />
@@ -1071,12 +1154,22 @@ function renderCard(s, i) {
         <div class="story-meta">
           <span>📂 ${esc(s.slug)}</span>
           <span>📖 ${s.chapter_count} chương</span>
-          ${s.source ? `<span>🔗 ${esc(s.source)}</span>` : ''}
+          ${s.source ? `<span>${esc(s.source)}</span>` : ''}
+          ${s.url ? `<a href="${esc(s.url)}" target="_blank" title="${esc(s.url)}" style="color:#60a5fa;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">🔗 Link gốc</a>` : ''}
         </div>
       </div>
       <div class="card-status">
         <span class="status-icon">${statusIcon}</span>
         ${statusBadge}
+        ${st.uploaded
+          ? '<span class="badge" style="background:#1d4ed8;color:#fff;font-weight:700">🚀 Đã upload</span>'
+          : st.status === 'done'
+            ? `<button class="btn-header-upload" id="headerUploadBtn_${esc(s.slug)}"
+                 onclick="event.stopPropagation(); uploadStory('${esc(s.slug)}', this, true)">
+                 🚀 Upload
+               </button>`
+            : ''
+        }
         ${s.is_ready        ? '<span class="badge green">🟢 Đủ điều kiện</span>' : ''}
         ${s.has_upload_json ? '<span class="badge blue">Gemini ✓</span>'        : '<span class="badge" title="Thiếu upload.json">❌ No Gemini</span>'}
         ${s.has_image       ? '' : '<span class="badge" title="Thiếu ảnh bìa">🖼️ No image</span>'}
@@ -1163,9 +1256,9 @@ async function checkDuplicate(slug, btn) {
       if (d.duplicates.length > 20) html += `<div class="tr-item">... và ${d.duplicates.length-20} chương nữa</div>`;
     }
     if (d.errors.length) {
-      html += `<div class="tr-warn" style="margin-top:8px">⚠️ Nghi lỗi crawl (&lt;10 dòng): ${d.errors.length} chương</div>`;
+      html += `<div class="tr-warn" style="margin-top:8px">⚠️ Nghi lỗi crawl (&lt;3 KB): ${d.errors.length} chương</div>`;
       d.errors.slice(0,10).forEach(x =>
-        html += `<div class="tr-item">${x.file} — ${x.lines} dòng</div>`
+        html += `<div class="tr-item">${x.file} — ${x.size_kb} KB</div>`
       );
     }
     if (d.misnamed.length) {
@@ -1175,7 +1268,24 @@ async function checkDuplicate(slug, btn) {
       );
     }
     if (d.missing && d.missing.length) {
-      html += `<div class="tr-err" style="margin-top:8px">🕳 Thiếu chương: ${d.missing_count} chương</div>`;
+      // Tính list index thiếu đầy đủ từ các range
+      const missingIndices = [];
+      d.missing.forEach(x => {
+        for (let i = x.from; i <= x.to; i++) missingIndices.push(i);
+      });
+      const storyMeta = STORIES.find(x => x.slug === slug);
+      const storyUrl  = storyMeta ? (storyMeta.url || '') : '';
+
+      html += `<div class="tr-err" style="margin-top:8px;display:flex;align-items:center;gap:10px">
+        <span>🕳 Thiếu chương: ${d.missing_count} chương</span>
+        ${storyUrl
+          ? `<button onclick="startCrawlMissing('${slug}', '${storyUrl.replace(/'/g,"\\'")}', ${JSON.stringify(missingIndices)})"
+               style="padding:3px 12px;border-radius:6px;border:none;background:#2563eb;color:#fff;cursor:pointer;font-size:13px;font-weight:600">
+               🔄 Crawl chương thiếu
+             </button>`
+          : '<span style="font-size:12px;color:var(--muted)">(thiếu URL gốc trong meta.json)</span>'
+        }
+      </div>`;
       d.missing.slice(0, 15).forEach(x => {
         const range = x.from === x.to ? `#${x.from}` : `#${x.from} → #${x.to} (${x.count} chương)`;
         html += `<div class="tr-item">${range}</div>`;
@@ -1233,11 +1343,17 @@ async function processText(slug, type) {
 }
 
 // ── Upload lên server ────────────────────────────────────────────────────────
-async function uploadStory(slug, btn) {
+async function uploadStory(slug, btn, fromHeader = false) {
   const s  = STORIES.find(x => x.slug === slug);
   const st = state[slug];
-  const title = st.title || s.original_title;
 
+  // Bắt buộc phải đánh dấu Sẵn sàng trước
+  if (st.status !== 'done') {
+    alert('⚠️ Vui lòng nhấn "Sẵn sàng upload" trước khi upload!');
+    return;
+  }
+
+  const title = st.title || s.original_title;
   if (!confirm(`Upload "${title}" lên server?\n(${s.chapter_count} chương)`)) return;
 
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang upload…'; }
@@ -1260,23 +1376,37 @@ async function uploadStory(slug, btn) {
     });
     const d = await res.json();
     if (d.success) {
-      // Lưu vào state ngay
       const now = new Date().toLocaleString('vi-VN', {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'});
       state[slug].uploaded = { uploaded_at: now, chapters: d.total, inserted: d.inserted, cover: d.cover||'' };
-      if (st.status !== 'done') markReady(slug);
+
+      // Cập nhật header button → badge "Đã upload" (không rebuild card, tránh collapse)
+      const headerBtn = document.getElementById(`headerUploadBtn_${slug}`);
+      if (headerBtn) {
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.style.cssText = 'background:#1d4ed8;color:#fff;font-weight:700';
+        badge.textContent = '🚀 Đã upload';
+        headerBtn.replaceWith(badge);
+      }
 
       let html = `<div class="tr-title">🚀 Upload hoàn tất!</div>`;
       html += `<div class="tr-ok">✅ ${d.message}</div>`;
       if (d.cover) html += `<div style="color:var(--muted);font-size:16px;margin-top:4px">🖼 Cover: ${d.cover}</div>`;
-      showResult(slug, html);
 
-      // Đổi nút thành "Đã upload"
-      if (btn) {
-        btn.classList.add('uploaded');
-        btn.textContent = `✅ Đã upload (${now})`;
-        btn.disabled = false;
-        return;
+      if (fromHeader) {
+        showToast(`🚀 Upload "${title}" thành công!`);
+      } else {
+        showResult(slug, html);
+        // Đổi nút trong card-body
+        if (btn) {
+          btn.classList.add('uploaded');
+          btn.textContent = `✅ Đã upload (${now})`;
+          btn.disabled = false;
+        }
       }
+      updateProgress();
+      autoSave();
+      return;
     } else {
       showResult(slug, `<span class="tr-err">❌ ${d.message || d.error || 'Lỗi không xác định'}</span>`);
     }
@@ -1417,10 +1547,11 @@ function applyFilters(searchQ) {
     const st    = state[slug];
     const story = STORIES.find(x => x.slug === slug);
     let show = true;
-    if (currentFilter === 'ready'   && !story.is_ready)      show = false;
-    if (currentFilter === 'done'    && st.status !== 'done')  show = false;
-    if (currentFilter === 'skip'    && st.status !== 'skip')  show = false;
-    if (currentFilter === 'pending' && st.status !== null)    show = false;
+    if (currentFilter === 'ready'    && (!story.is_ready || st.uploaded || st.status === 'skip')) show = false;
+    if (currentFilter === 'done'     && st.status !== 'done')             show = false;
+    if (currentFilter === 'skip'     && st.status !== 'skip')             show = false;
+    if (currentFilter === 'pending'  && st.status !== null)               show = false;
+    if (currentFilter === 'uploaded' && !st.uploaded)                     show = false;
     if (currentSource !== 'all' && (story.source||'').trim() !== currentSource) show = false;
     if (q && !slug.includes(q) && !title.includes(q))        show = false;
     card.classList.toggle('hidden', !show);
@@ -1435,6 +1566,24 @@ function exportSelections() {
   a.click();
   URL.revokeObjectURL(url);
   showToast(`✅ Đã export ${output.ready} truyện sẵn sàng upload!`);
+}
+
+async function startCrawlMissing(slug, url, missingIndices) {
+  try {
+    const res  = await fetch(`${API}/crawl-missing`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug, url, missing: missingIndices }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(`🖥️ Đã mở CMD — nhập index trong cửa sổ mới (gợi ý: ${missingIndices.length} chương)`);
+    } else {
+      showToast('⚠️ ' + (data.message || data.error || 'Lỗi không xác định'));
+    }
+  } catch(e) {
+    showToast('❌ Không kết nối được server review.py');
+  }
 }
 
 function showToast(msg) {
