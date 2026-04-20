@@ -257,8 +257,19 @@ export async function updateStory(id: string, formData: FormData) {
 export async function deleteStory(id: string) {
     const session = await checkAdmin();
     try {
-        const story = await db.story.findUnique({ where: { id }, select: { title: true } });
+        const story = await db.story.findUnique({ where: { id }, select: { title: true, slug: true } });
         await db.story.delete({ where: { id } });
+
+        // Xóa file trên disk
+        if (story?.slug) {
+            const { rm } = await import('fs/promises');
+            const path = await import('path');
+            const chaptersRoot = process.env.CHAPTERS_STORAGE_PATH
+                ?? path.join(process.cwd(), 'public', 'chapters');
+            await rm(path.join(chaptersRoot, story.slug), { recursive: true, force: true });
+            await rm(path.join(process.cwd(), 'public', 'covers', `${story.slug}.webp`), { force: true });
+        }
+
         await db.adminLog.create({ data: {
             adminId: session.user.id!,
             action: 'DELETE_STORY',
