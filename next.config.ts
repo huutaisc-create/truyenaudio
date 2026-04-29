@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   experimental: {
     workerThreads: false,
-    cpus: 4,
+    cpus: 2,
     // optimizeCss: true, // ← ĐÃ TẮT: critters gây CSS blocking trên Vercel
     //                         thay bằng cách tối ưu thủ công qua preload ở layout.tsx
   },
