@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
 
   experimental: {
     workerThreads: false,
-    cpus: 1,
+    cpus: 4,
     // optimizeCss: true, // ← ĐÃ TẮT: critters gây CSS blocking trên Vercel
     //                         thay bằng cách tối ưu thủ công qua preload ở layout.tsx
   },
