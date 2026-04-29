@@ -1,8 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  turbopack: {},
-
   experimental: {
     workerThreads: false,
     cpus: 4,

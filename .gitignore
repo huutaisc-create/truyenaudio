@@ -64,3 +64,17 @@ prisma/*.db
 
 *.db
 ".claude/worktrees/" 
+
+# Backup files
+**/*.backup*.tsx
+**/*.backup*.ts
+**/*.edited*.tsx
+**/*.edited*.ts
+**/*.bk
+**/*.bk.tsx
+
+# Listening page — chỉ giữ ListeningClient.tsx và page.tsx
+src/app/truyen/[slug]/nghe/ListeningClient - *.tsx
+src/app/truyen/[slug]/nghe/ListeningClient *.tsx
+src/app/truyen/[slug]/nghe/page*.tsx.bk
+src/app/truyen/[slug]/nghe/page6.0.tsx.bk
