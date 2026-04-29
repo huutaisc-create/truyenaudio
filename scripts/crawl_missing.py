@@ -83,6 +83,62 @@ def setup_driver():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# POPUP HANDLER
+# ══════════════════════════════════════════════════════════════════════════════
+
+def handle_popups(driver):
+    """Xử lý các popup phổ biến: overlay, app download, quảng cáo, chế độ đọc."""
+    # 1. Click overlay để đóng bất kỳ modal nào đang chặn
+    try:
+        ActionChains(driver).move_by_offset(50, 50).click().perform()
+        time.sleep(0.5)
+    except: pass
+
+    # 2. App download popup — nút "Đóng"
+    try:
+        btn = WebDriverWait(driver, 3).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[aria-label="Đóng"]'))
+        )
+        btn.click(); time.sleep(0.5)
+        log("  [POPUP] Đã đóng app popup", 'POP')
+    except: pass
+
+    # 3. Ẩn Google Ad iframes bằng JS
+    try:
+        driver.execute_script("""
+            document.querySelectorAll('iframe[id*="ad"], iframe[name*="ad"], div.creative, #ad_iframe')
+                .forEach(function(el) {
+                    if (el.parentElement) el.parentElement.style.display = 'none';
+                });
+        """)
+    except: pass
+
+    # 4. Reading mode popup — chọn "Cuộn xuống để đọc"
+    try:
+        btn = WebDriverWait(driver, 3).until(
+            EC.element_to_be_clickable((By.XPATH,
+                "//div[contains(text(),'Cuộn xuống để đọc')] | //p[contains(text(),'Cuộn xuống để đọc')]"
+            ))
+        )
+        btn.click(); time.sleep(1)
+        log("  [POPUP] Đã chọn chế độ 'Cuộn xuống để đọc'", 'POP')
+    except: pass
+
+
+def _js_fill_input(driver, element, value: str):
+    """Fill React/MUI controlled input bằng JS (bypass synthetic event system)."""
+    driver.execute_script("""
+        var input = arguments[0];
+        var value = arguments[1];
+        var nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+            window.HTMLInputElement.prototype, 'value').set;
+        nativeInputValueSetter.call(input, value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    """, element, value)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # LOGIN
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -104,11 +160,22 @@ def login(driver, accounts_file: Path):
     driver.get("https://truyenphuongdong.com/login")
     time.sleep(3)
 
+    # Dismiss app popup nếu có
     try:
         btn = WebDriverWait(driver, 5).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[aria-label="Đóng"]'))
         )
         btn.click(); time.sleep(1)
+    except: pass
+
+    # Ẩn quảng cáo
+    try:
+        driver.execute_script("""
+            document.querySelectorAll('iframe[id*="ad"], iframe[name*="ad"], div.creative, #ad_iframe')
+                .forEach(function(el) {
+                    if (el.parentElement) el.parentElement.style.display = 'none';
+                });
+        """)
     except: pass
 
     if '/user' in driver.current_url:
@@ -120,10 +187,28 @@ def login(driver, accounts_file: Path):
             EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='email'],input[name='username']"))
         )
         pass_input = driver.find_element(By.CSS_SELECTOR, "input[name='password']")
-        user_input.clear(); user_input.send_keys(email)
-        pass_input.clear(); pass_input.send_keys(password)
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        WebDriverWait(driver, 30).until(EC.url_contains('/user'))
+
+        # Dùng JS fill để bypass React controlled component
+        _js_fill_input(driver, user_input, email)
+        time.sleep(0.3)
+        _js_fill_input(driver, pass_input, password)
+        time.sleep(0.3)
+
+        # Submit — thử JS click trước, fallback Enter
+        try:
+            submit_btn = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+            driver.execute_script("arguments[0].click()", submit_btn)
+        except:
+            pass_input.send_keys(Keys.ENTER)
+
+        # Chờ redirect về /user; nếu màn trắng thì F5
+        try:
+            WebDriverWait(driver, 15).until(EC.url_contains('/user'))
+        except TimeoutException:
+            log("  [LOGIN] Timeout, thử F5...", 'LOGIN')
+            driver.refresh()
+            WebDriverWait(driver, 15).until(EC.url_contains('/user'))
+
         log("Đăng nhập thành công ✓", 'LOGIN')
         return True
     except Exception as e:
@@ -332,6 +417,9 @@ def crawl_one(driver, idx: int, menu_map: dict, story_dir: Path) -> bool:
         log(f"Chương {idx} — không tìm thấy trong menu", '✗')
         return False
 
+    # Dismiss popup sau khi nhảy chương (reading mode, overlay, v.v.)
+    handle_popups(driver)
+
     # Duyệt DOM tìm đúng chương theo title
     fallback_title = menu_map.get(str(idx), f'Chương {idx}')
     title, content = scrape_by_title(driver, idx, menu_map)
@@ -340,13 +428,16 @@ def crawl_one(driver, idx: int, menu_map: dict, story_dir: Path) -> bool:
         log(f"Chương {idx} — lưu xong ✓  [{title}]", '✓')
         return True
 
-    # Chờ lazy-load thêm rồi thử lại
-    log(f"Chương {idx} — chưa thấy trong DOM, chờ thêm 4s...", 'HUNT')
-    time.sleep(4)
+    # Không thấy trong DOM → refresh để lazy-load render lại
+    log(f"Chương {idx} — chưa thấy trong DOM, thử refresh...", 'HUNT')
+    driver.refresh()
+    time.sleep(5)
+    handle_popups(driver)
+
     title, content = scrape_by_title(driver, idx, menu_map)
     if title and content:
         save_chapter(story_dir, idx, title, content)
-        log(f"Chương {idx} — lưu xong (lần 2) ✓  [{title}]", '✓')
+        log(f"Chương {idx} — lưu xong (sau refresh) ✓  [{title}]", '✓')
         return True
 
     log(f"Chương {idx} — không tìm được title [{fallback_title}] trong DOM", '✗')
@@ -445,12 +536,18 @@ def main():
         log(f"Đang tải trang đọc...", 'NAV')
         driver.get(read_url)
         time.sleep(5)
+
+        # White screen check — nếu trang chưa render đủ thì F5
         try:
-            b = WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[aria-label="Đóng"]'))
-            )
-            b.click(); time.sleep(1)
+            div_count = len(driver.find_elements(By.TAG_NAME, 'div'))
+            page_title = driver.title or ''
+            if div_count < 5 or 'Vui lòng đợi' in page_title:
+                log("  Phát hiện màn trắng, thử F5...", 'NAV')
+                driver.refresh(); time.sleep(5)
         except: pass
+
+        # Xử lý tất cả popup (overlay, app, quảng cáo, chế độ đọc)
+        handle_popups(driver)
         log("Trang đã tải ✓", 'NAV')
 
         # Menu map

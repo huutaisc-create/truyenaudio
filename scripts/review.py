@@ -24,6 +24,10 @@ import subprocess
 from pathlib import Path
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from socketserver import ThreadingMixIn
+
+class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
 from urllib.parse import urlparse, parse_qs
 
 # ── Crawl subprocess tracking ─────────────────────────────────────────────────
@@ -103,13 +107,14 @@ def check_story_content(story_dir: Path) -> dict:
     all_files = [f for f in os.listdir(story_dir) if _chapter_num(f) is not None]
     sorted_files = sorted(all_files, key=lambda fn: (_chapter_num(fn) or 999999))
 
-    pool       = []   # [(filename, fingerprint)]
-    duplicates = []
-    errors     = []
-    misnamed   = []
-    ok_indices = []   # index của các chương hợp lệ (để tính missing)
-    ok_count   = 0
-    last_num   = 0
+    pool         = []   # [(filename, fingerprint)]
+    duplicates   = []
+    errors       = []
+    misnamed     = []
+    ok_indices   = []   # index hợp lệ (để tính missing)
+    all_indices  = []   # tất cả index tồn tại (kể cả file lỗi) — dùng tính gap
+    ok_count     = 0
+    last_num     = 0
 
     for filename in sorted_files:
         fp_path = story_dir / filename
@@ -117,14 +122,17 @@ def check_story_content(story_dir: Path) -> dict:
         num = _chapter_num(filename)
         if num is None: continue
 
+        all_indices.append(num)   # file tồn tại → luôn ghi nhận index
+
         try:
             content = fp_path.read_text(encoding='utf-8', errors='ignore')
         except Exception:
             continue
 
         file_size = fp_path.stat().st_size
-        if file_size < 3 * 1024:  # dưới 3KB
-            errors.append({'file': filename, 'size_kb': round(file_size / 1024, 2)})
+        if file_size < 3 * 1024:  # dưới 3KB — tồn tại nhưng nghi lỗi
+            preview = content[:500].replace('\r', '').strip()
+            errors.append({'file': filename, 'size_kb': round(file_size / 1024, 2), 'preview': preview})
             continue
 
         fp = _clean_fingerprint(content[:5000])
@@ -149,12 +157,12 @@ def check_story_content(story_dir: Path) -> dict:
             ok_indices.append(num)
             ok_count += 1
 
-    # Tìm chương bị thiếu trong dãy số
+    # Tìm chương bị thiếu — dùng all_indices (kể cả file lỗi) để không báo sai
     missing = []
-    if ok_indices:
-        ok_set   = set(ok_indices)
-        min_idx  = min(ok_indices)
-        max_idx  = max(ok_indices)
+    if all_indices:
+        ok_set   = set(all_indices)
+        min_idx  = min(all_indices)
+        max_idx  = max(all_indices)
         gaps     = sorted(i for i in range(min_idx, max_idx + 1) if i not in ok_set)
         # Gom các số liên tiếp thành range để hiển thị gọn
         if gaps:
@@ -664,6 +672,28 @@ class _Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 return self._json({'error': f'Không mở được CMD: {e}'}, 500)
 
+        if parsed.path == '/delete-file':
+            try:
+                length = int(self.headers.get('Content-Length', 0))
+                body   = json.loads(self.rfile.read(length).decode('utf-8'))
+            except Exception as e:
+                return self._json({'error': f'Bad request: {e}'}, 400)
+            slug     = body.get('slug', '').strip()
+            filename = body.get('filename', '').strip()
+            if not slug or not filename:
+                return self._json({'error': 'Thiếu slug / filename'}, 400)
+            # Bảo vệ: chỉ cho phép xóa file .txt nằm trong stories_dir/slug/
+            file_path = _STORIES_DIR_PATH / slug / filename
+            if not file_path.exists():
+                return self._json({'error': 'File không tồn tại'}, 404)
+            if file_path.suffix.lower() != '.txt':
+                return self._json({'error': 'Chỉ cho phép xóa file .txt'}, 400)
+            try:
+                file_path.unlink()
+                return self._json({'ok': True, 'deleted': filename})
+            except Exception as e:
+                return self._json({'error': str(e)}, 500)
+
         if parsed.path == '/save-selections':
             try:
                 length = int(self.headers.get('Content-Length', 0))
@@ -721,7 +751,7 @@ def start_local_server(stories_dir: Path, port: int = SERVER_PORT) -> bool:
     global _STORIES_DIR_PATH
     _STORIES_DIR_PATH = stories_dir
     try:
-        srv = HTTPServer(('localhost', port), _Handler)
+        srv = ThreadingHTTPServer(('localhost', port), _Handler)
         threading.Thread(target=srv.serve_forever, daemon=True).start()
         print(f"   → Local API server: http://localhost:{port}")
         return True
@@ -1019,6 +1049,20 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   <span style="width:1px;background:var(--border);align-self:stretch;margin:0 4px"></span>
   <span id="sourceFilters"></span>
   <input class="search-input" type="text" placeholder="🔍 Tìm theo tên..." oninput="filterSearch(this.value)" />
+  <span style="width:1px;background:var(--border);align-self:stretch;margin:0 4px"></span>
+  <input id="batchCheckCount" type="number" min="1" max="999" value="10"
+    style="width:60px;padding:4px 8px;border-radius:20px;border:1px solid var(--border);
+           background:var(--card);color:var(--text);font-size:15px;text-align:center" />
+  <button id="batchCheckBtn" onclick="startBatchCheck()"
+    style="padding:4px 14px;border-radius:20px;border:1px solid #2563eb;
+           background:rgba(37,99,235,.15);color:#93c5fd;cursor:pointer;font-size:15px;font-weight:600;white-space:nowrap">
+    🔁 Kiểm tra trùng
+  </button>
+  <button id="batchUploadBtn" onclick="startBatchUpload()"
+    style="padding:4px 14px;border-radius:20px;border:1px solid #16a34a;
+           background:rgba(22,163,74,.15);color:#86efac;cursor:pointer;font-size:15px;font-weight:600;white-space:nowrap">
+    🚀 Upload tất cả
+  </button>
 </div>
 
 <div class="story-list" id="storyList"></div>
@@ -1040,25 +1084,30 @@ function applyState(selections, uploadStatus) {
       let descIdx = null;
       if (prev.description) {
         const fi = s.van_an.findIndex(v => v.noi_dung === prev.description);
-        descIdx = fi >= 0 ? fi : (prev.description === s.description_raw ? 'raw' : null);
+        if      (fi >= 0)                              descIdx = fi;
+        else if (prev.description === s.description_raw) descIdx = 'raw';
+        else                                           descIdx = 'manual';  // nhập tay
       }
       let titleIdx = null;
       if (prev.title) {
         const ti = s.ten_truyen.findIndex(t => t.ten === prev.title);
-        titleIdx = ti >= 0 ? ti : 'original';
+        if      (ti >= 0)                              titleIdx = ti;
+        else if (prev.title === s.original_title)      titleIdx = 'original';
+        else                                           titleIdx = 'manual';  // nhập tay
       }
       state[s.slug] = {
         title:       prev.title       || null,
         description: prev.description || null,
         hashtags:    prev.hashtags    || [],
+        genres:      prev.genres      || null,   // null = dùng mặc định từ meta
         status:      prev.skipped ? 'skip' : prev.ready ? 'done' : null,
         uploaded:    up,
         descIdx, titleIdx,
       };
     } else {
       state[s.slug] = {
-        title: null, description: null, hashtags: [], status: null,
-        uploaded: up, descIdx: null, titleIdx: null,
+        title: null, description: null, hashtags: [], genres: null,
+        status: null, uploaded: up, descIdx: null, titleIdx: null,
       };
     }
   });
@@ -1114,6 +1163,19 @@ function renderCard(s, i) {
         <span class="option-tag original">Tên gốc</span>
         <div class="option-main">${esc(s.original_title)}</div>
       </div>
+    </label>`,
+    `<label class="option-item ${st.titleIdx === 'manual' ? 'selected' : ''}"
+       onclick="selectTitle('${esc(s.slug)}', 'manual')">
+      <input type="radio" name="title_${esc(s.slug)}" value="manual" ${st.titleIdx === 'manual' ? 'checked' : ''}>
+      <div class="option-content">
+        <span class="option-tag" style="background:#7c3aed;color:#fff">✏️ Nhập tay</span>
+        <input type="text" id="manualTitle_${esc(s.slug)}"
+          placeholder="Nhập tên truyện..."
+          value="${st.titleIdx === 'manual' ? esc(st.title || '') : ''}"
+          onclick="event.stopPropagation(); selectTitle('${esc(s.slug)}', 'manual')"
+          oninput="updateManualTitle('${esc(s.slug)}', this.value)"
+          style="margin-top:4px;width:100%;background:#1e2533;border:1px solid #4b5563;border-radius:6px;padding:6px 10px;color:#f1f5f9;font-size:15px;outline:none">
+      </div>
     </label>`
   ].join('');
 
@@ -1139,7 +1201,20 @@ function renderCard(s, i) {
           <span class="option-tag original">Mô tả gốc</span>
           <div class="option-note">${esc(s.description_raw)}</div>
         </div>
-      </label>` : ''
+      </label>` : '',
+    `<label class="option-item ${st.descIdx === 'manual' ? 'selected' : ''}"
+       onclick="selectDesc('${esc(s.slug)}', 'manual')">
+      <input type="radio" name="desc_${esc(s.slug)}" value="manual" ${st.descIdx === 'manual' ? 'checked' : ''}>
+      <div class="option-content">
+        <span class="option-tag" style="background:#7c3aed;color:#fff">✏️ Nhập tay</span>
+        <textarea id="manualDesc_${esc(s.slug)}"
+          placeholder="Nhập mô tả truyện..."
+          rows="4"
+          onclick="event.stopPropagation(); selectDesc('${esc(s.slug)}', 'manual')"
+          oninput="updateManualDesc('${esc(s.slug)}', this.value)"
+          style="margin-top:4px;width:100%;background:#1e2533;border:1px solid #4b5563;border-radius:6px;padding:6px 10px;color:#f1f5f9;font-size:14px;outline:none;resize:vertical;line-height:1.5">${st.descIdx === 'manual' ? esc(st.description || '') : ''}</textarea>
+      </div>
+    </label>`
   ].join('');
 
   const genresHtml = genres.map(g => `<span class="genre-tag">${esc(g)}</span>`).join('');
@@ -1177,17 +1252,27 @@ function renderCard(s, i) {
     </div>
 
     <div class="card-body" id="body_${esc(s.slug)}">
-      ${genresHtml ? `
-        <div class="section-label">Thể loại</div>
-        <div class="genres-list">${genresHtml}</div>` : ''}
+      <div class="section-label">Thể loại</div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px">
+        ${genresHtml || '<span style="color:var(--muted);font-size:13px">Chưa có thể loại từ meta.json</span>'}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="text" id="genreInput_${esc(s.slug)}"
+          placeholder="Nhập thể loại, cách nhau bởi dấu phẩy (VD: Đô Thị, Đam Mỹ, Ngược)"
+          value="${esc((st.genres !== null ? st.genres : (s.category || '')))}"
+          oninput="updateGenres('${esc(s.slug)}', this.value)"
+          style="flex:1;background:#1e2533;border:1px solid #4b5563;border-radius:6px;padding:6px 10px;color:#f1f5f9;font-size:14px;outline:none">
+        <button onclick="resetGenres('${esc(s.slug)}')"
+          style="padding:5px 10px;border-radius:6px;border:1px solid #4b5563;background:transparent;color:#9ca3af;cursor:pointer;font-size:12px;white-space:nowrap">
+          ↩ Mặc định
+        </button>
+      </div>
 
-      ${s.ten_truyen.length > 0 ? `
-        <div class="section-label">Chọn tên truyện</div>
-        <div class="option-list">${titleOptions}</div>` : ''}
+      <div class="section-label">Chọn tên truyện</div>
+      <div class="option-list">${titleOptions}</div>
 
-      ${(s.van_an.length > 0 || s.description_raw) ? `
-        <div class="section-label">Chọn mô tả</div>
-        <div class="option-list">${descOptions}</div>` : ''}
+      <div class="section-label">Chọn mô tả</div>
+      <div class="option-list">${descOptions}</div>
 
       <div class="card-actions">
         <button class="btn-ready ${st.status === 'done' ? 'active' : ''}"
@@ -1249,49 +1334,93 @@ async function checkDuplicate(slug, btn) {
     html += `<div class="tr-ok">✅ OK: ${d.ok} chương</div>`;
 
     if (d.duplicates.length) {
-      html += `<div class="tr-err" style="margin-top:8px">🔁 Trùng lặp: ${d.duplicates.length} chương</div>`;
+      const dupFiles = d.duplicates.map(x => x.file);
+      html += `<div class="tr-err" style="margin-top:8px;display:flex;align-items:center;justify-content:space-between">
+        <span>🔁 Trùng lặp: ${d.duplicates.length} chương</span>
+        <button onclick="deleteAllDuplicates('${slug}', ${JSON.stringify(dupFiles).replace(/"/g,'&quot;')})"
+          style="padding:2px 10px;border-radius:5px;border:none;background:#dc2626;color:#fff;cursor:pointer;font-size:12px;font-weight:600;margin-left:10px">
+          🗑 Xóa ${d.duplicates.length} file trùng
+        </button>
+      </div>`;
       d.duplicates.slice(0,20).forEach(x =>
         html += `<div class="tr-item">${x.file} → giống ${x.matches} (${x.word_count} từ trùng)</div>`
       );
       if (d.duplicates.length > 20) html += `<div class="tr-item">... và ${d.duplicates.length-20} chương nữa</div>`;
     }
+    // ── Nghi lỗi crawl (<3KB) — file TỒN TẠI nhưng nội dung ngắn ──────────────
     if (d.errors.length) {
-      html += `<div class="tr-warn" style="margin-top:8px">⚠️ Nghi lỗi crawl (&lt;3 KB): ${d.errors.length} chương</div>`;
-      d.errors.slice(0,10).forEach(x =>
-        html += `<div class="tr-item">${x.file} — ${x.size_kb} KB</div>`
-      );
+      html += `<div style="margin-top:10px;border:1px solid #854d0e;border-radius:8px;overflow:hidden">
+        <div style="background:#422006;padding:6px 12px;font-weight:700;color:#fbbf24;font-size:14px">
+          ⚠️ Nghi lỗi crawl (&lt;3 KB) — ${d.errors.length} file TỒN TẠI nhưng nội dung có thể thiếu
+        </div>
+        <div style="padding:6px 12px">`;
+      d.errors.forEach(x => {
+        const safePreview = (x.preview || '(trống)').replace(/`/g,"'").replace(/\\/g,'\\\\').replace(/\n/g,'\\n');
+        html += `<div class="tr-item" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span style="cursor:default;flex:1"
+            onmouseenter="showPreviewTooltip(event,'${safePreview}')"
+            onmouseleave="hidePreviewTooltip()"
+          >${x.file} — ${x.size_kb} KB</span>
+          <button onclick="deleteSingleFile('${slug}','${x.file}',this)"
+            style="padding:1px 8px;border-radius:4px;border:none;background:#7f1d1d;color:#fca5a5;cursor:pointer;font-size:12px;white-space:nowrap;flex-shrink:0">
+            🗑 Xóa
+          </button>
+        </div>`;
+      });
+      html += `</div></div>`;
     }
+
     if (d.misnamed.length) {
       html += `<div class="tr-warn" style="margin-top:8px">🔢 Sai số thứ tự: ${d.misnamed.length} chương</div>`;
       d.misnamed.slice(0,10).forEach(x =>
         html += `<div class="tr-item">${x.file} — số ${x.num}, cần ${x.expected}</div>`
       );
     }
+
+    // ── Thiếu chương — index KHÔNG TỒN TẠI trong thư mục ─────────────────────
     if (d.missing && d.missing.length) {
-      // Tính list index thiếu đầy đủ từ các range
       const missingIndices = [];
-      d.missing.forEach(x => {
-        for (let i = x.from; i <= x.to; i++) missingIndices.push(i);
-      });
+      d.missing.forEach(x => { for (let i = x.from; i <= x.to; i++) missingIndices.push(i); });
       const storyMeta = STORIES.find(x => x.slug === slug);
       const storyUrl  = storyMeta ? (storyMeta.url || '') : '';
 
-      html += `<div class="tr-err" style="margin-top:8px;display:flex;align-items:center;gap:10px">
-        <span>🕳 Thiếu chương: ${d.missing_count} chương</span>
-        ${storyUrl
-          ? `<button onclick="startCrawlMissing('${slug}', '${storyUrl.replace(/'/g,"\\'")}', ${JSON.stringify(missingIndices)})"
-               style="padding:3px 12px;border-radius:6px;border:none;background:#2563eb;color:#fff;cursor:pointer;font-size:13px;font-weight:600">
-               🔄 Crawl chương thiếu
-             </button>`
-          : '<span style="font-size:12px;color:var(--muted)">(thiếu URL gốc trong meta.json)</span>'
-        }
-      </div>`;
-      d.missing.slice(0, 15).forEach(x => {
-        const range = x.from === x.to ? `#${x.from}` : `#${x.from} → #${x.to} (${x.count} chương)`;
-        html += `<div class="tr-item">${range}</div>`;
+      html += `<div style="margin-top:10px;border:1px solid #991b1b;border-radius:8px;overflow:hidden">
+        <div style="background:#450a0a;padding:6px 12px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-weight:700;color:#f87171;font-size:14px">🕳 Thiếu chương — ${d.missing_count} index KHÔNG TỒN TẠI</span>
+          ${storyUrl
+            ? `<button onclick="startCrawlMissing('${slug}', '${storyUrl.replace(/'/g,"\\'")}', ${JSON.stringify(missingIndices)})"
+                 style="padding:3px 12px;border-radius:6px;border:none;background:#2563eb;color:#fff;cursor:pointer;font-size:13px;font-weight:600">
+                 🔄 Crawl chương thiếu
+               </button>`
+            : '<span style="font-size:12px;color:#9ca3af">(thiếu URL gốc trong meta.json)</span>'
+          }
+        </div>
+        <div style="padding:8px 12px">`;
+
+      // Hiện từng range — click để copy danh sách index vào clipboard
+      d.missing.forEach(x => {
+        const indices = [];
+        for (let i = x.from; i <= x.to; i++) indices.push(i);
+        const label   = x.from === x.to ? `#${x.from}` : `#${x.from} → #${x.to}`;
+        const count   = x.count > 1 ? ` <span style="color:#9ca3af;font-size:12px">(${x.count} chương)</span>` : '';
+        const idxStr  = indices.join(', ');
+        html += `<div class="tr-item" style="cursor:pointer" title="Click để copy index"
+                   onclick="navigator.clipboard.writeText('${idxStr}').then(()=>showToast('📋 Đã copy: ${idxStr.slice(0,40)}${idxStr.length>40?'...':''}'))">
+                   ${label}${count}
+                   <span style="color:#6b7280;font-size:11px;margin-left:6px">[${idxStr}]</span>
+                 </div>`;
       });
-      if (d.missing.length > 15) html += `<div class="tr-item">... và nhiều khoảng nữa</div>`;
+
+      html += `<div style="margin-top:6px;font-size:12px;color:#6b7280">
+        Tất cả: <span style="color:#93c5fd;cursor:pointer"
+          onclick="navigator.clipboard.writeText('${missingIndices.join(',')}').then(()=>showToast('📋 Đã copy ${missingIndices.length} index'))"
+          title="Click để copy tất cả">
+          ${missingIndices.join(', ')}
+        </span>
+      </div>`;
+      html += `</div></div>`;
     }
+
     if (!d.duplicates.length && !d.errors.length && !d.misnamed.length && !d.missing_count)
       html += `<div class="tr-ok" style="margin-top:4px">🎉 Không phát hiện vấn đề!</div>`;
 
@@ -1359,8 +1488,9 @@ async function uploadStory(slug, btn, fromHeader = false) {
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang upload…'; }
   showResult(slug, '<span style="color:var(--muted)">⏳ Đang upload lên server… (có thể mất vài phút)</span>');
 
-  const genres = [];
-  if (s.category) s.category.split(',').forEach(g => { if (g.trim()) genres.push(g.trim()); });
+  // Ưu tiên genres nhập tay; fallback về meta category
+  const genreSource = (st.genres !== null && st.genres !== undefined) ? st.genres : (s.category || '');
+  const genres = genreSource.split(',').map(g => g.trim()).filter(Boolean);
 
   try {
     const res = await fetch(`${API}/upload`, {
@@ -1427,27 +1557,54 @@ function toggleCard(slug) {
 function selectTitle(slug, idx) {
   const s = STORIES.find(x => x.slug === slug);
   state[slug].titleIdx = idx;
-  state[slug].title = idx === 'original' ? s.original_title : s.ten_truyen[idx].ten;
+  if (idx === 'original')     state[slug].title = s.original_title;
+  else if (idx === 'manual')  state[slug].title = document.getElementById(`manualTitle_${slug}`)?.value || '';
+  else                        state[slug].title = s.ten_truyen[idx].ten;
   document.getElementById('card_' + slug).querySelector('.story-title-preview').textContent = state[slug].title;
-  // Cập nhật selected class mà không cần refreshCard
   document.querySelectorAll(`[name="title_${slug}"]`).forEach(r => r.closest('.option-item').classList.remove('selected'));
   const sel = document.querySelector(`[name="title_${slug}"][value="${idx}"]`);
   if (sel) sel.closest('.option-item').classList.add('selected');
+  autoSave();
+}
+function updateManualTitle(slug, value) {
+  state[slug].titleIdx = 'manual';
+  state[slug].title    = value;
+  document.getElementById('card_' + slug).querySelector('.story-title-preview').textContent = value;
+  document.querySelectorAll(`[name="title_${slug}"]`).forEach(r => r.closest('.option-item').classList.remove('selected'));
+  const sel = document.querySelector(`[name="title_${slug}"][value="manual"]`);
+  if (sel) sel.closest('.option-item').classList.add('selected');
+  autoSave();
 }
 function selectDesc(slug, idx) {
   const s = STORIES.find(x => x.slug === slug);
   state[slug].descIdx = idx;
-  if (idx === 'raw') {
-    state[slug].description = s.description_raw;
-    state[slug].hashtags    = [];
-  } else {
-    state[slug].description = s.van_an[idx].noi_dung;
-    state[slug].hashtags    = s.van_an[idx].hashtag || [];
-  }
-  // Cập nhật selected class mà không cần refreshCard
+  if (idx === 'raw')          { state[slug].description = s.description_raw; state[slug].hashtags = []; }
+  else if (idx === 'manual')  { state[slug].description = document.getElementById(`manualDesc_${slug}`)?.value || ''; state[slug].hashtags = []; }
+  else                        { state[slug].description = s.van_an[idx].noi_dung; state[slug].hashtags = s.van_an[idx].hashtag || []; }
   document.querySelectorAll(`[name="desc_${slug}"]`).forEach(r => r.closest('.option-item').classList.remove('selected'));
   const sel = document.querySelector(`[name="desc_${slug}"][value="${idx}"]`);
   if (sel) sel.closest('.option-item').classList.add('selected');
+  autoSave();
+}
+function updateGenres(slug, value) {
+  state[slug].genres = value;   // lưu string thô, parse lúc upload
+  autoSave();
+}
+function resetGenres(slug) {
+  const s = STORIES.find(x => x.slug === slug);
+  state[slug].genres = null;    // null = về mặc định meta
+  const el = document.getElementById(`genreInput_${slug}`);
+  if (el) el.value = s.category || '';
+  autoSave();
+}
+function updateManualDesc(slug, value) {
+  state[slug].descIdx      = 'manual';
+  state[slug].description  = value;
+  state[slug].hashtags     = [];
+  document.querySelectorAll(`[name="desc_${slug}"]`).forEach(r => r.closest('.option-item').classList.remove('selected'));
+  const sel = document.querySelector(`[name="desc_${slug}"][value="manual"]`);
+  if (sel) sel.closest('.option-item').classList.add('selected');
+  autoSave();
 }
 function buildSelectionsPayload() {
   const result = STORIES.map(s => {
@@ -1459,6 +1616,7 @@ function buildSelectionsPayload() {
       title:       st.title || s.original_title,
       description: st.description || s.description_raw || '',
       hashtags:    st.hashtags || [],
+      genres:      st.genres !== null && st.genres !== undefined ? st.genres : null,
       category:    s.category,
       genres,
       ready:       st.status === 'done',
@@ -1483,15 +1641,15 @@ async function autoSave() {
 function markReady(slug) {
   const s  = STORIES.find(x => x.slug === slug);
   const st = state[slug];
-  // Title mặc định
-  if (st.titleIdx === null) {
+  // Title mặc định (bỏ qua nếu đã chọn manual và có nội dung)
+  if (st.titleIdx === null || (st.titleIdx === 'manual' && !st.title)) {
     if (s.ten_truyen.length) { st.titleIdx = 0; st.title = s.ten_truyen[0].ten; }
     else                     { st.titleIdx = 'original'; st.title = s.original_title; }
   }
-  // Desc mặc định
-  if (st.descIdx === null) {
-    if (s.van_an.length)    { st.descIdx = 0; st.description = s.van_an[0].noi_dung; st.hashtags = s.van_an[0].hashtag || []; }
-    else if (s.description_raw) { st.descIdx = 'raw'; st.description = s.description_raw; }
+  // Desc mặc định (bỏ qua nếu đã chọn manual và có nội dung)
+  if (st.descIdx === null || (st.descIdx === 'manual' && !st.description)) {
+    if (s.van_an.length)         { st.descIdx = 0; st.description = s.van_an[0].noi_dung; st.hashtags = s.van_an[0].hashtag || []; }
+    else if (s.description_raw)  { st.descIdx = 'raw'; st.description = s.description_raw; }
   }
   st.status = 'done';
   refreshCard(slug); updateProgress();
@@ -1566,6 +1724,194 @@ function exportSelections() {
   a.click();
   URL.revokeObjectURL(url);
   showToast(`✅ Đã export ${output.ready} truyện sẵn sàng upload!`);
+}
+
+// ── Batch upload — upload tuần tự tất cả truyện đang có nút Upload ───────────
+let _batchUploadRunning = false;
+
+async function startBatchUpload() {
+  if (_batchUploadRunning) {
+    _batchUploadRunning = false;
+    const btn = document.getElementById('batchUploadBtn');
+    btn.textContent = '🚀 Upload tất cả';
+    btn.style.background = 'rgba(22,163,74,.15)';
+    btn.style.color = '#86efac';
+    return;
+  }
+
+  // Lấy danh sách slug có nút headerUploadBtn đang hiển thị (status=done, chưa upload)
+  const slugs = [...document.querySelectorAll('[id^="headerUploadBtn_"]')]
+    .filter(el => !el.disabled && el.closest('.story-card:not(.hidden)'))
+    .map(el => el.id.replace('headerUploadBtn_', ''));
+
+  if (!slugs.length) { showToast('Không có truyện nào sẵn sàng upload'); return; }
+
+  if (!confirm(`Upload ${slugs.length} truyện tuần tự?\nSẽ lần lượt từng truyện một.`)) return;
+
+  _batchUploadRunning = true;
+  const btn = document.getElementById('batchUploadBtn');
+  btn.style.background = 'rgba(220,38,38,.2)';
+  btn.style.color = '#fca5a5';
+
+  let done = 0, failed = 0;
+  for (let i = 0; i < slugs.length; i++) {
+    if (!_batchUploadRunning) break;
+    const slug = slugs[i];
+    btn.textContent = `⏹ Dừng (${i+1}/${slugs.length})`;
+
+    // Scroll card vào view
+    const card = document.getElementById('card_' + slug);
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Lấy nút upload của card đó và gọi uploadStory
+    const headerBtn = document.getElementById('headerUploadBtn_' + slug);
+    if (!headerBtn || headerBtn.disabled) { failed++; continue; }
+
+    // Dùng Promise để chờ uploadStory xong (uploadStory là async)
+    try {
+      await uploadStory(slug, headerBtn, true);
+      done++;
+    } catch(e) {
+      failed++;
+    }
+
+    // Nghỉ nhỏ giữa 2 lần
+    if (i < slugs.length - 1) await new Promise(r => setTimeout(r, 500));
+  }
+
+  _batchUploadRunning = false;
+  btn.textContent = '🚀 Upload tất cả';
+  btn.style.background = 'rgba(22,163,74,.15)';
+  btn.style.color = '#86efac';
+  showToast(`✅ Đã upload xong: ${done} thành công${failed ? ` · ❌ ${failed} lỗi` : ''}`);
+}
+
+// ── Batch kiểm tra trùng — lấy N truyện đang hiển thị, check lần lượt ───────
+let _batchCheckRunning = false;
+
+async function startBatchCheck() {
+  if (_batchCheckRunning) {
+    _batchCheckRunning = false;          // nhấn lần 2 → dừng
+    document.getElementById('batchCheckBtn').textContent = '🔁 Kiểm tra trùng';
+    document.getElementById('batchCheckBtn').style.background = 'rgba(37,99,235,.15)';
+    document.getElementById('batchCheckBtn').style.color = '#93c5fd';
+    return;
+  }
+
+  // Tự động chuyển sang filter "Đủ điều kiện" trước khi check
+  const readyBtn = [...document.querySelectorAll('.filter-btn')].find(b => b.textContent.includes('Đủ điều kiện'));
+  if (readyBtn) setFilter('ready', readyBtn);
+
+  const n = parseInt(document.getElementById('batchCheckCount').value) || 10;
+
+  // Lấy danh sách slug theo thứ tự đang hiển thị (dùng class hidden, không phải inline style)
+  const visibleSlugs = [...document.querySelectorAll('.story-card:not(.hidden)')]
+    .slice(0, n)
+    .map(el => el.dataset.slug);
+
+  if (!visibleSlugs.length) { showToast('Không có truyện nào để kiểm tra'); return; }
+
+  _batchCheckRunning = true;
+  const btn = document.getElementById('batchCheckBtn');
+  btn.style.background = 'rgba(220,38,38,.2)';
+  btn.style.color = '#fca5a5';
+
+  for (let i = 0; i < visibleSlugs.length; i++) {
+    if (!_batchCheckRunning) break;
+    const slug = visibleSlugs[i];
+    btn.textContent = `⏹ Dừng (${i+1}/${visibleSlugs.length})`;
+
+    // Mở card nếu chưa mở
+    const body = document.getElementById('body_' + slug);
+    if (body && !body.classList.contains('open')) body.classList.add('open');
+
+    // Scroll card vào view
+    const card = document.getElementById('card_' + slug);
+    if (card) card.scrollIntoView({behavior: 'smooth', block: 'center'});
+
+    // Chạy check (await để xong mới sang cái tiếp theo)
+    await checkDuplicate(slug, null);
+
+    // Nghỉ nhỏ giữa 2 lần để tránh quá tải server
+    if (i < visibleSlugs.length - 1) await new Promise(r => setTimeout(r, 300));
+  }
+
+  _batchCheckRunning = false;
+  btn.textContent = '🔁 Kiểm tra trùng';
+  btn.style.background = 'rgba(37,99,235,.15)';
+  btn.style.color = '#93c5fd';
+  showToast(`✅ Đã kiểm tra xong ${visibleSlugs.length} truyện`);
+}
+
+// ── Xóa file trùng lặp (xóa tất cả file có index cao hơn) ───────────────────
+async function deleteAllDuplicates(slug, files) {
+  if (!confirm(`Xóa ${files.length} file trùng lặp (index cao hơn)?\nThao tác không thể hoàn tác!`)) return;
+  let ok = 0, fail = 0;
+  for (const filename of files) {
+    try {
+      const res = await fetch(`${API}/delete-file`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({slug, filename}),
+      });
+      const d = await res.json();
+      if (d.ok) ok++; else fail++;
+    } catch { fail++; }
+  }
+  showToast(`✅ Đã xóa ${ok} file trùng${fail ? ` · ❌ ${fail} lỗi` : ''}`);
+  checkStory(slug);
+}
+
+// ── Xóa từng file nghi lỗi crawl ────────────────────────────────────────────
+async function deleteSingleFile(slug, filename, btn) {
+  if (!confirm(`Xóa "${filename}"?\nThao tác không thể hoàn tác!`)) return;
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/delete-file`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({slug, filename}),
+    });
+    const d = await res.json();
+    if (d.ok) {
+      showToast(`✅ Đã xóa ${filename}`);
+      checkStory(slug);
+    } else {
+      showToast(`❌ Lỗi: ${d.error}`);
+      btn.disabled = false;
+    }
+  } catch(e) {
+    showToast(`❌ ${e.message}`);
+    btn.disabled = false;
+  }
+}
+
+// ── Tooltip hiển thị nội dung khi hover chương nghi lỗi ─────────────────────
+function showPreviewTooltip(event, text) {
+  let tip = document.getElementById('_previewTip');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.id = '_previewTip';
+    tip.style.cssText = [
+      'position:fixed','z-index:9999','max-width:420px','max-height:260px',
+      'overflow-y:auto','background:#1e293b','color:#e2e8f0',
+      'border:1px solid #475569','border-radius:8px','padding:10px 12px',
+      'font-size:12px','line-height:1.6','white-space:pre-wrap',
+      'box-shadow:0 8px 24px rgba(0,0,0,.5)','pointer-events:none',
+    ].join(';');
+    document.body.appendChild(tip);
+  }
+  tip.textContent = text.replace(/\\n/g, '\n');
+  const x = Math.min(event.clientX + 14, window.innerWidth - 440);
+  const y = Math.min(event.clientY + 14, window.innerHeight - 280);
+  tip.style.left = x + 'px';
+  tip.style.top  = y + 'px';
+  tip.style.display = 'block';
+}
+
+function hidePreviewTooltip() {
+  const tip = document.getElementById('_previewTip');
+  if (tip) tip.style.display = 'none';
 }
 
 async function startCrawlMissing(slug, url, missingIndices) {
