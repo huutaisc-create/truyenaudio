@@ -59,6 +59,13 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512.png" />
 
+        {/* Google AdSense */}
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8962618053368345"
+          crossOrigin="anonymous"
+        />
+
         {/* Khôi phục theme từ localStorage — chạy trước khi React hydrate để tránh flash */}
         <script
           dangerouslySetInnerHTML={{
