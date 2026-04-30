@@ -372,6 +372,19 @@ export default function ListeningClient({
 
   // Interaction state được khởi tạo từ server (initialUserStatus) — không cần fetch client-side
 
+  // ── Ad Refresh System ──
+  const adRefreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const adRefreshCooldownRef = useRef<number>(0);
+
+  // ── Chapter End Reward Overlay ──
+  const [showRewardOverlay, setShowRewardOverlay] = useState(false);
+  const [rewardCountdown, setRewardCountdown] = useState(5);
+  const rewardCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pendingNextFnRef = useRef<(() => void) | null>(null);
+  const [streak, setStreak] = useState(0);
+  const streakRef = useRef(0);
+  const CREDIT_PER_CHAPTER = 0.03;
+  const STREAK_BONUS: Record<number, number> = { 2: 0.01, 3: 0.02, 5: 0.05, 10: 0.15 };
 
   const currentIdx = currentChapter.index;
   const sortedChapters = [...allChapters].sort((a, b) => a.index - b.index);
@@ -407,6 +420,52 @@ export default function ListeningClient({
 
   // ── Sync speedRef ──
   useEffect(() => { speedRef.current = speed; }, [speed]);
+
+  // ── Ad Refresh functions ──
+  const refreshAd = useCallback(() => {
+    const now = Date.now();
+    if (now - adRefreshCooldownRef.current < 2000) return;
+    adRefreshCooldownRef.current = now;
+    try {
+      const googletag = (window as any).googletag;
+      if (googletag?.pubads) {
+        googletag.cmd = googletag.cmd || [];
+        googletag.cmd.push(() => { googletag.pubads().refresh(); });
+      }
+    } catch { /* silent */ }
+  }, []);
+
+  const stopAdRefreshCycle = useCallback(() => {
+    if (adRefreshTimerRef.current) {
+      clearInterval(adRefreshTimerRef.current);
+      adRefreshTimerRef.current = null;
+    }
+  }, []);
+
+  const startAdRefreshCycle = useCallback(() => {
+    stopAdRefreshCycle();
+    adRefreshTimerRef.current = setInterval(() => {
+      if (!document.hidden) refreshAd();
+    }, 60000);
+  }, [refreshAd, stopAdRefreshCycle]);
+
+  // ── visibilitychange: refresh ngay khi tab active, dừng khi ẩn ──
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        refreshAd();
+        startAdRefreshCycle();
+      } else {
+        stopAdRefreshCycle();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    if (!document.hidden) startAdRefreshCycle();
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      stopAdRefreshCycle();
+    };
+  }, [refreshAd, startAdRefreshCycle, stopAdRefreshCycle]);
 
   // ── Media Session ──
   useEffect(() => {
@@ -1421,22 +1480,26 @@ export default function ListeningClient({
         console.log(`[W:AutoNext] hasPrefetch=${hasPrefetch} prefetchDone=${prefetchDoneRef.current}`);
         if (hasPrefetch) {
           const nextChap = prefetchedChapRef.current!;
-          console.log(`[W:AutoNext] Play ngay từ buffer (partial ok): ${nextChap.title} chunks=${prefetchedPCMRef.current.length}`);
-          setLoadedChapters(prev => ({ ...prev, [nextMeta.index]: nextChap }));
-          setCurrentChapter(nextChap);
-          router.replace(`/truyen/${slug}/nghe?chuong=${nextMeta.index}`, { scroll: false });
-          playFromPrefetchBuffer(nextChap);
+          console.log(`[W:AutoNext] Play ngay từ buffer (partial ok): ${nextChap.title}`);
+          showChapterEndReward(() => {
+            setLoadedChapters(prev => ({ ...prev, [nextMeta.index]: nextChap }));
+            setCurrentChapter(nextChap);
+            router.replace(`/truyen/${slug}/nghe?chuong=${nextMeta.index}`, { scroll: false });
+            playFromPrefetchBuffer(nextChap);
+          });
         } else {
           console.log(`[W:AutoNext] Buffer không có — fetch chapter ${nextMeta.id}...`);
           fetch(`/api/chapters/${nextMeta.id}`)
             .then(r => r.json())
             .then((res: any) => {
               const nextChap: Chapter = res.data ?? res;
-              console.log(`[W:AutoNext] Fetch xong: ${nextChap.title} — gọi streamChapter`);
-              setLoadedChapters(prev => ({ ...prev, [nextMeta.index]: nextChap }));
-              setCurrentChapter(nextChap);
-              router.replace(`/truyen/${slug}/nghe?chuong=${nextMeta.index}`, { scroll: false });
-              streamChapterRef.current?.(nextChap);
+              console.log(`[W:AutoNext] Fetch xong: ${nextChap.title}`);
+              showChapterEndReward(() => {
+                setLoadedChapters(prev => ({ ...prev, [nextMeta.index]: nextChap }));
+                setCurrentChapter(nextChap);
+                router.replace(`/truyen/${slug}/nghe?chuong=${nextMeta.index}`, { scroll: false });
+                streamChapterRef.current?.(nextChap);
+              });
             });
         }
         return;
@@ -1689,21 +1752,25 @@ export default function ListeningClient({
         console.log(`[W:AutoNext] hasPrefetch=${hasPrefetch} prefetchDone=${prefetchDoneRef.current}`);
         if (hasPrefetch) {
           const nextChap = prefetchedChapRef.current!;
-          console.log(`[W:AutoNext] Play ngay từ buffer: ${nextChap.title} chunks=${prefetchedPCMRef.current.length}`);
-          setLoadedChapters(prev => ({ ...prev, [nextMeta.index]: nextChap }));
-          setCurrentChapter(nextChap);
-          router.replace(`/truyen/${slug}/nghe?chuong=${nextMeta.index}`, { scroll: false });
-          playFromPrefetchBufferRef.current?.(nextChap);
+          console.log(`[W:AutoNext] Play ngay từ buffer: ${nextChap.title}`);
+          showChapterEndReward(() => {
+            setLoadedChapters(prev => ({ ...prev, [nextMeta.index]: nextChap }));
+            setCurrentChapter(nextChap);
+            router.replace(`/truyen/${slug}/nghe?chuong=${nextMeta.index}`, { scroll: false });
+            playFromPrefetchBufferRef.current?.(nextChap);
+          });
         } else {
           console.log(`[W:AutoNext] Fetch + stream: ${nextMeta.id}`);
           fetch(`/api/chapters/${nextMeta.id}`)
             .then(r => r.json())
             .then((res: any) => {
               const nextChap: Chapter = res.data ?? res;
-              setLoadedChapters(prev => ({ ...prev, [nextMeta.index]: nextChap }));
-              setCurrentChapter(nextChap);
-              router.replace(`/truyen/${slug}/nghe?chuong=${nextMeta.index}`, { scroll: false });
-              streamChapterRef.current?.(nextChap);
+              showChapterEndReward(() => {
+                setLoadedChapters(prev => ({ ...prev, [nextMeta.index]: nextChap }));
+                setCurrentChapter(nextChap);
+                router.replace(`/truyen/${slug}/nghe?chuong=${nextMeta.index}`, { scroll: false });
+                streamChapterRef.current?.(nextChap);
+              });
             });
         }
         return;
@@ -1829,6 +1896,51 @@ export default function ListeningClient({
   const increaseSpeed = () => setSpeed(s => Math.min(MAX_SPEED, Math.round((s + SPEED_STEP) * 100) / 100));
   const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
+  // ── Hiện overlay cuối chương + phát audio kêu gọi + đếm ngược 5s ──
+  const showChapterEndReward = useCallback((playNextFn: () => void) => {
+    pendingNextFnRef.current = playNextFn;
+    setRewardCountdown(5);
+    setShowRewardOverlay(true);
+    try {
+      const cue = new Audio('/credit.mp3');
+      cue.volume = 0.9;
+      cue.play().catch(() => { /* autoplay blocked — silent */ });
+    } catch { /* silent */ }
+    let count = 5;
+    if (rewardCountdownRef.current) clearInterval(rewardCountdownRef.current);
+    rewardCountdownRef.current = setInterval(() => {
+      count--;
+      setRewardCountdown(count);
+      if (count <= 0) {
+        clearInterval(rewardCountdownRef.current!);
+        rewardCountdownRef.current = null;
+        setShowRewardOverlay(false);
+        pendingNextFnRef.current?.();
+        pendingNextFnRef.current = null;
+      }
+    }, 1000);
+  }, []);
+
+  // ── User click nhận thưởng ──
+  const handleClaimReward = useCallback(() => {
+    if (rewardCountdownRef.current) {
+      clearInterval(rewardCountdownRef.current);
+      rewardCountdownRef.current = null;
+    }
+    refreshAd();
+    const newStreak = streakRef.current + 1;
+    streakRef.current = newStreak;
+    setStreak(newStreak);
+    const bonus = STREAK_BONUS[newStreak] ?? 0;
+    const total = CREDIT_PER_CHAPTER + bonus;
+    const streakMsg = bonus > 0 ? ` 🔥 Streak x${newStreak}` : '';
+    showCreditToast(`+${total.toFixed(2)} Credit${streakMsg}`);
+    // TODO: fetch('/api/credit/earn', { method:'POST', body: JSON.stringify({ amount: total }) })
+    setShowRewardOverlay(false);
+    pendingNextFnRef.current?.();
+    pendingNextFnRef.current = null;
+  }, [refreshAd]);
+
   // ─────────────────────────────────────────────────────────
   // ── Shared UI ──
   // ─────────────────────────────────────────────────────────
@@ -1890,6 +2002,78 @@ export default function ListeningClient({
         className="w-9 h-9 rounded-full bg-[#2a2520] border border-white/[0.20] flex items-center justify-center text-white disabled:opacity-30 hover:border-white/40 transition-colors">
         <SkipForward size={16} />
       </button>
+    </div>
+  );
+
+  // ── Controls + VoiceSpeed gộp 1 dòng ──
+  const ControlsRow = (
+    <div className="flex items-center gap-2">
+      {/* Playback buttons */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <button onClick={() => goChapter('prev')} disabled={!hasPrev}
+          className="w-8 h-8 rounded-full bg-[#2a2520] border border-white/[0.20] flex items-center justify-center text-white disabled:opacity-30 hover:border-white/40 transition-colors">
+          <SkipBack size={14} />
+        </button>
+        <button onClick={() => skip(-15)}
+          className="w-8 h-8 rounded-full bg-[#2a2520] border border-white/[0.20] flex items-center justify-center text-white hover:border-white/40 transition-colors">
+          <RotateCcw size={13} />
+        </button>
+        <button onClick={togglePlay} disabled={isGenerating && generatedRef.current === 0}
+          className="w-12 h-12 rounded-full bg-gradient-to-br from-[#e8580a] to-[#ff7c35] flex items-center justify-center text-white shadow-[0_4px_16px_rgba(232,88,10,0.5)] active:scale-95 transition-all disabled:opacity-60">
+          {isPlaying
+            ? <Pause size={20} fill="white" />
+            : <Play size={20} fill="white" className="translate-x-0.5" />}
+        </button>
+        <button onClick={() => skip(15)}
+          className="w-8 h-8 rounded-full bg-[#2a2520] border border-white/[0.20] flex items-center justify-center text-white hover:border-white/40 transition-colors">
+          <RotateCw size={13} />
+        </button>
+        <button onClick={() => goChapter('next')} disabled={!hasNext}
+          className="w-8 h-8 rounded-full bg-[#2a2520] border border-white/[0.20] flex items-center justify-center text-white disabled:opacity-30 hover:border-white/40 transition-colors">
+          <SkipForward size={14} />
+        </button>
+      </div>
+      {/* Divider */}
+      <div className="w-px h-8 bg-white/[0.08] shrink-0" />
+      {/* Voice dropdown — compact */}
+      <div className="relative flex-1 min-w-0">
+        <button onClick={() => setShowVoiceMenu(v => !v)}
+          className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#231f1a] border border-white/[0.07] hover:border-[#e8580a]/30 transition-colors">
+          <span className="text-[11px]">🎙</span>
+          <span className="text-[11px] font-bold text-white flex-1 text-left truncate">
+            {voices.find(v => v.id === selectedVoice)?.name ?? 'Chọn giọng'}
+          </span>
+          <ChevronDown size={10} className="text-[#c0b4a8] shrink-0" />
+        </button>
+        {showVoiceMenu && voices.length > 0 && (
+          <div className="absolute bottom-full left-0 right-0 mb-1 bg-[#1a1612] border border-white/[0.09] rounded-xl overflow-hidden shadow-xl z-20 max-h-48 overflow-y-auto">
+            {voices.map(v => (
+              <button key={v.id} onClick={() => { setSelectedVoice(v.id); setShowVoiceMenu(false); }}
+                className={`w-full text-left px-3 py-2.5 text-[11px] font-medium transition-colors ${v.id === selectedVoice ? 'bg-[#e8580a]/15 text-[#ff7c35]' : 'text-[#f0ebe4] hover:bg-white/[0.05]'}`}>
+                {v.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {/* Speed */}
+      <div className="flex items-center gap-0.5 rounded-lg bg-[#231f1a] border border-[#e8580a]/35 overflow-hidden shrink-0">
+        <button onClick={decreaseSpeed} disabled={speed <= MIN_SPEED}
+          className="px-2 py-1.5 text-[#e8580a] text-[12px] font-black hover:bg-[#e8580a]/15 transition-colors disabled:opacity-30">−</button>
+        <span className="text-[#e8580a] text-[10px] font-black min-w-[30px] text-center">{speed.toFixed(2)}x</span>
+        <button onClick={increaseSpeed} disabled={speed >= MAX_SPEED}
+          className="px-2 py-1.5 text-[#e8580a] text-[12px] font-black hover:bg-[#e8580a]/15 transition-colors disabled:opacity-30">+</button>
+      </div>
+      {/* Workers */}
+      <div className="flex items-center gap-0.5 rounded-lg bg-[#231f1a] border border-white/[0.07] overflow-hidden shrink-0">
+        <button onClick={() => { const n = Math.max(2, workerCount-1); setWorkerCount(n); while(workerPoolRef.current.length < n) workerPoolRef.current.push(new Worker(`/workers/tts-worker.js?v=pcm1`,{type:'module'})); while(workerPoolRef.current.length > n) { try{workerPoolRef.current.pop()?.terminate();}catch{} } }}
+          disabled={workerCount <= 2}
+          className="px-2 py-1.5 text-[#c0b4a8] text-[12px] font-black hover:bg-white/[0.06] transition-colors disabled:opacity-30">−</button>
+        <span className="text-[#c0b4a8] text-[10px] font-black min-w-[24px] text-center">⚡{workerCount}</span>
+        <button onClick={() => { const n = Math.min(4, workerCount+1); setWorkerCount(n); while(workerPoolRef.current.length < n) workerPoolRef.current.push(new Worker(`/workers/tts-worker.js?v=pcm1`,{type:'module'})); while(workerPoolRef.current.length > n) { try{workerPoolRef.current.pop()?.terminate();}catch{} } }}
+          disabled={workerCount >= 4}
+          className="px-2 py-1.5 text-[#c0b4a8] text-[12px] font-black hover:bg-white/[0.06] transition-colors disabled:opacity-30">+</button>
+      </div>
     </div>
   );
 
@@ -2617,52 +2801,53 @@ export default function ListeningClient({
         </button>
       </div>
 
-      {/* ════ MOBILE (< lg) — full screen như mockup ════ */}
-      <div className="lg:hidden relative min-h-screen">
-        {/* Cover centered - not full screen */}
-        <div className="absolute inset-0">
-          {storyCover
-            ? <>
-              <div className="absolute inset-0 bg-cover bg-center opacity-20 blur-xl scale-110"
+      {/* ════ MOBILE (< lg) — cover block + controls 1 dòng ════ */}
+      <div className="lg:hidden flex flex-col min-h-screen bg-[#0f0d0a]">
+
+        {/* ── VÙNG COVER (thay thế vùng Ads) ── */}
+        <div className="relative w-full bg-[#0a0806] overflow-hidden" style={{ aspectRatio: '16/9', maxHeight: '56vw' }}>
+          {storyCover ? (
+            <>
+              <div className="absolute inset-0 bg-cover bg-center opacity-25 blur-lg scale-110"
                 style={{ backgroundImage: `url(${storyCover})` }} />
-              <div className="absolute inset-0 flex items-center justify-center" style={{ top: '60px', bottom: '320px' }}>
-                <img src={storyCover} alt={storyTitle}
-                  className="max-h-full max-w-[75%] object-contain drop-shadow-2xl rounded-lg" />
-              </div>
+              <img src={storyCover} alt={storyTitle}
+                className="relative z-10 h-full mx-auto object-contain drop-shadow-xl" />
             </>
-            : <div className="absolute inset-0 bg-gradient-to-br from-[#3d1f08] to-[#0f0d0a]" />}
-          <div className="absolute bottom-0 left-0 right-0 h-[480px] bg-gradient-to-t from-[#0f0d0a] via-[#0f0d0a]/80 to-transparent" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#3d1f08] to-[#0f0d0a]">
+              <Headphones size={40} className="text-[#e8580a]/30" />
+            </div>
+          )}
         </div>
 
-        {/* Controls căn bottom */}
-        <div className="relative flex flex-col justify-end min-h-screen pb-7">
-          <div className="mt-auto">
-            <div className="px-6 pb-3">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#e8580a]/50 bg-[#e8580a]/10 mb-2">
-                <Headphones size={9} className="text-[#e8580a]" />
-                <span className="text-[9px] font-black tracking-[.12em] uppercase text-[#e8580a]">Chương {currentIdx}</span>
-              </div>
-              <h1 className="font-serif text-[20px] font-bold text-white leading-tight mb-1">
-                {currentChapter.title || `Chương ${currentIdx}`}
-              </h1>
-            </div>
-            <div className="px-6 flex flex-col gap-3">
-              {DebugPanel}
-              {Controls}
-              {VoiceSpeed}
-              {WorkerPanel}
-            </div>
-            <div className="px-6 mt-3 border-t border-white/[0.06] pt-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black uppercase tracking-[.1em] text-[#f0ebe4]">Danh sách chương</span>
-                <button onClick={() => setShowChapterList(true)}
-                  className="bg-[#1a1612] border border-white/[0.07] rounded-lg px-2.5 py-1 text-[10px] font-bold text-[#e8580a]">
-                  Xem tất cả ›
-                </button>
-              </div>
-              {previewChaps.map(renderChapRow)}
-            </div>
+        {/* ── CHAPTER INFO ── */}
+        <div className="px-4 pt-3 pb-2">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#e8580a]/50 bg-[#e8580a]/10 mb-1.5">
+            <Headphones size={9} className="text-[#e8580a]" />
+            <span className="text-[9px] font-black tracking-[.12em] uppercase text-[#e8580a]">Chương {currentIdx}</span>
           </div>
+          <h1 className="font-serif text-[18px] font-bold text-white leading-tight">
+            {currentChapter.title || `Chương ${currentIdx}`}
+          </h1>
+        </div>
+
+        {/* ── DEBUG + CONTROLS 1 DÒNG ── */}
+        <div className="px-4 flex flex-col gap-2.5 pb-3">
+          {DebugPanel}
+          {ControlsRow}
+          {WorkerPanel}
+        </div>
+
+        {/* ── CHAPTER LIST PREVIEW ── */}
+        <div className="px-4 mt-1 border-t border-white/[0.06] pt-3 pb-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black uppercase tracking-[.1em] text-[#f0ebe4]">Danh sách chương</span>
+            <button onClick={() => setShowChapterList(true)}
+              className="bg-[#1a1612] border border-white/[0.07] rounded-lg px-2.5 py-1 text-[10px] font-bold text-[#e8580a]">
+              Xem tất cả ›
+            </button>
+          </div>
+          {previewChaps.map(renderChapRow)}
         </div>
       </div>
 
@@ -2679,30 +2864,45 @@ export default function ListeningClient({
           <div className="absolute inset-0 bg-gradient-to-t from-[#0f0d0a] via-[#0f0d0a]/30 to-transparent" />
         </div>
 
-        {/* LEFT 9 cols — cover full + controls căn bottom */}
-        <div className="col-span-9 relative z-10 overflow-hidden">
-          {/* Cover full */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            {storyCover
-              ? <img src={storyCover} alt={storyTitle} className="relative z-10 object-contain drop-shadow-2xl" style={{ maxHeight: '65%', maxWidth: '55%' }} />
-              : <Headphones size={80} className="text-[#e8580a]/20" />
-            }
+        {/* LEFT 9 cols — cover block (ads zone) + controls */}
+        <div className="col-span-9 relative z-10 flex flex-col h-screen overflow-hidden">
+
+          {/* ── VÙNG COVER = ADS ZONE ── */}
+          <div className="relative flex-shrink-0 overflow-hidden bg-[#080605]" style={{ height: '58%' }}>
+            {storyCover ? (
+              <>
+                {/* Blurred bg */}
+                <div className="absolute inset-0 bg-cover bg-center opacity-30 blur-2xl scale-110"
+                  style={{ backgroundImage: `url(${storyCover})` }} />
+                {/* Cover centered */}
+                <img
+                  src={storyCover} alt={storyTitle}
+                  className="relative z-10 h-full mx-auto object-contain drop-shadow-[0_8px_40px_rgba(0,0,0,0.8)]"
+                />
+              </>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Headphones size={80} className="text-[#e8580a]/20" />
+              </div>
+            )}
+            {/* Gradient fade bottom */}
+            <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#0a0806] to-transparent pointer-events-none" />
           </div>
 
-          {/* Controls căn bottom */}
-          <div className="absolute bottom-0 left-0 right-0 px-8 pb-8 flex flex-col gap-5">
+          {/* ── CHAPTER INFO + CONTROLS ── */}
+          <div className="flex-1 flex flex-col justify-center px-8 gap-4 min-h-0">
+            {/* Chapter label + title */}
             <div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#e8580a]/50 bg-[#e8580a]/10 mb-2">
                 <Headphones size={9} className="text-[#e8580a]" />
                 <span className="text-[9px] font-black tracking-[.12em] uppercase text-[#e8580a]">Chương {currentIdx}</span>
               </div>
-              <h1 className="font-serif text-[26px] font-bold text-white leading-tight mb-1">
+              <h1 className="font-serif text-[24px] font-bold text-white leading-tight">
                 {currentChapter.title || `Chương ${currentIdx}`}
               </h1>
             </div>
             {DebugPanel}
-            {Controls}
-            {VoiceSpeed}
+            {ControlsRow}
             {WorkerPanel}
           </div>
         </div>
@@ -2798,6 +2998,49 @@ export default function ListeningClient({
           </div>
           <div className="flex-1 overflow-hidden flex flex-col">
             {CommentsPanel}
+          </div>
+        </div>
+      )}
+      {/* ════ CHAPTER END REWARD OVERLAY ════ */}
+      {showRewardOverlay && (
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-[#1a1612] border border-[#e8580a]/30 p-6 text-center shadow-[0_0_50px_rgba(232,88,10,0.2)]">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8580a]/15 border border-[#e8580a]/30 mb-3">
+              <CheckCircle2 size={12} className="text-[#e8580a]" />
+              <span className="text-[11px] font-black uppercase tracking-[.12em] text-[#e8580a]">
+                Chương {currentChapter.index} hoàn thành
+              </span>
+            </div>
+            <p className="text-[12px] text-[#8a7e72] mb-4 leading-snug line-clamp-2 px-2">
+              {currentChapter.title}
+            </p>
+            {streak > 0 && (
+              <div className="flex items-center justify-center gap-1.5 mb-3">
+                <span className="text-[14px]">🔥</span>
+                <span className="text-[12px] font-bold text-[#f97316]">Streak {streak + 1}/5</span>
+                {STREAK_BONUS[streak + 1] && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#f97316]/20 text-[#f97316] font-bold">
+                    +{((STREAK_BONUS[streak + 1] ?? 0) * 100).toFixed(0)}% bonus!
+                  </span>
+                )}
+              </div>
+            )}
+            <button
+              onClick={handleClaimReward}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#e8580a] to-[#ff7c35] text-white font-black text-[15px] shadow-[0_4px_24px_rgba(232,88,10,0.4)] active:scale-95 transition-all mb-4"
+            >
+              🎁 Nhận {(CREDIT_PER_CHAPTER + (STREAK_BONUS[streak + 1] ?? 0)).toFixed(2)} Credit
+            </button>
+            <p className="text-[11px] text-[#8a7e72] mb-2">
+              Tự động chuyển chương sau{' '}
+              <span className="text-[#f0ebe4] font-bold tabular-nums">{rewardCountdown}s</span>
+            </p>
+            <div className="h-[3px] w-full bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#e8580a] to-[#ff7c35] rounded-full transition-all duration-1000 ease-linear"
+                style={{ width: `${(rewardCountdown / 5) * 100}%` }}
+              />
+            </div>
           </div>
         </div>
       )}
