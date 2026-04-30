@@ -2012,7 +2012,7 @@ export default function ListeningClient({
 
   // ── Controls + VoiceSpeed gộp 1 dòng ──
   const ControlsRow = (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center justify-center gap-2">
       {/* Playback buttons */}
       <div className="flex items-center gap-1.5 shrink-0">
         <button onClick={() => goChapter('prev')} disabled={!hasPrev}
@@ -2040,8 +2040,8 @@ export default function ListeningClient({
       </div>
       {/* Divider */}
       <div className="w-px h-8 bg-white/[0.08] shrink-0" />
-      {/* Voice dropdown — cùng chiều rộng nút tốc độ */}
-      <div className="relative shrink-0 w-[82px]">
+      {/* Voice dropdown — 200px */}
+      <div className="relative shrink-0 w-[200px]">
         <button onClick={() => setShowVoiceMenu(v => !v)}
           className="w-full flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#231f1a] border border-white/[0.07] hover:border-[#e8580a]/30 transition-colors overflow-hidden">
           <span className="text-[11px] shrink-0">🎙</span>
@@ -2783,13 +2783,13 @@ export default function ListeningClient({
         </div>
       )}
 
-      {/* ── Back + title overlay ── */}
+      {/* ── Back + title overlay — chỉ mobile, desktop đã có bottom bar ── */}
       <div className="absolute top-3 left-3 z-40 flex items-center gap-2">
         <Link href={`/truyen/${slug}`}
-          className="w-8 h-8 rounded-lg bg-black/60 backdrop-blur-sm border border-white/[0.25] flex items-center justify-center text-white hover:text-white hover:border-white/50 transition-colors flex-shrink-0">
+          className="lg:hidden w-8 h-8 rounded-lg bg-black/60 backdrop-blur-sm border border-white/[0.25] flex items-center justify-center text-white hover:text-white hover:border-white/50 transition-colors flex-shrink-0">
           <ArrowLeft size={15} />
         </Link>
-        <div className="bg-black/50 backdrop-blur-sm border border-white/[0.08] rounded-lg px-3 py-1.5 max-w-[260px] min-w-0">
+        <div className="lg:hidden bg-black/50 backdrop-blur-sm border border-white/[0.08] rounded-lg px-3 py-1.5 max-w-[260px] min-w-0">
           <p className="text-[13px] font-bold text-white truncate leading-tight">{storyTitle}</p>
         </div>
         <button onClick={() => setShowChapterList(true)}
@@ -2893,13 +2893,14 @@ export default function ListeningClient({
 
           {/* ── BOTTOM CONTROLS (shrink-0 — ghim xuống đáy) ── */}
           <div className="shrink-0 flex flex-col px-8 pb-5 pt-3 gap-3">
-            {/* 1 dòng: ← tên truyện · tên chương */}
-            <div className="flex items-center gap-2 min-w-0">
-              <Link href={`/truyen/${slug}`}
-                className="shrink-0 w-7 h-7 rounded-lg bg-white/[0.07] border border-white/[0.12] flex items-center justify-center text-white hover:border-white/30 transition-colors">
-                <ArrowLeft size={13} />
+            {/* 1 dòng: Trang chủ · tên truyện · tên chương */}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Link href="/"
+                className="shrink-0 px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-sm border border-white/[0.25] text-[13px] font-bold text-white hover:border-white/50 transition-colors whitespace-nowrap">
+                Trang chủ
               </Link>
-              <span className="text-[12px] font-semibold text-[#c0b4a8] truncate shrink-0 max-w-[35%]">{storyTitle}</span>
+              <span className="text-[#8a7e72] text-[11px] shrink-0">·</span>
+              <span className="text-[13px] font-bold text-white truncate shrink-0 max-w-[30%]">{storyTitle}</span>
               <span className="text-[#8a7e72] text-[11px] shrink-0">·</span>
               <span className="text-[13px] font-bold text-white truncate min-w-0">
                 {currentChapter.title || `Chương ${currentIdx}`}
