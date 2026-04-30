@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  turbopack: {},
+  // turbopack: {}, // ← TẮT: Turbopack production build ăn ~7.4GB RAM → OOM kill trên VPS 8GB
+  //                //   Dev vẫn dùng --webpack flag nên không ảnh hưởng
 
   experimental: {
     workerThreads: false,
