@@ -410,7 +410,12 @@ export default function ListeningClient({
       .then(r => r.json())
       .then((data: { id: string; name: string; path?: string }[]) => {
         setVoices(data);
-        if (data.length > 0) setSelectedVoice(data[0].id);
+        if (data.length > 0) {
+          const ngocHuyen = data.find((v: { id: string; name: string }) =>
+            v.name.toLowerCase().includes('ngọc huyền') || v.name.toLowerCase().includes('ngoc huyen')
+          );
+          setSelectedVoice(ngocHuyen?.id ?? data[0].id);
+        }
       })
       .catch(() => {
         setVoices([{ id: 'default', name: 'Giọng mặc định' }]);
@@ -2035,15 +2040,15 @@ export default function ListeningClient({
       </div>
       {/* Divider */}
       <div className="w-px h-8 bg-white/[0.08] shrink-0" />
-      {/* Voice dropdown — compact */}
-      <div className="relative flex-1 min-w-0">
+      {/* Voice dropdown — cùng chiều rộng nút tốc độ */}
+      <div className="relative shrink-0 w-[82px]">
         <button onClick={() => setShowVoiceMenu(v => !v)}
-          className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#231f1a] border border-white/[0.07] hover:border-[#e8580a]/30 transition-colors">
-          <span className="text-[11px]">🎙</span>
-          <span className="text-[11px] font-bold text-white flex-1 text-left truncate">
-            {voices.find(v => v.id === selectedVoice)?.name ?? 'Chọn giọng'}
+          className="w-full flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#231f1a] border border-white/[0.07] hover:border-[#e8580a]/30 transition-colors overflow-hidden">
+          <span className="text-[11px] shrink-0">🎙</span>
+          <span className="text-[10px] font-bold text-white flex-1 text-left truncate">
+            {voices.find(v => v.id === selectedVoice)?.name ?? 'Giọng'}
           </span>
-          <ChevronDown size={10} className="text-[#c0b4a8] shrink-0" />
+          <ChevronDown size={9} className="text-[#c0b4a8] shrink-0" />
         </button>
         {showVoiceMenu && voices.length > 0 && (
           <div className="absolute bottom-full left-0 right-0 mb-1 bg-[#1a1612] border border-white/[0.09] rounded-xl overflow-hidden shadow-xl z-20 max-h-48 overflow-y-auto">
@@ -2867,14 +2872,12 @@ export default function ListeningClient({
         {/* LEFT 9 cols — cover block (ads zone) + controls */}
         <div className="col-span-9 relative z-10 flex flex-col h-screen overflow-hidden">
 
-          {/* ── VÙNG COVER = ADS ZONE ── */}
-          <div className="relative flex-shrink-0 overflow-hidden bg-[#080605]" style={{ height: '58%' }}>
+          {/* ── VÙNG ADS (flex-1 — chiếm toàn bộ không gian còn lại phía trên) ── */}
+          <div className="relative flex-1 overflow-hidden bg-[#080605] min-h-0">
             {storyCover ? (
               <>
-                {/* Blurred bg */}
                 <div className="absolute inset-0 bg-cover bg-center opacity-30 blur-2xl scale-110"
                   style={{ backgroundImage: `url(${storyCover})` }} />
-                {/* Cover centered */}
                 <img
                   src={storyCover} alt={storyTitle}
                   className="relative z-10 h-full mx-auto object-contain drop-shadow-[0_8px_40px_rgba(0,0,0,0.8)]"
@@ -2885,21 +2888,22 @@ export default function ListeningClient({
                 <Headphones size={80} className="text-[#e8580a]/20" />
               </div>
             )}
-            {/* Gradient fade bottom */}
             <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#0a0806] to-transparent pointer-events-none" />
           </div>
 
-          {/* ── CHAPTER INFO + CONTROLS ── */}
-          <div className="flex-1 flex flex-col justify-center px-8 gap-4 min-h-0">
-            {/* Chapter label + title */}
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#e8580a]/50 bg-[#e8580a]/10 mb-2">
-                <Headphones size={9} className="text-[#e8580a]" />
-                <span className="text-[9px] font-black tracking-[.12em] uppercase text-[#e8580a]">Chương {currentIdx}</span>
-              </div>
-              <h1 className="font-serif text-[24px] font-bold text-white leading-tight">
+          {/* ── BOTTOM CONTROLS (shrink-0 — ghim xuống đáy) ── */}
+          <div className="shrink-0 flex flex-col px-8 pb-5 pt-3 gap-3">
+            {/* 1 dòng: ← tên truyện · tên chương */}
+            <div className="flex items-center gap-2 min-w-0">
+              <Link href={`/truyen/${slug}`}
+                className="shrink-0 w-7 h-7 rounded-lg bg-white/[0.07] border border-white/[0.12] flex items-center justify-center text-white hover:border-white/30 transition-colors">
+                <ArrowLeft size={13} />
+              </Link>
+              <span className="text-[12px] font-semibold text-[#c0b4a8] truncate shrink-0 max-w-[35%]">{storyTitle}</span>
+              <span className="text-[#8a7e72] text-[11px] shrink-0">·</span>
+              <span className="text-[13px] font-bold text-white truncate min-w-0">
                 {currentChapter.title || `Chương ${currentIdx}`}
-              </h1>
+              </span>
             </div>
             {DebugPanel}
             {ControlsRow}
