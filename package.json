@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack -H 0.0.0.0",
     "dev:https": "node https-proxy.js",
-    "build": "prisma generate && prisma migrate deploy && next build",
+    "build": "NODE_OPTIONS='--max-old-space-size=6144' prisma generate && NODE_OPTIONS='--max-old-space-size=6144' prisma migrate deploy && NODE_OPTIONS='--max-old-space-size=6144' next build",
     "start": "next start -H 0.0.0.0",
     "start:https": "node https-proxy.js",
     "lint": "eslint",
