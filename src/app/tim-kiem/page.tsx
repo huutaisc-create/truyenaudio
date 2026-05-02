@@ -5,35 +5,9 @@ import { Filter, Search, ChevronDown, Check, BookOpen, User, Star, RotateCcw, Ey
 import { useSearchParams, useRouter } from 'next/navigation';
 import { formatNumber } from '@/lib/utils';
 
-// --- DATA CONSTANTS ---
-const FILTER_DATA = {
-    theLoai: [
-        "Tiên Hiệp", "Huyền Huyễn", "Khoa Huyễn", "Võ Hiệp", "Đô Thị", "Đồng Nhân",
-        "Dã Sử", "Cạnh Kỹ", "Huyền Nghi", "Kiếm Hiệp", "Kỳ Ảo", "Linh Dị",
-        "Mạt Thế", "Ngôn Tình", "Ngược", "Quân Sự", "Quan Trường", "Sắc",
-        "Sủng", "Thám Hiểm", "Trinh Thám", "Trọng Sinh", "Võng Du", "Xuyên Không",
-        "Xuyên Nhanh", "Phương Tây", "Việt Nam", "Light Novel", "Nữ Cường", "Đam Mỹ",
-        "Bách Hợp", "Cung Đấu", "Gia Đấu", "Điền Văn", "Hài Hước", "Lịch Sử"
-    ],
-    boiCanh: [
-        "Đông Phương", "Tây Phương", "Hiện Đại", "Cổ Đại", "Mạt Thế", "Tương Lai", "Dị Giới", "Huyền Ảo"
-    ],
-    tinhCach: [
-        "Điềm Đạm", "Nhiệt Huyết", "Vô Sỉ", "Thiết Huyết", "Nhẹ Nhàng", "Cơ Trí", "Lãnh Khốc", "Kiêu Ngạo", "Ngây Thơ"
-    ],
-    luuPhai: [
-        "Hệ Thống", "Lão Gia", "Bàn Thờ", "Tùy Thân", "Nhạc Lý", "Ẩm Thực", "Vô Địch", "Xuyên Qua", "Trọng Sinh"
-    ],
-    thiGiac: [
-        "Nam Chủ", "Nữ Chủ", "Ngôi Thứ Nhất"
-    ],
-    tinhTrang: [
-        "Đang Ra", "Hoàn Thành", "Dịch", "Convert"
-    ],
-    soChuong: [
-        "< 200", "200 - 400", "400 - 600", "600 - 800", "800 - 1000", "> 1000"
-    ]
-};
+// Tình trạng & số chương vẫn hardcode vì không lưu trong DB Genre
+const TINH_TRANG = ["Đang Ra", "Hoàn Thành", "Dịch", "Convert"];
+const SO_CHUONG  = ["< 200", "200 - 400", "400 - 600", "600 - 800", "800 - 1000", "> 1000"];
 
 // --- HELPER COMPONENTS ---
 const FilterSection = ({
@@ -71,9 +45,8 @@ const FilterSection = ({
     </div>
 );
 
-import { searchStories } from '@/actions/stories';
+import { searchStories, getGenres } from '@/actions/stories';
 
-// ... (FILTER_DATA and FilterSection remain unchanged) ...
 
 const FilterPage = () => {
     const searchParams = useSearchParams();
@@ -117,6 +90,17 @@ const FilterPage = () => {
         tinhTrang: [] as string[],
         soChuong: [] as string[]
     });
+
+    // Genres từ DB
+    const [genreData, setGenreData] = useState<Record<string, string[]>>({});
+    React.useEffect(() => {
+        getGenres().then(setGenreData);
+    }, []);
+    const theLoaiList = genreData['GENRE']    || [];
+    const boiCanhList = genreData['BOI_CANH'] || [];
+    const luuPhaiList = genreData['LUU_PHAI'] || [];
+    const tinhCachList= genreData['TINH_CACH']|| [];
+    const thiGiacList = genreData['THI_GIAC'] || [];
 
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
     const [timeFilter, setTimeFilter] = useState<{ type: 'all' | 'specific'; month: number; year: number }>({
@@ -321,7 +305,7 @@ const FilterPage = () => {
                                         <ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180" />
                                     </summary>
                                     <div className="p-4 flex flex-wrap gap-2 border-t border-zinc-100">
-                                        {FILTER_DATA.theLoai.map(item => (
+                                        {theLoaiList.map(item => (
                                             <button
                                                 key={item}
                                                 onClick={() => toggleFilter('theLoai', item)}
@@ -340,7 +324,7 @@ const FilterPage = () => {
                                         <ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180" />
                                     </summary>
                                     <div className="p-4 flex flex-wrap gap-2 border-t border-zinc-100">
-                                        {FILTER_DATA.tinhTrang.map(item => (
+                                        {TINH_TRANG.map(item => (
                                             <button
                                                 key={item}
                                                 onClick={() => toggleFilter('tinhTrang', item)}
@@ -359,7 +343,7 @@ const FilterPage = () => {
                                         <ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180" />
                                     </summary>
                                     <div className="p-4 flex flex-wrap gap-2 border-t border-zinc-100">
-                                        {FILTER_DATA.soChuong.map(item => (
+                                        {SO_CHUONG.map(item => (
                                             <button
                                                 key={item}
                                                 onClick={() => toggleFilter('soChuong', item)}
@@ -378,7 +362,7 @@ const FilterPage = () => {
                                         <ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180" />
                                     </summary>
                                     <div className="p-4 flex flex-wrap gap-2 border-t border-zinc-100">
-                                        {FILTER_DATA.boiCanh.map(item => (
+                                        {boiCanhList.map(item => (
                                             <button
                                                 key={item}
                                                 onClick={() => toggleFilter('boiCanh', item)}
@@ -397,7 +381,7 @@ const FilterPage = () => {
                                         <ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180" />
                                     </summary>
                                     <div className="p-4 flex flex-wrap gap-2 border-t border-zinc-100">
-                                        {FILTER_DATA.luuPhai.map(item => (
+                                        {luuPhaiList.map(item => (
                                             <button
                                                 key={item}
                                                 onClick={() => toggleFilter('luuPhai', item)}
@@ -416,7 +400,7 @@ const FilterPage = () => {
                                         <ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180" />
                                     </summary>
                                     <div className="p-4 flex flex-wrap gap-2 border-t border-zinc-100">
-                                        {FILTER_DATA.tinhCach.map(item => (
+                                        {tinhCachList.map(item => (
                                             <button
                                                 key={item}
                                                 onClick={() => toggleFilter('tinhCach', item)}
@@ -435,7 +419,7 @@ const FilterPage = () => {
                                         <ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180" />
                                     </summary>
                                     <div className="p-4 flex flex-wrap gap-2 border-t border-zinc-100">
-                                        {FILTER_DATA.thiGiac.map(item => (
+                                        {thiGiacList.map(item => (
                                             <button
                                                 key={item}
                                                 onClick={() => toggleFilter('thiGiac', item)}
@@ -483,7 +467,7 @@ const FilterPage = () => {
                     <div className="p-6">
                         <FilterSection
                             title="Thể Loại"
-                            items={FILTER_DATA.theLoai}
+                            items={theLoaiList}
                             selectedItems={filters.theLoai}
                             onToggle={(item) => toggleFilter('theLoai', item)}
                         />
@@ -685,14 +669,14 @@ const FilterPage = () => {
                         <div className="bg-white p-5 rounded-xl shadow-sm border border-zinc-200">
                             <SidebarFilterSection
                                 title="Tình Trạng"
-                                items={FILTER_DATA.tinhTrang}
+                                items={TINH_TRANG}
                                 selectedItems={filters.tinhTrang}
                                 onToggle={(item) => toggleFilter('tinhTrang', item)}
                             />
                             <div className="h-px bg-zinc-100 my-4" />
                             <SidebarFilterSection
                                 title="Số Chương"
-                                items={FILTER_DATA.soChuong}
+                                items={SO_CHUONG}
                                 selectedItems={filters.soChuong}
                                 onToggle={(item) => toggleFilter('soChuong', item)}
                             />
@@ -750,28 +734,28 @@ const FilterPage = () => {
                             <div className="h-px bg-zinc-100 my-4" />
                             <SidebarFilterSection
                                 title="Bối Cảnh"
-                                items={FILTER_DATA.boiCanh}
+                                items={boiCanhList}
                                 selectedItems={filters.boiCanh}
                                 onToggle={(item) => toggleFilter('boiCanh', item)}
                             />
                             <div className="h-px bg-zinc-100 my-4" />
                             <SidebarFilterSection
                                 title="Lưu Phái"
-                                items={FILTER_DATA.luuPhai}
+                                items={luuPhaiList}
                                 selectedItems={filters.luuPhai}
                                 onToggle={(item) => toggleFilter('luuPhai', item)}
                             />
                             <div className="h-px bg-zinc-100 my-4" />
                             <SidebarFilterSection
                                 title="Tính Cách"
-                                items={FILTER_DATA.tinhCach}
+                                items={tinhCachList}
                                 selectedItems={filters.tinhCach}
                                 onToggle={(item) => toggleFilter('tinhCach', item)}
                             />
                             <div className="h-px bg-zinc-100 my-4" />
                             <SidebarFilterSection
                                 title="Thị Giác"
-                                items={FILTER_DATA.thiGiac}
+                                items={thiGiacList}
                                 selectedItems={filters.thiGiac}
                                 onToggle={(item) => toggleFilter('thiGiac', item)}
                             />

@@ -24,6 +24,23 @@ import { auth } from '@/auth';
 import { rewardCredit } from '@/lib/credits';
 import { getVnTodayStart, secsUntilVnMidnight } from '@/lib/date-vn';
 
+export async function getGenres(): Promise<Record<string, string[]>> {
+    try {
+        const genres = await db.genre.findMany({
+            select: { name: true, type: true },
+            orderBy: { name: 'asc' },
+        });
+        const grouped: Record<string, string[]> = {};
+        for (const g of genres) {
+            if (!grouped[g.type]) grouped[g.type] = [];
+            grouped[g.type].push(g.name);
+        }
+        return grouped;
+    } catch {
+        return {};
+    }
+}
+
 export async function searchStories(params: SearchParams) {
     const {
         keyword, genres, boiCanh, luuPhai, tinhCach, thiGiac,
