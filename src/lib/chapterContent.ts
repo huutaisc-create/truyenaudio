@@ -3,7 +3,7 @@ import path from "path";
 
 const CHAPTERS_ROOT =
     process.env.CHAPTERS_STORAGE_PATH ??
-    path.join(process.cwd(), ...["public", "chapters"]);
+    `${process.cwd()}/public/chapters`;
 
 /**
  * Đọc nội dung chapter — hỗ trợ cả disk lẫn R2/HTTP:

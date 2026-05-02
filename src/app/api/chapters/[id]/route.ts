@@ -5,7 +5,7 @@ import db from "@/lib/db";
 
 // Thư mục gốc lưu chapter trên disk (phải khớp với CHAPTERS_STORAGE_PATH trong admin API)
 const CHAPTERS_ROOT = process.env.CHAPTERS_STORAGE_PATH
-    ?? path.join(process.cwd(), ...["public", "chapters"]);
+    ?? `${process.cwd()}/public/chapters`;
 
 /**
  * Đọc nội dung chapter:
