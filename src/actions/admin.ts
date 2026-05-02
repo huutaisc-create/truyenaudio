@@ -5,8 +5,6 @@ import { auth } from '@/auth'
 import { revalidatePath } from 'next/cache'
 import { ALL_ADMIN_ROLES } from '@/lib/admin-guard'
 import { fetchChapterContent } from '@/lib/chapterContent'
-import { writeFile, mkdir, readFile } from 'fs/promises'
-import pathModule from 'path'
 
 async function checkAdmin() {
     const session = await auth()
@@ -16,21 +14,20 @@ async function checkAdmin() {
     return session
 }
 
-// ── Local disk helpers ────────────────────────────────────
-const CHAPTERS_ROOT = () => process.env.CHAPTERS_STORAGE_PATH!
-
+// ── Local disk helpers (dynamic import để Turbopack không scan) ───────────
 async function saveChapterToDisk(slug: string, index: number, content: string): Promise<string> {
-    const dir = pathModule.join(CHAPTERS_ROOT(), slug)
+    const { writeFile, mkdir } = await import('fs/promises')
+    const root = process.env.CHAPTERS_STORAGE_PATH!
+    const dir = `${root}/${slug}`
     await mkdir(dir, { recursive: true })
-    const filePath = pathModule.join(dir, `${index}.txt`)
-    await writeFile(filePath, content, 'utf-8')
+    await writeFile(`${dir}/${index}.txt`, content, 'utf-8')
     return `/chapters/${slug}/${index}.txt`
 }
 
-const MANIFEST_PATH = () => pathModule.join(
-    process.env.CHAPTERS_STORAGE_PATH!,
-    '../models/custom/manifest.json'
-)
+async function getManifestPath(): Promise<string> {
+    const root = process.env.CHAPTERS_STORAGE_PATH!
+    return `${root}/../models/custom/manifest.json`
+}
 
 export async function getDashboardStats() {
     await checkAdmin();
@@ -932,7 +929,8 @@ export async function createPushNotification(formData: FormData) {
 export async function getVoiceManifest(): Promise<{ id: string; name: string; path?: string }[]> {
     await checkAdmin();
     try {
-        const manifestPath = MANIFEST_PATH()
+        const { readFile } = await import('fs/promises')
+        const manifestPath = await getManifestPath()
         const body = await readFile(manifestPath, 'utf-8')
         return JSON.parse(body)
     } catch (e: any) {
@@ -944,8 +942,11 @@ export async function getVoiceManifest(): Promise<{ id: string; name: string; pa
 
 export async function saveVoiceManifest(voices: { id: string; name: string; path?: string }[]) {
     await checkAdmin();
-    const manifestPath = MANIFEST_PATH()
-    await mkdir(pathModule.dirname(manifestPath), { recursive: true })
+    const { writeFile, mkdir } = await import('fs/promises')
+    const manifestPath = await getManifestPath()
+    // Tạo thư mục nếu chưa có (dùng template để tránh path.dirname)
+    const dir = manifestPath.replace(/\/[^/]+$/, '')
+    await mkdir(dir, { recursive: true })
     await writeFile(manifestPath, JSON.stringify(voices, null, 2), 'utf-8')
     revalidatePath('/admin/voices');
     return { success: true };
@@ -1014,12 +1015,14 @@ export async function replaceInStoryChapters(storyId: string, searchText: string
 
             const updated = original.replace(regex, replaceText);
 
-            // Ghi thẳng vào file local
+            // Ghi thẳng vào file local (dynamic import tránh Turbopack scan)
+            const { writeFile, mkdir } = await import('fs/promises')
             const relativePath = ch.contentUrl.startsWith('/chapters/')
                 ? ch.contentUrl.slice('/chapters/'.length)
                 : ch.contentUrl;
-            const filePath = pathModule.join(chaptersRoot, relativePath);
-            await mkdir(pathModule.dirname(filePath), { recursive: true });
+            const filePath = `${chaptersRoot}/${relativePath}`;
+            const fileDir = filePath.replace(/\/[^/]+$/, '')
+            await mkdir(fileDir, { recursive: true });
             await writeFile(filePath, updated, 'utf-8');
             replaced++;
         } catch (e) {

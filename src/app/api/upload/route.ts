@@ -1,9 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
-
-// Thư mục public của Next.js — phục vụ static files trực tiếp
-const PUBLIC_DIR = path.join(process.cwd(), 'public');
 
 export async function POST(request: NextRequest) {
     const data = await request.formData();
@@ -28,6 +23,7 @@ export async function POST(request: NextRequest) {
         const inputBuffer = Buffer.from(bytes);
 
         const sharp = (await import('sharp')).default;
+        const { writeFile, mkdir } = await import('fs/promises');
         const timestamp = Date.now();
 
         let outputBuffer: Buffer;
@@ -58,16 +54,15 @@ export async function POST(request: NextRequest) {
             folder = 'uploads';
         }
 
-        const saveDir = path.join(PUBLIC_DIR, folder);
+        // Dynamic cwd() để Turbopack không resolve tĩnh
+        const cwd = process.cwd();
+        const saveDir = `${cwd}/public/${folder}`;
         await mkdir(saveDir, { recursive: true });
-        await writeFile(path.join(saveDir, filename), outputBuffer);
-
-        // URL tương đối — Next.js serve static từ /public
-        const publicUrl = `/${folder}/${filename}`;
+        await writeFile(`${saveDir}/${filename}`, outputBuffer);
 
         return NextResponse.json({
             success: true,
-            url: publicUrl,
+            url: `/${folder}/${filename}`,
             size: outputBuffer.length,
         });
     } catch (error) {
