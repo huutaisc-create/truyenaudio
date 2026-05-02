@@ -8,7 +8,7 @@ import path from "path";
 const UPLOAD_SECRET = process.env.UPLOAD_SECRET || "df5e8753a931894d842645d812d2b23fe89917d87def1633c8926f2c67728a5c";
 
 const COVERS_ROOT = process.env.COVERS_STORAGE_PATH
-    ?? path.join(process.cwd(), "public", "covers");
+    ?? `${process.cwd()}/public/covers`;
 
 const ALLOWED_MIME: Record<string, string> = {
     "image/jpeg":  "jpg",
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         // Lưu vào public/covers/<slug>.<ext>
         await mkdir(COVERS_ROOT, { recursive: true });
         const filename = `${slug}.${ext}`;
-        await writeFile(path.join(COVERS_ROOT, filename), buffer);
+        await writeFile(`${COVERS_ROOT}/${filename}`, buffer);
 
         const url = `/covers/${filename}`;
         return NextResponse.json({ success: true, url, filename });

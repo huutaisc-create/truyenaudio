@@ -17,7 +17,7 @@ export async function fetchChapterContent(contentUrl: string | null): Promise<st
     if (contentUrl.startsWith("/chapters/")) {
         try {
             const relativePath = contentUrl.slice("/chapters/".length);
-            const filePath = path.join(CHAPTERS_ROOT, relativePath);
+            const filePath = `${CHAPTERS_ROOT}/${relativePath}`;
             return await readFile(filePath, "utf-8");
         } catch (e) {
             console.error("fetchChapterContent disk error:", contentUrl, e);

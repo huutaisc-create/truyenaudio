@@ -9,7 +9,7 @@ const UPLOAD_SECRET = "df5e8753a931894d842645d812d2b23fe89917d87def1633c8926f2c6
 
 const CHAPTERS_ROOT = process.env.CHAPTERS_STORAGE_PATH
     ?? `${process.cwd()}/public/chapters`;
-const COVERS_ROOT = path.join(process.cwd(), "public", "covers");
+const COVERS_ROOT = `${process.cwd()}/public/covers`;
 
 export async function DELETE(
     request: NextRequest,
@@ -42,8 +42,8 @@ export async function DELETE(
         await db.story.delete({ where: { slug } });
 
         // Xóa file trên disk (không throw nếu không tồn tại)
-        await rm(path.join(CHAPTERS_ROOT, slug), { recursive: true, force: true });
-        await rm(path.join(COVERS_ROOT, `${slug}.webp`), { force: true });
+        await rm(`${CHAPTERS_ROOT}/${slug}`, { recursive: true, force: true });
+        await rm(`${COVERS_ROOT}/${slug}.webp`, { force: true });
 
         return NextResponse.json({
             success: true,

@@ -16,7 +16,7 @@ async function fetchChapterContent(contentUrl: string): Promise<string> {
     if (contentUrl.startsWith("/chapters/")) {
         // Đọc từ disk: bỏ prefix "/chapters/" và ghép vào CHAPTERS_ROOT
         const relativePath = contentUrl.slice("/chapters/".length); // "slug/1.txt"
-        const filePath = path.join(CHAPTERS_ROOT, relativePath);
+        const filePath = `${CHAPTERS_ROOT}/${relativePath}`;
         return await readFile(filePath, "utf-8");
     }
     // Fetch HTTP (R2 hoặc bất kỳ URL tuyệt đối nào)

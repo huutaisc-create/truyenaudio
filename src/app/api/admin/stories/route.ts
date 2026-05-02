@@ -14,9 +14,9 @@ const CHAPTERS_ROOT = process.env.CHAPTERS_STORAGE_PATH
     ?? `${process.cwd()}/public/chapters`;
 
 async function saveChapterToDisk(slug: string, index: number, content: string): Promise<string> {
-    const dir = path.join(CHAPTERS_ROOT, slug);
+    const dir = `${CHAPTERS_ROOT}/${slug}`;
     await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, `${index}.txt`), content, "utf-8");
+    await writeFile(`${dir}/${index}.txt`, content, "utf-8");
     // Trả về relative URL — chapter API sẽ đọc từ disk thay vì fetch HTTP
     return `/chapters/${slug}/${index}.txt`;
 }

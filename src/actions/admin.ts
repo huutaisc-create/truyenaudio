@@ -267,8 +267,8 @@ export async function deleteStory(id: string) {
             const path = await import('path');
             const chaptersRoot = process.env.CHAPTERS_STORAGE_PATH
                 ?? `${process.cwd()}/public/chapters`;
-            await rm(path.join(chaptersRoot, story.slug), { recursive: true, force: true });
-            await rm(path.join(process.cwd(), 'public', 'covers', `${story.slug}.webp`), { force: true });
+            await rm(`${chaptersRoot}/${story.slug}`, { recursive: true, force: true });
+            await rm(`${process.cwd()}/public/covers/${story.slug}.webp`, { force: true });
         }
 
         await db.adminLog.create({ data: {
@@ -1039,7 +1039,7 @@ export async function replaceInStoryChapters(storyId: string, searchText: string
                 const { writeFile } = await import('fs/promises');
                 const path = await import('path');
                 const relativePath = ch.contentUrl.slice('/chapters/'.length);
-                const filePath = path.join(chaptersRoot, relativePath);
+                const filePath = `${chaptersRoot}/${relativePath}`;
                 await writeFile(filePath, updated, 'utf-8');
             } else {
                 // R2 chapter → upload lên S3
