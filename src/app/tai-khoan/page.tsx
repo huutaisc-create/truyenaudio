@@ -33,7 +33,6 @@ export default async function TaiKhoanPage() {
       chapter: { select: { index: true, title: true } },
     },
     orderBy: { visitedAt: 'desc' },
-    take: 12,
   });
 
   const realm = getRealm(user.chaptersRead);
@@ -81,7 +80,7 @@ export default async function TaiKhoanPage() {
               <div className="flex md:flex-col gap-2 w-full">
                 {[
                   { label: 'Tủ sách', value: user._count.library },
-                  { label: 'Đã đọc',  value: user._count.readingHistory },
+                  { label: 'Đã nghe', value: user._count.readingHistory },
                   { label: 'Chương',  value: user.chaptersRead.toLocaleString('vi') },
                 ].map(s => (
                   <div key={s.label} className="flex-1 md:flex-none flex md:flex-row items-center justify-between px-3 py-2 rounded-xl"
@@ -208,19 +207,19 @@ export default async function TaiKhoanPage() {
         <section>
           <div className="mb-5 border-l-4 pl-3" style={{ borderColor: ORANGE }}>
             <h2 className="text-lg font-bold uppercase text-zinc-800 flex items-center gap-2">
-              <Clock className="h-5 w-5" style={{ color: ORANGE }} /> Lịch Sử Đọc
+              <Clock className="h-5 w-5" style={{ color: ORANGE }} /> Lịch Sử Nghe
               <span className="text-sm font-normal text-zinc-400">({user._count.readingHistory})</span>
             </h2>
           </div>
           {history.length === 0 ? (
             <div className="text-center py-12 text-zinc-400">
               <Clock className="h-10 w-10 mx-auto mb-2 opacity-20" />
-              <p>Chưa có lịch sử đọc</p>
+              <p>Chưa có lịch sử nghe</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {history.map(({ story, chapter, visitedAt }) => (
-                <Link key={story.slug} href={`/truyen/${story.slug}`} className="group flex gap-3 p-2.5 rounded-xl bg-white border border-zinc-100 hover:shadow-md hover:border-zinc-200 transition-all">
+                <Link key={story.slug} href={`/truyen/${story.slug}/nghe${chapter ? `?chuong=${chapter.index}` : ''}`} className="group flex gap-3 p-2.5 rounded-xl bg-white border border-zinc-100 hover:shadow-md hover:border-zinc-200 transition-all">
                   <div className="shrink-0 w-[56px] h-[76px] rounded-lg overflow-hidden bg-zinc-100">
                     {story.coverImage ? (
                       <img src={story.coverImage} alt={story.title} className="w-full h-full object-cover" />
@@ -234,7 +233,7 @@ export default async function TaiKhoanPage() {
                       <p className="text-[11px] text-zinc-500 mt-0.5">{story.author}</p>
                     </div>
                     <div>
-                      {chapter && <p className="text-[11px] font-medium" style={{ color: ORANGE }}>Chương {chapter.index}: {chapter.title}</p>}
+                      {chapter && <p className="text-[11px] font-medium" style={{ color: ORANGE }}>▶ Nghe tiếp C.{chapter.index}</p>}
                       <p className="text-[10px] text-zinc-400 mt-0.5">{new Date(visitedAt).toLocaleDateString('vi-VN')}</p>
                     </div>
                   </div>

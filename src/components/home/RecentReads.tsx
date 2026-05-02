@@ -75,7 +75,7 @@ export default function RecentReads() {
                 </h3>
                 <div className="flex items-center gap-1 mt-0.5">
                   <span className="text-[10px] font-medium" style={{ color: "var(--accent)" }}>
-                    Đọc tiếp C.{item.chapterIndex || 1}
+                    Nghe tiếp C.{item.chapterIndex || 1}
                   </span>
                 </div>
               </div>

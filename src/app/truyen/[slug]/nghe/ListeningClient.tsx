@@ -11,6 +11,9 @@ import {
 } from 'lucide-react';
 import { toggleFollow, toggleLike, nominateStory } from '@/actions/interactions';
 import ReviewButton from '@/components/story/ReviewButton';
+import { useReadingHistory } from '@/hooks/useReadingHistory';
+import { trackChapterRead } from '@/actions/stories';
+import { useSession } from 'next-auth/react';
 
 // ── R2 CDN base URL ──────────────────────────────────────────────────────
 // Đổi URL này khi có custom domain, không cần sửa chỗ nào khác
@@ -266,6 +269,9 @@ export default function ListeningClient({
     }
   }, [storyId, allChapters.length, totalChapters]);
   const router = useRouter();
+  const { data: session } = useSession();
+  const { addToHistory } = useReadingHistory();
+  const trackedChapterRef = useRef<string>('');
 
   // ── Audio engine refs ──
   const actxRef = useRef<AudioContext | null>(null);
@@ -390,6 +396,19 @@ export default function ListeningClient({
   const sortedChapters = [...allChapters].sort((a, b) => a.index - b.index);
   const hasPrev = sortedChapters.some(c => c.index < currentIdx);
   const hasNext = sortedChapters.some(c => c.index > currentIdx);
+
+  // ── Track listening history (localStorage + DB) mỗi khi đổi chương ──
+  useEffect(() => {
+    // localStorage widget
+    addToHistory(slug, storyTitle, currentChapter.index, storyCover || undefined);
+
+    // DB tracking (chỉ khi đã login, chống gọi 2 lần StrictMode)
+    const key = `${slug}-${currentChapter.id}`;
+    if (session?.user?.id && trackedChapterRef.current !== key) {
+      trackedChapterRef.current = key;
+      trackChapterRead(slug, currentChapter.id).catch(console.error);
+    }
+  }, [slug, storyTitle, storyCover, currentChapter.index, currentChapter.id, session?.user?.id]);
 
   // ── Detect hardware info khi mount ──
   useEffect(() => {

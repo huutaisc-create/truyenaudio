@@ -28,7 +28,7 @@ export default function ReadingHistoryWidget() {
       }}
     >
       {/* Header */}
-      <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
+      <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
         <div
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
           style={{
@@ -44,8 +44,21 @@ export default function ReadingHistoryWidget() {
           >
             🕐
           </span>
-          <span className="text-[12px] font-black uppercase tracking-[.1em]">Truyện Nghe Gần Đây</span>
+          <span className="text-[12px] font-black uppercase tracking-[.1em]">Nghe gần đây</span>
         </div>
+        <Link
+          href="/tai-khoan"
+          className="text-[11px] font-bold px-2.5 py-1 rounded-full transition-all"
+          style={{ color: "var(--accent)", border: "1px solid var(--accent)33" }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLElement).style.background = "var(--accent)18";
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLElement).style.background = "transparent";
+          }}
+        >
+          Tất cả
+        </Link>
       </div>
 
       {/* List */}

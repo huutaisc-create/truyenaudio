@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+const STORAGE_KEY = 'listening_history';
+
 export interface HistoryItem {
     slug: string;
     title: string;
@@ -15,12 +17,20 @@ export function useReadingHistory() {
     const [isLoaded, setIsLoaded] = useState(false);
 
     useEffect(() => {
-        const saved = localStorage.getItem('reading_history');
+        // Migrate dữ liệu cũ từ 'reading_history' sang 'listening_history' nếu có
+        const old = localStorage.getItem('reading_history');
+        const current = localStorage.getItem(STORAGE_KEY);
+        if (old && !current) {
+            localStorage.setItem(STORAGE_KEY, old);
+            localStorage.removeItem('reading_history');
+        }
+
+        const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
             try {
                 setHistory(JSON.parse(saved));
             } catch (e) {
-                console.error("Failed to parse history", e);
+                console.error("Failed to parse listening history", e);
             }
         }
         setIsLoaded(true);
@@ -38,8 +48,7 @@ export function useReadingHistory() {
             const filtered = prev.filter(item => item.slug !== slug);
             const updated = [newItem, ...filtered].slice(0, 5); // Keep last 5
 
-            // Side effect: Save to local storage
-            localStorage.setItem('reading_history', JSON.stringify(updated));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 
             return updated;
         });
