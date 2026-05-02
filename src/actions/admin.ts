@@ -265,8 +265,7 @@ export async function deleteStory(id: string) {
         if (story?.slug) {
             const { rm } = await import('fs/promises');
             const path = await import('path');
-            const chaptersRoot = process.env.CHAPTERS_STORAGE_PATH
-                ?? `${process.cwd()}/public/chapters`;
+            const chaptersRoot = process.env.CHAPTERS_STORAGE_PATH!;
             await rm(`${chaptersRoot}/${story.slug}`, { recursive: true, force: true });
             await rm(`${process.cwd()}/public/covers/${story.slug}.webp`, { force: true });
         }
@@ -1021,8 +1020,7 @@ export async function replaceInStoryChapters(storyId: string, searchText: string
 
     let replaced = 0;
     const r2Base = process.env.R2_PUBLIC_URL ?? '';
-    const chaptersRoot = process.env.CHAPTERS_STORAGE_PATH
-        ?? `${process.cwd()}/public/chapters`;
+    const chaptersRoot = process.env.CHAPTERS_STORAGE_PATH!;
 
     for (const ch of chapters) {
         if (!ch.contentUrl) continue;

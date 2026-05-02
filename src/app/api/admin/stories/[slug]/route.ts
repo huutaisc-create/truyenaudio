@@ -7,8 +7,7 @@ import db from "@/lib/db";
 
 const UPLOAD_SECRET = "df5e8753a931894d842645d812d2b23fe89917d87def1633c8926f2c67728a5c";
 
-const CHAPTERS_ROOT = process.env.CHAPTERS_STORAGE_PATH
-    ?? `${process.cwd()}/public/chapters`;
+const CHAPTERS_ROOT = process.env.CHAPTERS_STORAGE_PATH!;
 const COVERS_ROOT = `${process.cwd()}/public/covers`;
 
 export async function DELETE(

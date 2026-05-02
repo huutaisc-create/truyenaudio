@@ -10,8 +10,7 @@ const UPLOAD_SECRET = process.env.UPLOAD_SECRET || "df5e8753a931894d842645d812d2
 // Thư mục gốc lưu chapter trên disk Contabo
 // Mặc định: <app>/public/chapters/ — Next.js tự serve tại /chapters/...
 // Có thể override bằng env CHAPTERS_STORAGE_PATH (trỏ đến thư mục Nginx serve)
-const CHAPTERS_ROOT = process.env.CHAPTERS_STORAGE_PATH
-    ?? `${process.cwd()}/public/chapters`;
+const CHAPTERS_ROOT = process.env.CHAPTERS_STORAGE_PATH!;
 
 async function saveChapterToDisk(slug: string, index: number, content: string): Promise<string> {
     const dir = `${CHAPTERS_ROOT}/${slug}`;

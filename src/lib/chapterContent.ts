@@ -1,8 +1,6 @@
 import path from "path";
 
-const CHAPTERS_ROOT =
-    process.env.CHAPTERS_STORAGE_PATH ??
-    `${process.cwd()}/public/chapters`;
+const CHAPTERS_ROOT = process.env.CHAPTERS_STORAGE_PATH!;
 
 /**
  * Đọc nội dung chapter — hỗ trợ cả disk lẫn R2/HTTP:
