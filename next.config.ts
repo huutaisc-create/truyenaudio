@@ -1,39 +1,38 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  turbopack: {},
+  turbopack: {
+    // Turbopack: không resolve các thư mục static lớn trong public/
+    resolveAlias: {},
+  },
 
   experimental: {
     workerThreads: false,
     cpus: 1,
-    // optimizeCss: true, // ← ĐÃ TẮT: critters gây CSS blocking trên Vercel
-    //                         thay bằng cách tối ưu thủ công qua preload ở layout.tsx
   },
 
-  // ── Bỏ qua scan chapters/covers khi build — 227k+ files gây OOM với Turbopack ──
+  // ── Bỏ qua scan thư mục lớn khi output tracing ──────────────────────────
+  // chapters nằm NGOÀI public/ trên VPS (/var/www/truyenaudio/chapters)
+  // nên outputFileTracingExcludes chỉ cần cover avatars/covers/uploads
   outputFileTracingExcludes: {
     '*': [
-      'public/chapters/**',
       'public/covers/**',
       'public/avatars/**',
       'public/uploads/**',
+      'public/models/**',
+      'public/piper-wasm/**',
     ],
   },
 
-  // ── FIX: JS polyfill cũ (Array.at, Object.fromEntries, ...) ──────────────
-  // Nói với SWC chỉ transpile cho browser hiện đại → bỏ các polyfill không cần
-  // Tiết kiệm ~13.7KB theo Lighthouse report
   compiler: {
-    // ⚠️ TẠM BẬT để debug log trên Vercel — tắt lại sau khi xong
-    // Đổi lại thành: removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
-    removeConsole: false,
+    removeConsole: process.env.NODE_ENV === 'production'
+      ? { exclude: ['error', 'warn'] }
+      : false,
   },
 
   images: {
     remotePatterns: [
-      { protocol: 'https', hostname: '**.r2.dev' },
-      { protocol: 'https', hostname: '**.r2.cloudflarestorage.com' },
-      { protocol: 'https', hostname: 'lh3.googleusercontent.com' }, // ← ảnh đại diện Google
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' }, // ảnh Google account
     ],
     deviceSizes: [640, 828, 1080, 1200, 1920],
     imageSizes: [36, 48, 64, 96, 128, 160, 256],
@@ -44,16 +43,10 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: '/uploads/(.*)',
+        source: '/(uploads|avatars|covers)/(.*)',
         headers: [
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source: '/(uploads|avatars)/(.*)',
-        headers: [
-          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ],
       },
       {

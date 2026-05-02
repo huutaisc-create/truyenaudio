@@ -54,9 +54,11 @@ export async function POST(request: NextRequest) {
             folder = 'uploads';
         }
 
-        // Dynamic cwd() để Turbopack không resolve tĩnh
-        const cwd = process.cwd();
-        const saveDir = `${cwd}/public/${folder}`;
+        // UPLOAD_STORAGE_DIR phải set trong .env.local trên VPS
+        // VD: UPLOAD_STORAGE_DIR=/var/www/truyenaudio/public
+        // → path hoàn toàn dynamic, Turbopack không scan được public/
+        const uploadRoot = process.env.UPLOAD_STORAGE_DIR!;
+        const saveDir = `${uploadRoot}/${folder}`;
         await mkdir(saveDir, { recursive: true });
         await writeFile(`${saveDir}/${filename}`, outputBuffer);
 
