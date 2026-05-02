@@ -371,11 +371,10 @@ export async function updateChapterContent(chapterId: string, newContent: string
         if (!chapter) return { success: false, error: 'Chapter not found' };
 
         const { writeFile, mkdir } = await import('fs/promises');
-        const path = await import('path');
         const chaptersRoot = process.env.CHAPTERS_STORAGE_PATH!;
-        const dir = path.join(chaptersRoot, chapter.story.slug);
+        const dir = `${chaptersRoot}/${chapter.story.slug}`;
         await mkdir(dir, { recursive: true });
-        await writeFile(path.join(dir, `${chapter.index}.txt`), newContent, 'utf-8');
+        await writeFile(`${dir}/${chapter.index}.txt`, newContent, 'utf-8');
 
         const contentUrl = `/chapters/${chapter.story.slug}/${chapter.index}.txt`;
         await db.chapter.update({

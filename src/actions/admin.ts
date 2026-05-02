@@ -257,10 +257,10 @@ export async function deleteStory(id: string) {
         // Xóa file trên disk
         if (story?.slug) {
             const { rm } = await import('fs/promises');
-            const path = await import('path');
             const chaptersRoot = process.env.CHAPTERS_STORAGE_PATH!;
+            const uploadRoot = process.env.UPLOAD_STORAGE_DIR!;
             await rm(`${chaptersRoot}/${story.slug}`, { recursive: true, force: true });
-            await rm(`${process.cwd()}/public/covers/${story.slug}.webp`, { force: true });
+            await rm(`${uploadRoot}/covers/${story.slug}.webp`, { force: true });
         }
 
         await db.adminLog.create({ data: {
