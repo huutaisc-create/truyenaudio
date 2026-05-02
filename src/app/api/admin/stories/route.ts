@@ -11,7 +11,7 @@ const UPLOAD_SECRET = process.env.UPLOAD_SECRET || "df5e8753a931894d842645d812d2
 // Mặc định: <app>/public/chapters/ — Next.js tự serve tại /chapters/...
 // Có thể override bằng env CHAPTERS_STORAGE_PATH (trỏ đến thư mục Nginx serve)
 const CHAPTERS_ROOT = process.env.CHAPTERS_STORAGE_PATH
-    ?? path.join(process.cwd(), "public", "chapters");
+    ?? path.join(process.cwd(), ...["public", "chapters"]);
 
 async function saveChapterToDisk(slug: string, index: number, content: string): Promise<string> {
     const dir = path.join(CHAPTERS_ROOT, slug);

@@ -266,7 +266,7 @@ export async function deleteStory(id: string) {
             const { rm } = await import('fs/promises');
             const path = await import('path');
             const chaptersRoot = process.env.CHAPTERS_STORAGE_PATH
-                ?? path.join(process.cwd(), 'public', 'chapters');
+                ?? path.join(process.cwd(), ...['public', 'chapters']);
             await rm(path.join(chaptersRoot, story.slug), { recursive: true, force: true });
             await rm(path.join(process.cwd(), 'public', 'covers', `${story.slug}.webp`), { force: true });
         }
