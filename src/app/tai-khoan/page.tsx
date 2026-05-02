@@ -29,7 +29,14 @@ export default async function TaiKhoanPage() {
   const history = await db.readingHistory.findMany({
     where: { userId: user.id },
     include: {
-      story: { select: { slug: true, title: true, coverImage: true, author: true } },
+      story: {
+        select: {
+          slug: true, title: true, coverImage: true,
+          status: true, totalChapters: true,
+          ratingScore: true, viewCount: true,
+          genres: { select: { name: true, type: true }, where: { type: 'GENRE' }, take: 2 },
+        }
+      },
       chapter: { select: { index: true, title: true } },
     },
     orderBy: { visitedAt: 'desc' },
@@ -73,7 +80,7 @@ export default async function TaiKhoanPage() {
               <div className="text-center md:text-left">
                 <h1 className="text-xl font-black text-white">{user.name}</h1>
                 <p className="text-sm font-bold mt-0.5" style={{ color: ORANGE }}>{realm.name}</p>
-                <p className="text-[11px] text-zinc-500 mt-1">{user.email}</p>
+                <p className="text-[11px] text-zinc-400 mt-1">{user.email}</p>
               </div>
 
               {/* Stats - màu cam cố định */}
@@ -85,7 +92,7 @@ export default async function TaiKhoanPage() {
                 ].map(s => (
                   <div key={s.label} className="flex-1 md:flex-none flex md:flex-row items-center justify-between px-3 py-2 rounded-xl"
                     style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider">{s.label}</span>
+                    <span className="text-[10px] text-zinc-400 uppercase tracking-wider">{s.label}</span>
                     <span className="text-base font-black" style={{ color: ORANGE }}>{s.value}</span>
                   </div>
                 ))}
@@ -143,13 +150,13 @@ export default async function TaiKhoanPage() {
             <div className="hidden md:flex flex-col gap-3 shrink-0 w-48">
               <div className="px-4 py-3 rounded-xl text-center"
                 style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <p className="text-[10px] text-zinc-600 uppercase tracking-widest mb-1">Thành viên từ</p>
-                <p className="text-sm font-bold text-zinc-400">{new Date(user.createdAt).toLocaleDateString('vi-VN')}</p>
+                <p className="text-[10px] text-zinc-400 uppercase tracking-widest mb-1">Thành viên từ</p>
+                <p className="text-sm font-bold text-white">{new Date(user.createdAt).toLocaleDateString('vi-VN')}</p>
               </div>
               <div className="px-4 py-3 rounded-xl text-center"
                 style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <p className="text-[10px] text-zinc-600 uppercase tracking-widest mb-1">Đánh giá</p>
-                <p className="text-sm font-bold text-zinc-400">{user._count.reviews} bình luận</p>
+                <p className="text-[10px] text-zinc-400 uppercase tracking-widest mb-1">Đánh giá</p>
+                <p className="text-sm font-bold text-white">{user._count.reviews} bình luận</p>
               </div>
               <Link href="/tai-khoan/cai-dat"
                 className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all hover:opacity-80"
@@ -168,7 +175,7 @@ export default async function TaiKhoanPage() {
         {/* Tủ sách */}
         <section>
           <div className="mb-5 border-l-4 pl-3" style={{ borderColor: ORANGE }}>
-            <h2 className="text-lg font-bold uppercase text-zinc-800 flex items-center gap-2">
+            <h2 className="text-lg font-bold uppercase text-white flex items-center gap-2">
               <BookMarked className="h-5 w-5" style={{ color: ORANGE }} /> Tủ Sách
               <span className="text-sm font-normal text-zinc-400">({user._count.library})</span>
             </h2>
@@ -206,7 +213,7 @@ export default async function TaiKhoanPage() {
         {/* Lịch sử đọc */}
         <section>
           <div className="mb-5 border-l-4 pl-3" style={{ borderColor: ORANGE }}>
-            <h2 className="text-lg font-bold uppercase text-zinc-800 flex items-center gap-2">
+            <h2 className="text-lg font-bold uppercase text-white flex items-center gap-2">
               <Clock className="h-5 w-5" style={{ color: ORANGE }} /> Lịch Sử Nghe
               <span className="text-sm font-normal text-zinc-400">({user._count.readingHistory})</span>
             </h2>
@@ -219,7 +226,7 @@ export default async function TaiKhoanPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {history.map(({ story, chapter, visitedAt }) => (
-                <Link key={story.slug} href={`/truyen/${story.slug}/nghe${chapter ? `?chuong=${chapter.index}` : ''}`} className="group flex gap-3 p-2.5 rounded-xl bg-white border border-zinc-100 hover:shadow-md hover:border-zinc-200 transition-all">
+                <Link key={story.slug} href={`/truyen/${story.slug}/nghe${chapter ? `?chuong=${chapter.index}` : ''}`} className="group flex gap-3 p-2.5 rounded-xl hover:shadow-md transition-all" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <div className="shrink-0 w-[56px] h-[76px] rounded-lg overflow-hidden bg-zinc-100">
                     {story.coverImage ? (
                       <img src={story.coverImage} alt={story.title} className="w-full h-full object-cover" />
@@ -229,8 +236,22 @@ export default async function TaiKhoanPage() {
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                     <div>
-                      <h4 className="font-bold text-sm text-zinc-800 line-clamp-1 group-hover:text-orange-500 transition-colors">{story.title}</h4>
-                      <p className="text-[11px] text-zinc-500 mt-0.5">{story.author}</p>
+                      <h4 className="font-bold text-sm text-white line-clamp-1 group-hover:text-orange-400 transition-colors">{story.title}</h4>
+                      {/* Thể loại */}
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {story.genres?.slice(0, 2).map((g: any) => (
+                          <span key={g.name} className="text-[10px] px-1.5 py-0.5 rounded text-zinc-300" style={{ background: 'rgba(255,255,255,0.1)' }}>{g.name}</span>
+                        ))}
+                        <span className="text-[10px] px-1.5 py-0.5 rounded text-zinc-300" style={{ background: 'rgba(255,255,255,0.1)' }}>
+                          {story.status === 'COMPLETED' ? 'Full' : story.status === 'TRANSLATED' ? 'Dịch' : story.status === 'CONVERTED' ? 'Convert' : 'Đang ra'}
+                        </span>
+                      </div>
+                      {/* Số chương · Đánh giá · Lượt xem */}
+                      <div className="flex items-center gap-2 mt-1 text-[10px] text-zinc-400">
+                        <span>📖 {story.totalChapters ?? 0} chương</span>
+                        <span>⭐ {story.ratingScore?.toFixed(1) ?? '0.0'}</span>
+                        <span>👁 {story.viewCount?.toLocaleString('vi-VN') ?? 0}</span>
+                      </div>
                     </div>
                     <div>
                       {chapter && <p className="text-[11px] font-medium" style={{ color: ORANGE }}>▶ Nghe tiếp C.{chapter.index}</p>}
