@@ -129,7 +129,7 @@ const Header = () => {
             {/* ── Nav pills (desktop) ── */}
             <nav className="hidden items-center gap-1 lg:flex" aria-label="Điều hướng chính">
               <Link href="/" className={navPill('/')}>Trang chủ</Link>
-              <Link href="/tim-kiem" className={navPill('/tim-kiem')}>Thể loại</Link>
+              <Link href="/tim-kiem" className={navPill('/tim-kiem')}>Tìm kiếm</Link>
               <Link href="/xep-hang" className={navPill('/xep-hang')}>Xếp hạng</Link>
               {session && (
                 <Link
@@ -408,7 +408,7 @@ const Header = () => {
             <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1" aria-label="Menu di động">
               {[
                 { href: '/', icon: <Home className="h-5 w-5" />, label: 'Trang chủ' },
-                { href: '/tim-kiem', icon: <Compass className="h-5 w-5" />, label: 'Thể loại' },
+                { href: '/tim-kiem', icon: <Compass className="h-5 w-5" />, label: 'Tìm kiếm' },
                 { href: '/xep-hang', icon: <TrendingUp className="h-5 w-5" />, label: 'Xếp hạng' },
               ].map(({ href, icon, label }) => (
                 <Link
