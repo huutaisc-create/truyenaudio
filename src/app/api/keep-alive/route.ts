@@ -6,12 +6,10 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get('authorization')
-    const isVercelCron = authHeader === `Bearer ${process.env.CRON_SECRET}`
+    const isValidCron = authHeader === `Bearer ${process.env.CRON_SECRET}`
 
-    // ✅ Nếu không có CRON_SECRET trong env → vẫn cho ping (monitor bên ngoài)
-    // Nếu có CRON_SECRET trong env → chỉ cho cron hợp lệ hoặc request không có auth (monitor)
-    // Logic: chặn request CÓ auth header nhưng sai secret (tấn công giả mạo)
-    const hasBadAuth = authHeader && !isVercelCron
+    // Chặn request có auth header nhưng sai secret
+    const hasBadAuth = authHeader && !isValidCron
     if (hasBadAuth) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -26,7 +24,7 @@ export async function GET(request: Request) {
             ok: true,
             timestamp: new Date().toISOString(),
             responseTime: `${responseTime}ms`,
-            source: isVercelCron ? 'vercel-cron' : 'monitor',
+            source: isValidCron ? 'cron' : 'monitor',
             dbStatus: responseTime > 500 ? 'cold-start' : 'warm',
         }
 

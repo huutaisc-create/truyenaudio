@@ -370,25 +370,14 @@ export async function updateChapterContent(chapterId: string, newContent: string
         });
         if (!chapter) return { success: false, error: 'Chapter not found' };
 
-        const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
-        const s3 = new S3Client({
-            region: 'auto',
-            endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-            credentials: {
-                accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-                secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-            },
-        });
+        const { writeFile, mkdir } = await import('fs/promises');
+        const path = await import('path');
+        const chaptersRoot = process.env.CHAPTERS_STORAGE_PATH!;
+        const dir = path.join(chaptersRoot, chapter.story.slug);
+        await mkdir(dir, { recursive: true });
+        await writeFile(path.join(dir, `${chapter.index}.txt`), newContent, 'utf-8');
 
-        const key = `chapters/${chapter.story.slug}/${chapter.index}.txt`;
-        await s3.send(new PutObjectCommand({
-            Bucket: process.env.R2_BUCKET_NAME!,
-            Key: key,
-            Body: Buffer.from(newContent, 'utf-8'),
-            ContentType: 'text/plain; charset=utf-8',
-        }));
-
-        const contentUrl = `${process.env.R2_PUBLIC_URL}/${key}`;
+        const contentUrl = `/chapters/${chapter.story.slug}/${chapter.index}.txt`;
         await db.chapter.update({
             where: { id: chapterId },
             data: { contentUrl }

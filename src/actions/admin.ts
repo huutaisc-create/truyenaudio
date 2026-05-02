@@ -3,9 +3,10 @@
 import db from '@/lib/db'
 import { auth } from '@/auth'
 import { revalidatePath } from 'next/cache'
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { ALL_ADMIN_ROLES } from '@/lib/admin-guard'
 import { fetchChapterContent } from '@/lib/chapterContent'
+import { writeFile, mkdir, readFile } from 'fs/promises'
+import pathModule from 'path'
 
 async function checkAdmin() {
     const session = await auth()
@@ -15,26 +16,21 @@ async function checkAdmin() {
     return session
 }
 
-// ── R2 client ────────────────────────────────────────────
-const s3 = new S3Client({
-    region: 'auto',
-    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-    credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-    },
-})
+// ── Local disk helpers ────────────────────────────────────
+const CHAPTERS_ROOT = () => process.env.CHAPTERS_STORAGE_PATH!
 
-async function uploadChapterToR2(slug: string, index: number, content: string): Promise<string> {
-    const key = `chapters/${slug}/${index}.txt`
-    await s3.send(new PutObjectCommand({
-        Bucket: process.env.R2_BUCKET_NAME!,
-        Key: key,
-        Body: Buffer.from(content, 'utf-8'),
-        ContentType: 'text/plain; charset=utf-8',
-    }))
-    return `${process.env.R2_PUBLIC_URL}/${key}`
+async function saveChapterToDisk(slug: string, index: number, content: string): Promise<string> {
+    const dir = pathModule.join(CHAPTERS_ROOT(), slug)
+    await mkdir(dir, { recursive: true })
+    const filePath = pathModule.join(dir, `${index}.txt`)
+    await writeFile(filePath, content, 'utf-8')
+    return `/chapters/${slug}/${index}.txt`
 }
+
+const MANIFEST_PATH = () => pathModule.join(
+    process.env.CHAPTERS_STORAGE_PATH!,
+    '../models/custom/manifest.json'
+)
 
 export async function getDashboardStats() {
     await checkAdmin();
@@ -356,7 +352,6 @@ export async function createChapter(storyId: string, formData: FormData) {
     const index = parseInt(indexStr);
 
     try {
-        // Lấy slug của story để tạo đường dẫn R2
         const story = await db.story.findUnique({
             where: { id: storyId },
             select: { slug: true }
@@ -364,8 +359,7 @@ export async function createChapter(storyId: string, formData: FormData) {
 
         if (!story) return { error: "Story not found" };
 
-        // Upload content lên R2
-        const contentUrl = await uploadChapterToR2(story.slug, index, content);
+        const contentUrl = await saveChapterToDisk(story.slug, index, content);
 
         const newChapter = await db.chapter.create({
             data: {
@@ -405,7 +399,6 @@ export async function updateChapter(chapterId: string, formData: FormData) {
     const index = parseInt(indexStr);
 
     try {
-        // Lấy story slug để upload R2
         const chapter = await db.chapter.findUnique({
             where: { id: chapterId },
             include: { story: { select: { slug: true } } }
@@ -413,8 +406,7 @@ export async function updateChapter(chapterId: string, formData: FormData) {
 
         if (!chapter) return { error: "Chapter not found" };
 
-        // Upload content mới lên R2
-        const contentUrl = await uploadChapterToR2(chapter.story.slug, index, content);
+        const contentUrl = await saveChapterToDisk(chapter.story.slug, index, content);
 
         await db.chapter.update({
             where: { id: chapterId },
@@ -935,22 +927,16 @@ export async function createPushNotification(formData: FormData) {
     }
 }
 
-// --- VOICES (R2 manifest) ---
-
-const MANIFEST_KEY = 'models/custom/manifest.json';
+// --- VOICES (local manifest) ---
 
 export async function getVoiceManifest(): Promise<{ id: string; name: string; path?: string }[]> {
     await checkAdmin();
     try {
-        const res = await s3.send(new GetObjectCommand({
-            Bucket: process.env.R2_BUCKET_NAME!,
-            Key: MANIFEST_KEY,
-        }));
-        const body = await res.Body?.transformToString('utf-8');
-        return body ? JSON.parse(body) : [];
+        const manifestPath = MANIFEST_PATH()
+        const body = await readFile(manifestPath, 'utf-8')
+        return JSON.parse(body)
     } catch (e: any) {
-        // manifest chưa tồn tại
-        if (e?.name === 'NoSuchKey') return [];
+        if (e?.code === 'ENOENT') return [];
         console.error('getVoiceManifest error:', e);
         return [];
     }
@@ -958,12 +944,9 @@ export async function getVoiceManifest(): Promise<{ id: string; name: string; pa
 
 export async function saveVoiceManifest(voices: { id: string; name: string; path?: string }[]) {
     await checkAdmin();
-    await s3.send(new PutObjectCommand({
-        Bucket: process.env.R2_BUCKET_NAME!,
-        Key: MANIFEST_KEY,
-        Body: JSON.stringify(voices, null, 2),
-        ContentType: 'application/json',
-    }));
+    const manifestPath = MANIFEST_PATH()
+    await mkdir(pathModule.dirname(manifestPath), { recursive: true })
+    await writeFile(manifestPath, JSON.stringify(voices, null, 2), 'utf-8')
     revalidatePath('/admin/voices');
     return { success: true };
 }
@@ -1019,7 +1002,6 @@ export async function replaceInStoryChapters(storyId: string, searchText: string
     });
 
     let replaced = 0;
-    const r2Base = process.env.R2_PUBLIC_URL ?? '';
     const chaptersRoot = process.env.CHAPTERS_STORAGE_PATH!;
 
     for (const ch of chapters) {
@@ -1032,23 +1014,13 @@ export async function replaceInStoryChapters(storyId: string, searchText: string
 
             const updated = original.replace(regex, replaceText);
 
-            if (ch.contentUrl.startsWith('/chapters/')) {
-                // Disk chapter → ghi thẳng vào file
-                const { writeFile } = await import('fs/promises');
-                const path = await import('path');
-                const relativePath = ch.contentUrl.slice('/chapters/'.length);
-                const filePath = `${chaptersRoot}/${relativePath}`;
-                await writeFile(filePath, updated, 'utf-8');
-            } else {
-                // R2 chapter → upload lên S3
-                const key = ch.contentUrl.replace(r2Base + '/', '');
-                await s3.send(new PutObjectCommand({
-                    Bucket: process.env.R2_BUCKET_NAME!,
-                    Key: key,
-                    Body: Buffer.from(updated, 'utf-8'),
-                    ContentType: 'text/plain; charset=utf-8',
-                }));
-            }
+            // Ghi thẳng vào file local
+            const relativePath = ch.contentUrl.startsWith('/chapters/')
+                ? ch.contentUrl.slice('/chapters/'.length)
+                : ch.contentUrl;
+            const filePath = pathModule.join(chaptersRoot, relativePath);
+            await mkdir(pathModule.dirname(filePath), { recursive: true });
+            await writeFile(filePath, updated, 'utf-8');
             replaced++;
         } catch (e) {
             console.error(`replaceInChapter ${ch.id}:`, e);

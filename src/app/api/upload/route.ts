@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
 
-const R2 = new S3Client({
-    region: 'auto',
-    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-    credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-    },
-});
+// Thư mục public của Next.js — phục vụ static files trực tiếp
+const PUBLIC_DIR = path.join(process.cwd(), 'public');
 
 export async function POST(request: NextRequest) {
     const data = await request.formData();
@@ -63,16 +58,12 @@ export async function POST(request: NextRequest) {
             folder = 'uploads';
         }
 
-        const key = `${folder}/${filename}`;
+        const saveDir = path.join(PUBLIC_DIR, folder);
+        await mkdir(saveDir, { recursive: true });
+        await writeFile(path.join(saveDir, filename), outputBuffer);
 
-        await R2.send(new PutObjectCommand({
-            Bucket: process.env.R2_BUCKET_NAME!,
-            Key: key,
-            Body: outputBuffer,
-            ContentType: 'image/webp',
-        }));
-
-        const publicUrl = `${process.env.R2_PUBLIC_URL}/${key}`;
+        // URL tương đối — Next.js serve static từ /public
+        const publicUrl = `/${folder}/${filename}`;
 
         return NextResponse.json({
             success: true,
