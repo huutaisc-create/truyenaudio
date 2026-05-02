@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks && chmod +x .githooks/pre-commit || true",
     "dev": "next dev --webpack -H 0.0.0.0",
     "dev:https": "node https-proxy.js",
     "build": "NODE_OPTIONS='--max-old-space-size=6144' prisma generate && NODE_OPTIONS='--max-old-space-size=6144' prisma migrate deploy && NODE_OPTIONS='--max-old-space-size=6144' next build",

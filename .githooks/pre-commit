@@ -1,0 +1,15 @@
+#!/bin/sh
+# Chặn commit các file env chứa credentials
+
+ENV_FILES=$(git diff --cached --name-only | grep -E "^\.env|^env$")
+
+if [ -n "$ENV_FILES" ]; then
+  echo ""
+  echo "🚫 BLOCKED: Phát hiện env file trong commit:"
+  echo "$ENV_FILES"
+  echo ""
+  echo "   Env files chứa credentials, KHÔNG được commit lên git."
+  echo "   Nếu muốn bỏ tracking: git rm --cached <file>"
+  echo ""
+  exit 1
+fi
