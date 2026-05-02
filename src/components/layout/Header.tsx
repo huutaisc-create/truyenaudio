@@ -16,10 +16,9 @@ function useTheme() {
   const [theme, setTheme] = useState<'male' | 'female'>('male');
 
   useEffect(() => {
-    // Đọc theme đã lưu (script inline trong layout đã set attribute rồi)
-    const saved = localStorage.getItem('mtc-theme') as 'male' | 'female' | null;
-    const current = document.documentElement.getAttribute('data-theme') as 'male' | 'female';
-    setTheme(saved || current || 'male');
+    // Luôn dùng theme Nam làm mặc định
+    document.documentElement.setAttribute('data-theme', 'male');
+    localStorage.setItem('mtc-theme', 'male');
   }, []);
 
   const toggle = (t: 'male' | 'female') => {
@@ -148,44 +147,6 @@ const Header = () => {
                 </Link>
               )}
             </nav>
-
-            {/* ── Divider ── */}
-            <div
-              className="hidden lg:block h-5 w-px"
-              style={{ background: 'var(--border)' }}
-              aria-hidden="true"
-            />
-
-            {/* ── Theme Toggle ── */}
-            <div
-              className="hidden lg:flex items-center gap-[3px] rounded-full p-[3px]"
-              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
-              role="group"
-              aria-label="Chọn giao diện"
-            >
-              <button
-                onClick={() => toggle('male')}
-                aria-pressed={theme === 'male'}
-                className="rounded-full px-3 py-[5px] text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer"
-                style={theme === 'male'
-                  ? { background: 'var(--accent)', color: '#fff' }
-                  : { background: 'transparent', color: 'var(--text-muted)' }
-                }
-              >
-                ⚔ Nam
-              </button>
-              <button
-                onClick={() => toggle('female')}
-                aria-pressed={theme === 'female'}
-                className="rounded-full px-3 py-[5px] text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer"
-                style={theme === 'female'
-                  ? { background: 'var(--accent)', color: '#fff' }
-                  : { background: 'transparent', color: 'var(--text-muted)' }
-                }
-              >
-                ✦ Nữ
-              </button>
-            </div>
 
             {/* ── Divider ── */}
             <div
@@ -424,37 +385,6 @@ const Header = () => {
                 </Link>
               ))}
 
-              <div className="my-2 border-t" style={{ borderColor: 'var(--border)' }} aria-hidden="true" />
-
-              {/* Mobile theme toggle */}
-              <div className="px-2 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Giao diện</p>
-                <div
-                  className="flex items-center gap-[3px] rounded-full p-[3px] w-full"
-                  style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
-                >
-                  <button
-                    onClick={() => toggle('male')}
-                    className="flex-1 rounded-full py-2 text-xs font-bold transition-all"
-                    style={theme === 'male'
-                      ? { background: 'var(--accent)', color: '#fff' }
-                      : { background: 'transparent', color: 'var(--text-muted)' }
-                    }
-                  >
-                    ⚔ Nam
-                  </button>
-                  <button
-                    onClick={() => toggle('female')}
-                    className="flex-1 rounded-full py-2 text-xs font-bold transition-all"
-                    style={theme === 'female'
-                      ? { background: 'var(--accent)', color: '#fff' }
-                      : { background: 'transparent', color: 'var(--text-muted)' }
-                    }
-                  >
-                    ✦ Nữ
-                  </button>
-                </div>
-              </div>
 
               <div className="my-2 border-t" style={{ borderColor: 'var(--border)' }} aria-hidden="true" />
 
