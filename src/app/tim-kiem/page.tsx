@@ -463,14 +463,48 @@ const FilterPage = () => {
                         </button>
                     </div>
 
-                    {/* Genre List (Horizontal) */}
+                    {/* Genre List (Horizontal) — mỗi type một dòng */}
                     <div className="p-6">
-                        <FilterSection
-                            title="Thể Loại"
-                            items={theLoaiList}
-                            selectedItems={filters.theLoai}
-                            onToggle={(item) => toggleFilter('theLoai', item)}
-                        />
+                        {theLoaiList.length > 0 && (
+                            <FilterSection
+                                title="Thể Loại"
+                                items={theLoaiList}
+                                selectedItems={filters.theLoai}
+                                onToggle={(item) => toggleFilter('theLoai', item)}
+                            />
+                        )}
+                        {boiCanhList.length > 0 && (
+                            <FilterSection
+                                title="Bối Cảnh"
+                                items={boiCanhList}
+                                selectedItems={filters.boiCanh}
+                                onToggle={(item) => toggleFilter('boiCanh', item)}
+                            />
+                        )}
+                        {luuPhaiList.length > 0 && (
+                            <FilterSection
+                                title="Lưu Phái"
+                                items={luuPhaiList}
+                                selectedItems={filters.luuPhai}
+                                onToggle={(item) => toggleFilter('luuPhai', item)}
+                            />
+                        )}
+                        {tinhCachList.length > 0 && (
+                            <FilterSection
+                                title="Tính Cách"
+                                items={tinhCachList}
+                                selectedItems={filters.tinhCach}
+                                onToggle={(item) => toggleFilter('tinhCach', item)}
+                            />
+                        )}
+                        {thiGiacList.length > 0 && (
+                            <FilterSection
+                                title="Thị Giác"
+                                items={thiGiacList}
+                                selectedItems={filters.thiGiac}
+                                onToggle={(item) => toggleFilter('thiGiac', item)}
+                            />
+                        )}
                         {/* Active Filters Summary (Moved here or keep below? Keep simplified version above results or here) */}
                         <div className="mt-4 pt-4 border-t border-dashed border-zinc-100 flex flex-wrap gap-2 items-center">
                             <span className="text-xs font-bold text-zinc-400 uppercase mr-2">Đang chọn:</span>

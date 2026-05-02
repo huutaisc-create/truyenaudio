@@ -33,7 +33,11 @@ export async function getGenres(): Promise<Record<string, string[]>> {
         const grouped: Record<string, string[]> = {};
         for (const g of genres) {
             if (!grouped[g.type]) grouped[g.type] = [];
-            grouped[g.type].push(g.name);
+            // Dedup không phân biệt hoa thường (giữ lại cái đầu tiên gặp)
+            const already = grouped[g.type].some(
+                n => n.toLowerCase() === g.name.toLowerCase()
+            );
+            if (!already) grouped[g.type].push(g.name);
         }
         return grouped;
     } catch {
