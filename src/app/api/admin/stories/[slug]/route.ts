@@ -1,14 +1,9 @@
-// D:\Webtruyen\webtruyen-app\src\app\api\admin\stories\[slug]\route.ts
+// src/app/api/admin/stories/[slug]/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { rm } from "fs/promises";
-import path from "path";
 import db from "@/lib/db";
 
 const UPLOAD_SECRET = "df5e8753a931894d842645d812d2b23fe89917d87def1633c8926f2c67728a5c";
-
-const CHAPTERS_ROOT = process.env.CHAPTERS_STORAGE_PATH!;
-const COVERS_ROOT = `${process.cwd()}/public/covers`;
 
 export async function DELETE(
     request: NextRequest,
@@ -41,8 +36,14 @@ export async function DELETE(
         await db.story.delete({ where: { slug } });
 
         // Xóa file trên disk (không throw nếu không tồn tại)
-        await rm(`${CHAPTERS_ROOT}/${slug}`, { recursive: true, force: true });
-        await rm(`${COVERS_ROOT}/${slug}.webp`, { force: true });
+        const { rm } = await import("fs/promises");
+        const chaptersRoot = process.env.CHAPTERS_STORAGE_PATH!;
+        const coversRoot = process.env.UPLOAD_STORAGE_DIR
+            ? `${process.env.UPLOAD_STORAGE_DIR}/covers`
+            : process.env.COVERS_STORAGE_PATH!;
+
+        await rm(`${chaptersRoot}/${slug}`, { recursive: true, force: true });
+        await rm(`${coversRoot}/${slug}.webp`, { force: true });
 
         return NextResponse.json({
             success: true,

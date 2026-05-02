@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
 import db from "@/lib/db";
 
 // Thư mục gốc lưu chapter trên disk (phải khớp với CHAPTERS_STORAGE_PATH trong admin API)

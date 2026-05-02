@@ -48,17 +48,17 @@ export default function ReadingHistoryWidget() {
         </div>
         <Link
           href="/tai-khoan"
-          className="text-[11px] font-bold px-2.5 py-1 rounded-full transition-all"
-          style={{ color: "var(--accent)", border: "1px solid var(--accent)33" }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.background = "var(--accent)18";
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.background = "transparent";
+          aria-label="Xem toàn bộ lịch sử nghe"
+          className="see-all-hist inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold border-[1.5px] transition-all"
+          style={{
+            borderColor: "var(--pill2-border)",
+            color: "var(--pill2-color)",
+            background: "transparent",
           }}
         >
-          Tất cả
+          Tất cả →
         </Link>
+        <style>{`.see-all-hist:hover { background: var(--pill2-bg) !important; color: var(--pill2-color) !important; border-color: var(--pill2-border) !important; }`}</style>
       </div>
 
       {/* List */}

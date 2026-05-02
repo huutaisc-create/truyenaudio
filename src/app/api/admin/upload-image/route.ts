@@ -2,13 +2,8 @@
 // Upload ảnh bìa truyện lên disk, serve tĩnh qua Next.js tại /covers/<slug>.<ext>
 
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 
 const UPLOAD_SECRET = process.env.UPLOAD_SECRET || "df5e8753a931894d842645d812d2b23fe89917d87def1633c8926f2c67728a5c";
-
-const COVERS_ROOT = process.env.COVERS_STORAGE_PATH
-    ?? `${process.cwd()}/public/covers`;
 
 const ALLOWED_MIME: Record<string, string> = {
     "image/jpeg":  "jpg",
@@ -38,10 +33,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Xác định extension từ MIME type của file gốc
         const mime = file.type?.toLowerCase() || "";
-        const ext  = ALLOWED_MIME[mime]
-            ?? path.extname(file.name).replace(".", "").toLowerCase()
+        const ext = ALLOWED_MIME[mime]
+            ?? file.name.slice(file.name.lastIndexOf(".") + 1).toLowerCase()
             ?? "jpg";
 
         if (!ALLOWED_MIME[mime] && !ext) {
@@ -51,13 +45,16 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Đọc buffer
         const buffer = Buffer.from(await file.arrayBuffer());
 
-        // Lưu vào public/covers/<slug>.<ext>
-        await mkdir(COVERS_ROOT, { recursive: true });
+        const { writeFile, mkdir } = await import("fs/promises");
+        const coversRoot = process.env.UPLOAD_STORAGE_DIR
+            ? `${process.env.UPLOAD_STORAGE_DIR}/covers`
+            : process.env.COVERS_STORAGE_PATH!;
+
+        await mkdir(coversRoot, { recursive: true });
         const filename = `${slug}.${ext}`;
-        await writeFile(`${COVERS_ROOT}/${filename}`, buffer);
+        await writeFile(`${coversRoot}/${filename}`, buffer);
 
         const url = `/covers/${filename}`;
         return NextResponse.json({ success: true, url, filename });

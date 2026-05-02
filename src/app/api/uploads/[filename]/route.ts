@@ -2,8 +2,6 @@
 // Serve ảnh từ thư mục uploads động - bypass Turbopack bug
 
 import { NextRequest, NextResponse } from 'next/server';
-import { readFile } from 'fs/promises';
-import path from 'path';
 
 export async function GET(
   request: NextRequest,
@@ -17,13 +15,15 @@ export async function GET(
   }
 
   const allowedExtensions = ['.webp', '.jpg', '.jpeg', '.png', '.gif'];
-  const ext = path.extname(filename).toLowerCase();
+  const ext = filename.slice(filename.lastIndexOf('.')).toLowerCase();
   if (!allowedExtensions.includes(ext)) {
     return new NextResponse('Not allowed', { status: 403 });
   }
 
   try {
-    const filePath = path.join(process.cwd(), 'public', 'uploads', filename);
+    const { readFile } = await import('fs/promises');
+    const uploadRoot = process.env.UPLOAD_STORAGE_DIR!;
+    const filePath = `${uploadRoot}/uploads/${filename}`;
     const fileBuffer = await readFile(filePath);
 
     const contentTypeMap: Record<string, string> = {

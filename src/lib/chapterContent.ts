@@ -1,5 +1,3 @@
-import path from "path";
-
 const CHAPTERS_ROOT = process.env.CHAPTERS_STORAGE_PATH!;
 
 /**

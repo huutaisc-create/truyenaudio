@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, readFile } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
 
 export async function POST(request: NextRequest) {
     try {
@@ -18,25 +15,26 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, message: 'Invalid file extension' }, { status: 400 });
         }
 
-        const uploadDir = join(process.cwd(), 'public', 'models', 'custom');
+        const { writeFile, readFile, mkdir } = await import('fs/promises');
+        const { existsSync } = await import('fs');
+
+        const uploadRoot = process.env.UPLOAD_STORAGE_DIR!;
+        const uploadDir = `${uploadRoot}/models/custom`;
+        await mkdir(uploadDir, { recursive: true });
 
         // Create a safe filename ID
-        // normalize string, remove special chars, replace space with underscore
         const safeName = voiceName.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
         const timestamp = Date.now();
-        const fileId = `${safeName}_${timestamp}`; // unique ID
+        const fileId = `${safeName}_${timestamp}`;
 
         const onnxBytes = await onnxFile.arrayBuffer();
         const jsonBytes = await jsonFile.arrayBuffer();
 
-        const onnxPath = join(uploadDir, `${fileId}.onnx`);
-        const jsonPath = join(uploadDir, `${fileId}.onnx.json`); // Must follow pattern {id}.onnx.json for simplicity
-
-        await writeFile(onnxPath, Buffer.from(onnxBytes));
-        await writeFile(jsonPath, Buffer.from(jsonBytes));
+        await writeFile(`${uploadDir}/${fileId}.onnx`, Buffer.from(onnxBytes));
+        await writeFile(`${uploadDir}/${fileId}.onnx.json`, Buffer.from(jsonBytes));
 
         // Update manifest
-        const manifestPath = join(uploadDir, 'manifest.json');
+        const manifestPath = `${uploadDir}/manifest.json`;
         let manifest = [];
         if (existsSync(manifestPath)) {
             const fileContent = await readFile(manifestPath, 'utf8');
@@ -50,11 +48,10 @@ export async function POST(request: NextRequest) {
         const newVoice = {
             id: fileId,
             name: voiceName,
-            path: fileId // filename without extension
+            path: fileId
         };
 
         manifest.push(newVoice);
-
         await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
 
         return NextResponse.json({ success: true, voice: newVoice });
