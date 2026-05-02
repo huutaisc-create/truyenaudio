@@ -1,4 +1,3 @@
-import { readFile } from "fs/promises";
 import path from "path";
 
 const CHAPTERS_ROOT =
@@ -18,7 +17,8 @@ export async function fetchChapterContent(contentUrl: string | null): Promise<st
         try {
             const relativePath = contentUrl.slice("/chapters/".length);
             const filePath = `${CHAPTERS_ROOT}/${relativePath}`;
-            return await readFile(filePath, "utf-8");
+            const { readFile: rf } = await import('fs/promises');
+            return await rf(filePath, "utf-8");
         } catch (e) {
             console.error("fetchChapterContent disk error:", contentUrl, e);
             return '';

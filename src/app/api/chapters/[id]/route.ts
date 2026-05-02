@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile } from "fs/promises";
 import path from "path";
 import db from "@/lib/db";
 
@@ -17,7 +16,8 @@ async function fetchChapterContent(contentUrl: string): Promise<string> {
         // Đọc từ disk: bỏ prefix "/chapters/" và ghép vào CHAPTERS_ROOT
         const relativePath = contentUrl.slice("/chapters/".length); // "slug/1.txt"
         const filePath = `${CHAPTERS_ROOT}/${relativePath}`;
-        return await readFile(filePath, "utf-8");
+        const { readFile: rf } = await import('fs/promises');
+        return await rf(filePath, "utf-8");
     }
     // Fetch HTTP (R2 hoặc bất kỳ URL tuyệt đối nào)
     const res = await fetch(contentUrl, { next: { revalidate: 3600 } });
