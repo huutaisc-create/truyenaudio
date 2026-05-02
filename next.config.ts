@@ -1,14 +1,23 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // turbopack: {}, // ← TẮT: Turbopack production build ăn ~7.4GB RAM → OOM kill trên VPS 8GB
-  //                //   Dev vẫn dùng --webpack flag nên không ảnh hưởng
+  turbopack: {},
 
   experimental: {
     workerThreads: false,
     cpus: 1,
     // optimizeCss: true, // ← ĐÃ TẮT: critters gây CSS blocking trên Vercel
     //                         thay bằng cách tối ưu thủ công qua preload ở layout.tsx
+  },
+
+  // ── Bỏ qua scan chapters/covers khi build — 227k+ files gây OOM với Turbopack ──
+  outputFileTracingExcludes: {
+    '*': [
+      'public/chapters/**',
+      'public/covers/**',
+      'public/avatars/**',
+      'public/uploads/**',
+    ],
   },
 
   // ── FIX: JS polyfill cũ (Array.at, Object.fromEntries, ...) ──────────────
