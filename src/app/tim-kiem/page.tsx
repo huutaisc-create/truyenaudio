@@ -165,6 +165,7 @@ const FilterPage = () => {
 
         const timer = setTimeout(async () => {
             setLoading(true);
+            setStories([]);
             try {
                 const { min, max } = parseChapterRange(filters.soChuong);
                 const res = await searchStories({
@@ -186,6 +187,7 @@ const FilterPage = () => {
                 setPagination(res.pagination);
             } catch (e) {
                 console.error('Failed to fetch stories', e);
+                setPagination({ total: 0, page: 1, totalPages: 0 });
             } finally {
                 setLoading(false);
             }
@@ -533,6 +535,28 @@ const FilterPage = () => {
 
                         {/* Grid Results */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {loading && stories.length === 0 && Array.from({ length: 6 }).map((_, i) => (
+                                <div key={i} className="bg-white rounded-xl border border-zinc-200 overflow-hidden animate-pulse">
+                                    <div className="p-4 flex gap-4">
+                                        <div className="w-24 h-32 bg-zinc-200 rounded shrink-0" />
+                                        <div className="flex-1 space-y-2 pt-1">
+                                            <div className="h-4 bg-zinc-200 rounded w-3/4" />
+                                            <div className="h-4 bg-zinc-200 rounded w-1/2" />
+                                            <div className="h-3 bg-zinc-100 rounded w-1/3 mt-2" />
+                                        </div>
+                                    </div>
+                                    <div className="px-4 py-3 bg-zinc-50 border-t border-zinc-100 flex gap-4">
+                                        <div className="h-3 bg-zinc-200 rounded w-1/3" />
+                                        <div className="h-3 bg-zinc-200 rounded w-1/3" />
+                                    </div>
+                                </div>
+                            ))}
+                            {!loading && stories.length === 0 && (
+                                <div className="col-span-full py-16 text-center text-zinc-400">
+                                    <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                                    <p className="text-sm">Không tìm thấy truyện phù hợp</p>
+                                </div>
+                            )}
                             {stories.map((story, idx) => (
                                 <a href={`/truyen/${story.slug}`} key={story.id || idx} className="group bg-white rounded-xl border border-zinc-200 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col h-full">
                                     <div className="p-4 flex gap-4">

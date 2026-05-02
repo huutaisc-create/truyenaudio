@@ -129,6 +129,7 @@ export async function searchStories(params: SearchParams) {
                     status: true,
                     viewCount: true,
                     ratingScore: true,
+                    ratingCount: true,
                     totalChapters: true,
                     genres: {
                         // FIX PERF: chỉ lấy field cần, giới hạn số genre
