@@ -171,7 +171,7 @@ const FilterPage = () => {
                 setPagination(res.pagination);
             } catch (e) {
                 console.error('Failed to fetch stories', e);
-                setPagination({ total: 0, page: 1, totalPages: 0 });
+                setPagination({ total: 0, totalPages: 0 });
             } finally {
                 setLoading(false);
             }
