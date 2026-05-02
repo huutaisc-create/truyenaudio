@@ -181,7 +181,7 @@ export default async function TaiKhoanPage() {
           ) : (
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12">
               {library.map(({ story }) => (
-                <Link key={story.slug} href={`/truyen/${story.slug}`} className="group block">
+                <Link key={story.slug} href={`/truyen/${story.slug}/nghe`} className="group block">
                   <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-zinc-100 shadow-sm transition-all group-hover:shadow-md">
                     {story.coverImage ? (
                       <img src={story.coverImage} alt={story.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />

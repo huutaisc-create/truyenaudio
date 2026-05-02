@@ -576,7 +576,7 @@ const FilterPage = () => {
                                 </div>
                             )}
                             {stories.map((story, idx) => (
-                                <a href={`/truyen/${story.slug}`} key={story.id || idx} className="group bg-white rounded-xl border border-zinc-200 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col h-full">
+                                <a href={`/truyen/${story.slug}/nghe`} key={story.id || idx} className="group bg-white rounded-xl border border-zinc-200 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col h-full">
                                     <div className="p-4 flex gap-4">
                                         <div className="w-24 h-32 bg-zinc-100 rounded shadow-inner shrink-0 flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform duration-300 relative">
                                             {story.coverImage ? (

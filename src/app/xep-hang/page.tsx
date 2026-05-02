@@ -121,7 +121,7 @@ const RankingPage = async ({ searchParams: searchParamsPromise }: { searchParams
                                 stories.map((story, idx) => {
                                     const realIndex = offset + idx + 1;
                                     return (
-                                        <Link href={`/truyen/${story.slug}`} key={story.id} className="flex gap-3 md:gap-6 p-3 md:p-6 border-b border-zinc-50 last:border-0 hover:bg-zinc-50 transition-colors group cursor-pointer items-start md:items-center">
+                                        <Link href={`/truyen/${story.slug}/nghe`} key={story.id} className="flex gap-3 md:gap-6 p-3 md:p-6 border-b border-zinc-50 last:border-0 hover:bg-zinc-50 transition-colors group cursor-pointer items-start md:items-center">
                                             {/* Rank Number */}
                                             <div className="flex shrink-0 items-center justify-center w-6 md:w-8 mt-1 md:mt-0">
                                                 <span className={`text-lg md:text-2xl font-black italic ${realIndex === 1 ? 'text-red-500 scale-125' :
@@ -179,7 +179,7 @@ const RankingPage = async ({ searchParams: searchParamsPromise }: { searchParams
                                 stories.map((story, idx) => {
                                     const realIndex = offset + idx + 1;
                                     return (
-                                        <Link href={`/truyen/${story.slug}`} key={story.id} className="group bg-white rounded-xl border border-zinc-200 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col h-full relative">
+                                        <Link href={`/truyen/${story.slug}/nghe`} key={story.id} className="group bg-white rounded-xl border border-zinc-200 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col h-full relative">
                                             {/* Rank Badge */}
                                             <div className="absolute top-2 left-2 z-20 flex items-center justify-center w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow-md border border-zinc-100">
                                                 <span className={`text-lg font-black italic ${realIndex === 1 ? 'text-red-500' : realIndex === 2 ? 'text-orange-500' : realIndex === 3 ? 'text-yellow-500' : 'text-zinc-400'}`}>

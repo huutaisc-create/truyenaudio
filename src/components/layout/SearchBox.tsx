@@ -114,7 +114,7 @@ const SearchBox: React.FC<SearchBoxProps> = ({
                             results.map((result, idx) => (
                                 <Link
                                     key={result.id || idx}
-                                    href={`/truyen/${result.slug}`}
+                                    href={`/truyen/${result.slug}/nghe`}
                                     role="option"
                                     aria-label={`${result.title} - ${result.author}`}
                                     className="flex items-center gap-3 p-3 transition-colors"

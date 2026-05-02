@@ -398,7 +398,7 @@ const StoryDetail = async ({
                                 {topNominations.map((s: any, i: number) => (
                                     <a
                                         key={s.id}
-                                        href={`/truyen/${s.slug}`}
+                                        href={`/truyen/${s.slug}/nghe`}
                                         className="flex gap-2.5 group"
                                         aria-label={`${s.title} - ${s.author}`}
                                     >
@@ -442,7 +442,7 @@ const StoryDetail = async ({
                                     {relatedStoriesReal.map((s: any) => (
                                         <a
                                             key={s.id}
-                                            href={`/truyen/${s.slug}`}
+                                            href={`/truyen/${s.slug}/nghe`}
                                             className="flex gap-2.5 group"
                                             aria-label={`${s.title} - ${s.author}`}
                                         >
@@ -487,7 +487,7 @@ const StoryDetail = async ({
                                     {authorStoriesReal.map((s: any) => (
                                         <a
                                             key={s.id}
-                                            href={`/truyen/${s.slug}`}
+                                            href={`/truyen/${s.slug}/nghe`}
                                             className="flex gap-2.5 group"
                                             aria-label={s.title}
                                         >

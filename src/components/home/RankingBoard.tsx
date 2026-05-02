@@ -68,7 +68,7 @@ const RankingColumn = ({ title, stories, countKey, countLabel, accentColor, tab,
               </span>
             )}
             <Link
-              href={`/truyen/${top1.slug}`}
+              href={`/truyen/${top1.slug}/nghe`}
               className="block aspect-[2/3] rounded overflow-hidden shadow-md transition-shadow hover:shadow-lg"
               style={{ background: "var(--card2)", border: "1px solid var(--border)" }}
               aria-label={`Xem truyện ${top1.title}`}
@@ -92,7 +92,7 @@ const RankingColumn = ({ title, stories, countKey, countLabel, accentColor, tab,
           </div>
           <div className="flex-1 min-w-0 flex flex-col gap-1">
             <Link
-              href={`/truyen/${top1.slug}`}
+              href={`/truyen/${top1.slug}/nghe`}
               className="font-bold text-sm line-clamp-2 leading-tight transition-colors"
               style={{ color: "var(--text)" }}
               onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = "var(--accent)")}
@@ -130,7 +130,7 @@ const RankingColumn = ({ title, stories, countKey, countLabel, accentColor, tab,
               {idx + 2}
             </span>
             <Link
-              href={`/truyen/${story.slug}`}
+              href={`/truyen/${story.slug}/nghe`}
               className="flex-1 min-w-0 text-sm truncate transition-colors"
               style={{ color: "var(--text-muted)" }}
               onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = "var(--accent)")}
