@@ -287,7 +287,7 @@ const StoryDetail = async ({
                                 <div className="border-t border-warm-border-soft">
                                     {story.latestChapters.map(ch => (
                                         <a
-                                            href={`/truyen/${slug}/chuong-${ch.id}`}
+                                            href={`/truyen/${slug}/nghe?chuong=${ch.id}`}
                                             key={ch.id}
                                             className="flex justify-between items-center py-2.5 border-b border-warm-border-soft group"
                                         >
@@ -311,7 +311,7 @@ const StoryDetail = async ({
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
                                     {chapterDataReal.chapters.map(ch => (
                                         <a
-                                            href={`/truyen/${slug}/chuong-${ch.index}`}
+                                            href={`/truyen/${slug}/nghe?chuong=${ch.index}`}
                                             key={ch.id}
                                             className="text-base text-warm-ink flex justify-between items-center py-2 border-b border-warm-border-soft group hover:text-warm-primary transition-colors"
                                         >

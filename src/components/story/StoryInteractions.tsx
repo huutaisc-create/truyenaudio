@@ -193,7 +193,7 @@ export default function StoryInteractions({
             addToast("Vui lòng nhập số chương hợp lệ!", 'info');
             return;
         }
-        router.push(`/truyen/${storySlug}/chuong-${chapterNum}`);
+        router.push(`/truyen/${storySlug}/nghe?chuong=${chapterNum}`);
     };
 
     return (
@@ -280,7 +280,7 @@ export default function StoryInteractions({
                 </div>
 
                 <a
-                    href={`/truyen/${storySlug}/chuong-${firstChapterId || 1}`}
+                    href={`/truyen/${storySlug}/nghe?chuong=${firstChapterId || 1}`}
                     className="shrink-0 px-3 sm:px-4 h-8 sm:h-9 flex items-center rounded-xl font-bold text-sm sm:text-base text-[#8c3a08] bg-warm-primary-pale border-2 border-warm-primary/50 hover:bg-warm-primary hover:text-white whitespace-nowrap transition-all active:scale-95"
                 >
                     <span className="sm:hidden">▶ C.1</span>
@@ -288,7 +288,7 @@ export default function StoryInteractions({
                 </a>
 
                 <a
-                    href={`/truyen/${storySlug}/chuong-${latestChapterId || 1}`}
+                    href={`/truyen/${storySlug}/nghe?chuong=${latestChapterId || 1}`}
                     className="shrink-0 px-3 sm:px-4 h-8 sm:h-9 flex items-center rounded-xl font-bold text-sm sm:text-base text-[#8c3a08] bg-warm-primary-pale border-2 border-warm-primary/50 hover:bg-warm-primary hover:text-white whitespace-nowrap transition-all active:scale-95"
                 >
                     <span className="sm:hidden">⏭ C.End</span>
@@ -299,11 +299,11 @@ export default function StoryInteractions({
             {/* Đọc gần đây */}
             {mounted && lastRead?.chapterIndex && (
                 <a
-                    href={`/truyen/${storySlug}/chuong-${lastRead?.chapterIndex || 1}`}
+                    href={`/truyen/${storySlug}/nghe?chuong=${lastRead?.chapterIndex || 1}`}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-warm-border-soft bg-warm-bg hover:bg-warm-primary-pale transition-colors group"
                 >
                     <span aria-hidden="true" className="text-sm">🕐</span>
-                    <span className="text-sm font-medium text-warm-ink-soft">Đọc gần đây</span>
+                    <span className="text-sm font-medium text-warm-ink-soft">Nghe gần đây</span>
                     <span className="text-sm font-bold text-[#8c3a08] group-hover:text-warm-primary transition-colors">
                         Chương {lastRead.chapterIndex} →
                     </span>
