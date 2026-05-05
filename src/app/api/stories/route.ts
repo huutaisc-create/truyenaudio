@@ -10,9 +10,11 @@ export async function GET(request: NextRequest) {
     const limit       = parseInt(searchParams.get("limit") || "10", 10);
     const search      = searchParams.get("search")      || "";
     const status      = searchParams.get("status")      || "";
-    const genre       = searchParams.get("genre")       || ""; // filter by genre name
-    const sort        = searchParams.get("sort")        || ""; // viewCount | ratingCount | updatedAt
-    const excludeSlug = searchParams.get("excludeSlug") || ""; // exclude current story
+    const genre        = searchParams.get("genre")        || ""; // single genre filter
+    const genres       = searchParams.get("genres")       || ""; // comma-sep, AND condition
+    const sort         = searchParams.get("sort")         || ""; // viewCount | ratingCount | popular | updatedAt
+    const excludeSlug  = searchParams.get("excludeSlug")  || ""; // single exclude
+    const excludeSlugs = searchParams.get("excludeSlugs") || ""; // comma-sep excludes
 
     const skip = (page - 1) * limit;
 
@@ -25,11 +27,32 @@ export async function GET(request: NextRequest) {
     if (status) {
       whereCondition.status = status;
     }
+    // Single genre filter
     if (genre) {
       whereCondition.genres = { some: { name: genre } };
     }
-    if (excludeSlug) {
-      whereCondition.slug = { not: excludeSlug };
+    // Multiple genres AND condition (story must have ALL listed genres)
+    if (genres) {
+      const genreList = genres.split(",").map((g) => g.trim()).filter(Boolean);
+      if (genreList.length === 1) {
+        whereCondition.genres = { some: { name: genreList[0] } };
+      } else if (genreList.length > 1) {
+        whereCondition.AND = genreList.map((g) => ({
+          genres: { some: { name: g } },
+        }));
+      }
+    }
+    // Exclude slugs
+    const excludeSlugList: string[] = [];
+    if (excludeSlug) excludeSlugList.push(excludeSlug);
+    if (excludeSlugs) {
+      excludeSlugs.split(",").map((s) => s.trim()).filter(Boolean)
+        .forEach((s) => excludeSlugList.push(s));
+    }
+    if (excludeSlugList.length === 1) {
+      whereCondition.slug = { not: excludeSlugList[0] };
+    } else if (excludeSlugList.length > 1) {
+      whereCondition.slug = { notIn: excludeSlugList };
     }
 
     // ── Order by ──────────────────────────────────────────────────────────
