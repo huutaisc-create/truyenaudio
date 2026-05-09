@@ -412,11 +412,11 @@ export default async function Home() {
                       style={{ borderBottom: "1px solid var(--border-soft)" }}
                     >
                       <div
-                        className="shrink-0 w-12 h-16 rounded-lg overflow-hidden relative"
+                        className="shrink-0 w-24 h-32 rounded-lg overflow-hidden relative"
                         style={{ background: "var(--card2)", border: "1px solid var(--border)" }}
                       >
                         {story.coverImage ? (
-                          <Image src={story.coverImage} alt={`Ảnh bìa ${story.title}`} fill sizes="48px" className="object-cover" unoptimized={story.coverImage.startsWith('/covers/')} />
+                          <Image src={story.coverImage} alt={`Ảnh bìa ${story.title}`} fill sizes="96px" className="object-cover" unoptimized={story.coverImage.startsWith('/covers/')} />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center" style={{ color: "var(--text-soft)" }}>
                             <BookOpen size={16} aria-hidden="true" />
