@@ -1,11 +1,10 @@
-import { BookOpen, Star, MessageSquare, Download, ChevronLeft, Share2, Headphones, List, Clock, ChevronRight, Bookmark } from 'lucide-react';
+import { BookOpen, User, Clock, Eye, List, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
 import StoryRatingClient from '@/components/story/StoryRatingClient';
 import StoryInteractions from '@/components/story/StoryInteractions';
 import CommentSectionWrapper from '@/components/story/CommentSectionWrapper';
-import DescriptionExpand from '@/components/story/DescriptionExpand';
 
 import {
     getStoryBySlug,
@@ -21,6 +20,7 @@ import { formatNumber } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
+
 const StoryDetail = async ({
     params,
     searchParams,
@@ -32,6 +32,7 @@ const StoryDetail = async ({
     const { page: pageParam } = await searchParams;
     const currentPage = Math.max(1, parseInt(pageParam || '1'));
 
+    // auth() chạy song song với getStoryBySlug — không block cache trang
     const [storyData, session] = await Promise.all([
         getStoryBySlug(slug),
         auth(),
@@ -43,6 +44,8 @@ const StoryDetail = async ({
         ? { id: session.user.id, name: session.user.name ?? '', image: session.user.image ?? null }
         : null;
 
+    // Round 2: tất cả query cần storyId chạy song song
+    // reviews fetch thẳng DB (không cache) → luôn fresh, không bị stale 60s
     const [chapterDataReal, relatedStoriesReal, authorStoriesReal, topNominations, freshReviews] =
         await Promise.all([
             getChaptersByStoryId(storyData.id, currentPage),
@@ -60,6 +63,7 @@ const StoryDetail = async ({
             }),
         ]);
 
+    // Check user đã review truyện này chưa (chỉ khi đã đăng nhập)
     let hasReviewed = false;
     if (currentUser) {
         const existing = await db.review.findFirst({
@@ -75,12 +79,11 @@ const StoryDetail = async ({
         author: storyData.author,
         genres: storyData.genres.map(g => g.name),
         status: storyData.status === 'COMPLETED' ? 'Hoàn thành' : 'Đang ra',
-        isCompleted: storyData.status === 'COMPLETED',
+        storyType: (storyData as any).storyType as string ?? 'ORIGINAL',
+        translatorName: (storyData as any).translatorName as string | null ?? null,
+        isCompleted: (storyData as any).isCompleted as boolean ?? false,
         chapters: formatNumber(storyData._count.chapters),
-        chaptersRaw: storyData._count.chapters,
         views: formatNumber(storyData.viewCount),
-        likeCount: storyData.likeCount || 0,
-        followCount: storyData.followCount || 0,
         rating: storyData.ratingScore ?? 0,
         ratingCount: storyData.ratingCount || 0,
         description: storyData.description || 'Chưa có giới thiệu.',
@@ -88,8 +91,8 @@ const StoryDetail = async ({
             ...review,
             user: {
                 ...review.user,
-                name: review.user.name || 'Khách ẩn danh',
-                image: review.user.image || '',
+                name: review.user.name || "Khách ẩn danh",
+                image: review.user.image || "",
             },
         })),
         latestChapters: storyData.chapters.map(c => ({
@@ -103,350 +106,419 @@ const StoryDetail = async ({
     const pageUrl = (p: number) => `/truyen/${slug}?page=${p}`;
 
     return (
-        <div className="min-h-screen bg-[#0f0d0a] pb-24">
+        <div className="min-h-screen bg-warm-bg pb-16">
 
-            {/* ── HERO ── */}
-            <div className="relative w-full overflow-hidden" style={{ minHeight: 320 }}>
-                {/* Blurred background */}
-                {story.coverImage && (
-                    <div
-                        className="absolute inset-0 bg-cover bg-center scale-110 blur-xl opacity-40"
-                        style={{ backgroundImage: `url(${story.coverImage})` }}
-                    />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-[#0f0d0a]/60 to-[#0f0d0a]" />
-
-                {/* Top bar */}
-                <div className="relative z-10 flex items-center justify-between px-4 pt-12 pb-2">
-                    <Link href="/"
-                        className="w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white">
-                        <ChevronLeft size={20} />
-                    </Link>
-                    <button className="w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white">
-                        <Share2 size={16} />
-                    </button>
-                </div>
-
-                {/* Cover + Info */}
-                <div className="relative z-10 px-4 pb-6 flex gap-4 items-end mt-2">
-                    {/* Text info */}
-                    <div className="flex-1 min-w-0">
-                        <span className={`inline-block px-2.5 py-1 rounded text-[11px] font-black tracking-widest uppercase mb-2 ${story.isCompleted ? 'bg-red-600 text-white' : 'bg-[#e8580a] text-white'}`}>
-                            {story.isCompleted ? 'Hoàn Thành' : 'Đang Ra'}
-                        </span>
-                        <h1 className="text-[22px] font-bold text-white leading-tight mb-1.5">
-                            {story.title}
-                        </h1>
-                        <div className="flex items-center gap-1.5 text-[#c0b4a8]">
-                            <BookOpen size={13} />
-                            <span className="text-[13px] font-medium">{story.chapters} Chương</span>
-                        </div>
-                    </div>
-
-                    {/* Cover image */}
-                    {story.coverImage ? (
-                        <div className="shrink-0 w-28 rounded-xl overflow-hidden shadow-2xl border border-white/10" style={{ aspectRatio: '3/4' }}>
-                            <Image
-                                src={story.coverImage}
-                                alt={story.title}
-                                width={112}
-                                height={150}
-                                className="object-cover w-full h-full"
-                                priority
-                                unoptimized={story.coverImage.startsWith('/covers/')}
-                            />
-                        </div>
-                    ) : (
-                        <div className="shrink-0 w-28 rounded-xl bg-[#1a1612] border border-white/10 flex items-center justify-center" style={{ aspectRatio: '3/4' }}>
-                            <BookOpen size={32} className="text-white/20" />
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* ── STATS ── */}
-            <div className="mx-4 rounded-2xl overflow-hidden border border-white/[0.07] bg-[#1a1612] mt-1">
-                <div className="grid grid-cols-3 divide-x divide-white/[0.07]">
-                    <div className="flex flex-col items-center py-3">
-                        <span className="text-[18px] font-bold text-white">{story.views}</span>
-                        <span className="text-[11px] text-[#8a7e72] mt-0.5">Lượt nghe</span>
-                    </div>
-                    <div className="flex flex-col items-center py-3">
-                        <span className="text-[18px] font-bold text-white">{formatNumber(story.likeCount)}</span>
-                        <span className="text-[11px] text-[#8a7e72] mt-0.5">Yêu thích</span>
-                    </div>
-                    <div className="flex flex-col items-center py-3">
-                        <span className="text-[18px] font-bold text-white">{formatNumber(story.followCount)}</span>
-                        <span className="text-[11px] text-[#8a7e72] mt-0.5">Theo dõi</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* ── GENRES ── */}
-            <div className="px-4 mt-4 flex flex-wrap gap-2">
-                {story.genres.map(g => (
-                    <Link
-                        key={g}
-                        href={`/tim-kiem?the-loai=${encodeURIComponent(g)}`}
-                        className="px-3.5 py-1.5 rounded-full text-[13px] font-semibold border border-[#e8580a]/50 text-[#e8580a] bg-[#e8580a]/10"
-                    >
-                        {g}
-                    </Link>
-                ))}
-            </div>
-
-            {/* ── DESCRIPTION ── */}
-            <div className="px-4 mt-4">
-                <DescriptionExpand text={story.description} />
-            </div>
-
-            {/* ── ACTION BUTTONS ── */}
-            <div id="actions" className="px-4 mt-5 grid grid-cols-3 gap-3">
-                <a href="#danh-gia"
-                    className="flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl bg-[#1a1612] border border-white/[0.07]">
-                    <Star size={20} className="text-[#e8580a]" />
-                    <span className="text-[12px] font-semibold text-[#d4ccc4]">Đánh Giá</span>
-                </a>
-                <a href="#binh-luan"
-                    className="flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl bg-[#1a1612] border border-white/[0.07]">
-                    <MessageSquare size={20} className="text-[#e8580a]" />
-                    <span className="text-[12px] font-semibold text-[#d4ccc4]">Bình Luận</span>
-                </a>
-                <a href={`/truyen/${slug}/nghe`}
-                    className="flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl bg-[#1a1612] border border-white/[0.07]">
-                    <Download size={20} className="text-[#e8580a]" />
-                    <span className="text-[12px] font-semibold text-[#d4ccc4]">Tải về</span>
-                </a>
-            </div>
-
-            {/* ── RELATED STORIES BUTTON ── */}
-            {relatedStoriesReal.length > 0 && (
-                <div className="px-4 mt-3">
-                    <a href="#truyen-lien-quan"
-                        className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-[#1a1612] border border-white/[0.07] text-[14px] font-semibold text-[#d4ccc4]">
-                        <span className="text-[#e8580a]">✦</span> Truyện liên quan
+            {/* Breadcrumb */}
+            <div className="bg-warm-card border-b border-warm-border mb-7">
+                <div className="container mx-auto px-4 py-3 flex items-center gap-2 text-xs text-warm-ink-light">
+                    <a href="/" className="text-warm-ink-soft hover:text-warm-primary transition-colors">
+                        Truyện Audio Của Tôi
                     </a>
+                    <ChevronRight className="h-3 w-3 text-warm-border" aria-hidden="true" />
+                    <span className="font-semibold text-warm-ink-mid truncate">{story.title}</span>
                 </div>
-            )}
+            </div>
 
-            {/* ── DANH SÁCH CHƯƠNG ── */}
-            <div className="px-4 mt-6">
-                <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-[15px] font-bold text-white flex items-center gap-2">
-                        <List size={15} className="text-[#e8580a]" /> Danh sách chương
-                    </h2>
-                    <span className="text-[12px] text-[#8a7e72]">{story.chapters} chương</span>
-                </div>
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-7">
 
-                {/* Mới cập nhật */}
-                <div className="mb-3">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-[#8a7e72] mb-2 flex items-center gap-1.5">
-                        <Clock size={11} /> Mới cập nhật
-                    </p>
-                    <div className="rounded-2xl overflow-hidden border border-white/[0.07] bg-[#1a1612]">
-                        {story.latestChapters.map((ch, idx) => (
-                            <a
-                                key={ch.id}
-                                href={`/truyen/${slug}/nghe?chuong=${ch.id}`}
-                                className={`flex justify-between items-center px-4 py-3 group ${idx < story.latestChapters.length - 1 ? 'border-b border-white/[0.05]' : ''}`}
-                            >
-                                <span className="text-[13px] font-medium text-[#d4ccc4] group-hover:text-[#e8580a] transition-colors truncate">
-                                    {ch.title}
-                                </span>
-                                <span className="text-[11px] text-[#8a7e72] shrink-0 ml-3">{ch.time}</span>
-                            </a>
-                        ))}
-                    </div>
-                </div>
+                    {/* ── MAIN COLUMN ── */}
+                    <div className="lg:col-span-9 space-y-6">
 
-                {/* Tất cả chương */}
-                <div className="rounded-2xl overflow-hidden border border-white/[0.07] bg-[#1a1612]">
-                    {chapterDataReal.chapters.map((ch, idx) => (
-                        <a
-                            key={ch.id}
-                            href={`/truyen/${slug}/nghe?chuong=${ch.index}`}
-                            className={`flex justify-between items-center px-4 py-3 group ${idx < chapterDataReal.chapters.length - 1 ? 'border-b border-white/[0.05]' : ''}`}
-                        >
-                            <span className="text-[13px] font-medium text-[#d4ccc4] group-hover:text-[#e8580a] transition-colors truncate">
-                                {ch.title || `Chương ${ch.index}`}
-                            </span>
-                            <ChevronRight size={14} className="text-[#8a7e72] shrink-0 opacity-0 group-hover:opacity-100 transition-all" />
-                        </a>
-                    ))}
-                </div>
+                        {/* HERO CARD */}
+                        <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-md p-6 md:p-8 flex flex-col md:flex-row gap-7">
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                    <nav className="mt-4 flex justify-center items-center gap-1.5 flex-wrap">
-                        {currentPage > 1 && (
-                            <a href={pageUrl(currentPage - 1)}
-                                className="px-3 py-2 rounded-lg text-[13px] font-bold bg-[#1a1612] border border-white/[0.07] text-[#d4ccc4]">‹</a>
-                        )}
-                        {Array.from({ length: totalPages }, (_, i) => i + 1)
-                            .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
-                            .reduce<(number | '...')[]>((acc, p, idx, arr) => {
-                                if (idx > 0 && (arr[idx - 1] as number) + 1 < p) acc.push('...');
-                                acc.push(p);
-                                return acc;
-                            }, [])
-                            .map((p, idx) =>
-                                p === '...' ? (
-                                    <span key={`ellipsis-${idx}`} className="px-2 py-2 text-[13px] text-[#8a7e72]">...</span>
+                            {/* Cover */}
+                            <div className="shrink-0 relative self-start mx-auto md:mx-0">
+                                {story.coverImage ? (
+                                    <div
+                                        className="w-44 relative rounded-xl overflow-hidden shadow-xl"
+                                        style={{ aspectRatio: '3/4' }}
+                                    >
+                                        <Image
+                                            src={story.coverImage}
+                                            alt={`Ảnh bìa truyện ${story.title}`}
+                                            fill
+                                            sizes="176px"
+                                            className="object-cover"
+                                            priority={true}
+                                            unoptimized={story.coverImage.startsWith('/covers/')}
+                                        />
+                                    </div>
                                 ) : (
-                                    <a key={p} href={pageUrl(p as number)}
-                                        className={`px-3.5 py-2 rounded-lg text-[13px] font-bold transition-colors ${currentPage === p
-                                            ? 'bg-[#e8580a] text-white'
-                                            : 'bg-[#1a1612] border border-white/[0.07] text-[#d4ccc4]'}`}>
-                                        {p}
-                                    </a>
-                                )
-                            )}
-                        {currentPage < totalPages && (
-                            <a href={pageUrl(currentPage + 1)}
-                                className="px-3 py-2 rounded-lg text-[13px] font-bold bg-[#1a1612] border border-white/[0.07] text-[#d4ccc4]">›</a>
-                        )}
-                    </nav>
-                )}
-            </div>
-
-            {/* ── ĐÁNH GIÁ ── */}
-            <div id="danh-gia" className="px-4 mt-6">
-                <h2 className="text-[15px] font-bold text-white flex items-center gap-2 mb-3">
-                    <Star size={15} className="text-[#e8580a]" /> Đánh giá
-                </h2>
-                <div className="rounded-2xl overflow-hidden border border-white/[0.07] bg-[#1a1612] p-4">
-                    <StoryRatingClient
-                        storyId={storyData.id}
-                        currentUser={currentUser}
-                        hasReviewed={hasReviewed}
-                        initialRating={story.rating}
-                        initialRatingCount={story.ratingCount}
-                        initialReviews={story.reviews}
-                    />
-                </div>
-            </div>
-
-            {/* ── TƯƠNG TÁC (like/follow) ── */}
-            <div className="px-4 mt-4">
-                <StoryInteractions
-                    storyId={storyData.id}
-                    storySlug={slug}
-                    firstChapterId={1}
-                    latestChapterId={storyData.totalChapters || 1}
-                    stats={{
-                        likeCount: storyData.likeCount || 0,
-                        followCount: storyData.followCount || 0,
-                        nominationCount: storyData.nominationCount || 0,
-                        viewCount: storyData.viewCount,
-                    }}
-                    userStatus={{
-                        isLiked: false,
-                        isFollowed: false,
-                        lastReadChapterId: null,
-                    }}
-                    currentUser={currentUser}
-                />
-            </div>
-
-            {/* ── BÌNH LUẬN ── */}
-            <div id="binh-luan" className="px-4 mt-6">
-                <h2 className="text-[15px] font-bold text-white flex items-center gap-2 mb-3">
-                    <MessageSquare size={15} className="text-[#e8580a]" /> Bình luận
-                </h2>
-                <CommentSectionWrapper storySlug={slug} />
-            </div>
-
-            {/* ── TRUYỆN LIÊN QUAN ── */}
-            {relatedStoriesReal.length > 0 && (
-                <div id="truyen-lien-quan" className="px-4 mt-6">
-                    <h2 className="text-[15px] font-bold text-white flex items-center gap-2 mb-3">
-                        <span className="text-[#e8580a]">✦</span> Truyện liên quan
-                    </h2>
-                    <div className="space-y-2">
-                        {relatedStoriesReal.map((s: any) => (
-                            <a key={s.id} href={`/truyen/${s.slug}/nghe`}
-                                className="flex gap-3 items-center p-3 rounded-2xl bg-[#1a1612] border border-white/[0.07] group">
-                                <div className="w-12 h-16 rounded-lg overflow-hidden shrink-0 relative bg-[#0f0d0a]">
-                                    {s.coverImage ? (
-                                        <Image src={s.coverImage} alt={s.title} fill sizes="48px" className="object-cover" unoptimized={s.coverImage.startsWith('/covers/')} />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <BookOpen size={16} className="text-white/20" />
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="text-[13px] font-bold text-[#d4ccc4] group-hover:text-[#e8580a] transition-colors line-clamp-2 leading-tight">
-                                        {s.title}
-                                    </h3>
-                                    <div className="flex items-center gap-2 mt-1.5">
-                                        {s.genres[0] && (
-                                            <span className="text-[11px] px-2 py-0.5 rounded-full border border-[#e8580a]/40 text-[#e8580a] bg-[#e8580a]/10">
-                                                {s.genres[0].name}
-                                            </span>
-                                        )}
-                                        <span className="text-[11px] text-[#8a7e72]">{s._count.chapters} chương</span>
+                                    <div
+                                        className="w-44 rounded-xl flex items-center justify-center bg-gradient-to-br from-[#f5e6d3] to-[#e8d5bf] shadow-xl"
+                                        style={{ aspectRatio: '3/4' }}
+                                    >
+                                        <BookOpen
+                                            className="h-14 w-14 text-warm-ink-light opacity-20"
+                                            aria-hidden="true"
+                                        />
                                     </div>
-                                </div>
-                                <ChevronRight size={15} className="text-[#8a7e72] shrink-0" />
-                            </a>
-                        ))}
-                    </div>
-                </div>
-            )}
+                                )}
+                                {story.status === 'Hoàn thành' && (
+                                    <span className="absolute top-2 left-2 bg-warm-primary text-white text-sm font-black px-2.5 py-1 rounded-md uppercase tracking-widest shadow">
+                                        FULL
+                                    </span>
+                                )}
+                            </div>
 
-            {/* ── CÙNG TÁC GIẢ ── */}
-            {authorStoriesReal.length > 0 && (
-                <div className="px-4 mt-6">
-                    <h2 className="text-[15px] font-bold text-white flex items-center gap-2 mb-1">
-                        <span className="text-[#e8580a]">✍️</span> Cùng tác giả
-                    </h2>
-                    <p className="text-[12px] text-[#8a7e72] mb-3">{story.author}</p>
-                    <div className="space-y-2">
-                        {authorStoriesReal.map((s: any) => (
-                            <a key={s.id} href={`/truyen/${s.slug}/nghe`}
-                                className="flex gap-3 items-center p-3 rounded-2xl bg-[#1a1612] border border-white/[0.07] group">
-                                <div className="w-12 h-16 rounded-lg overflow-hidden shrink-0 relative bg-[#0f0d0a]">
-                                    {s.coverImage ? (
-                                        <Image src={s.coverImage} alt={s.title} fill sizes="48px" className="object-cover" unoptimized={s.coverImage.startsWith('/covers/')} />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <BookOpen size={16} className="text-white/20" />
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="text-[13px] font-bold text-[#d4ccc4] group-hover:text-[#e8580a] transition-colors line-clamp-2 leading-tight">
-                                        {s.title}
-                                    </h3>
-                                    <div className="flex items-center gap-2 mt-1.5">
-                                        <span className="text-[11px] text-[#8a7e72]">{s._count.chapters} chương</span>
-                                        <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${s.status === 'COMPLETED' ? 'text-green-400 bg-green-900/30' : 'text-blue-400 bg-blue-900/30'}`}>
-                                            {s.status === 'COMPLETED' ? 'Hoàn thành' : 'Đang ra'}
+                            {/* Info */}
+                            <div className="flex-1 min-w-0 flex flex-col gap-3">
+                                <h1 className="text-xl md:text-2xl font-bold leading-snug text-warm-ink">
+                                    {story.title}
+                                </h1>
+
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-base font-semibold text-warm-ink-soft">
+                                    {/* storyType badge */}
+                                    {story.storyType === 'CONVERT' && (
+                                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                            Convert{story.isCompleted ? ' · Full' : ''}
                                         </span>
-                                    </div>
+                                    )}
+                                    {story.storyType === 'TRANSLATED' && (
+                                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                                            Dịch{story.isCompleted ? ' · Full' : ''}
+                                        </span>
+                                    )}
+                                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-base font-bold bg-green-50 text-green-700 border border-green-200">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true" />
+                                        {story.status}
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                        <Eye className="h-3.5 w-3.5 text-warm-ink-light" aria-hidden="true" />
+                                        {story.views} lượt đọc
+                                    </span>
                                 </div>
-                                <ChevronRight size={15} className="text-[#8a7e72] shrink-0" />
-                            </a>
-                        ))}
-                    </div>
-                </div>
-            )}
 
-            {/* ── FIXED BOTTOM BAR ── */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center gap-3 px-4 py-3 bg-[#0f0d0a]/95 backdrop-blur-md border-t border-white/[0.07]">
-                {/* Bookmark */}
-                <button className="w-12 h-12 shrink-0 flex items-center justify-center rounded-xl bg-[#1a1612] border border-white/[0.10] text-[#d4ccc4]">
-                    <Bookmark size={20} />
-                </button>
-                {/* Nghe ngay */}
-                <a href={`/truyen/${slug}/nghe`}
-                    className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-[#e8580a] text-white font-bold text-[15px] shadow-[0_4px_20px_rgba(232,88,10,0.4)]">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <polygon points="5,3 19,12 5,21" />
-                    </svg>
-                    Nghe ngay
-                </a>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {story.genres.map(g => (
+                                        <Link
+                                            key={g}
+                                            href={`/tim-kiem?the-loai=${encodeURIComponent(g)}`}
+                                            className="px-3 py-0.5 rounded-full text-base font-semibold bg-warm-primary-pale text-warm-primary border border-warm-primary/20 hover:bg-warm-primary hover:text-white transition-all"
+                                        >
+                                            {g}
+                                        </Link>
+                                    ))}
+                                </div>
+
+                                {/* ── RATING + REVIEW + DANH SÁCH REVIEW ──
+                                    Tách ra Client Component để review hiện ngay sau submit
+                                    mà không cần router.refresh() hay đợi revalidate 60s       */}
+                                <StoryRatingClient
+                                    storyId={storyData.id}
+                                    currentUser={currentUser}
+                                    hasReviewed={hasReviewed}
+                                    initialRating={story.rating}
+                                    initialRatingCount={story.ratingCount}
+                                    initialReviews={story.reviews}
+                                />
+
+                                {/* StoryInteractions */}
+                                <StoryInteractions
+                                    storyId={storyData.id}
+                                    storySlug={slug}
+                                    firstChapterId={1}
+                                    latestChapterId={storyData.totalChapters || 1}
+                                    stats={{
+                                        likeCount: storyData.likeCount || 0,
+                                        followCount: storyData.followCount || 0,
+                                        nominationCount: storyData.nominationCount || 0,
+                                        viewCount: storyData.viewCount,
+                                    }}
+                                    userStatus={{
+                                        isLiked: false,
+                                        isFollowed: false,
+                                        lastReadChapterId: null,
+                                    }}
+                                    currentUser={currentUser}
+                                />
+
+                                {/* Nút Nghe Truyện */}
+                                <a
+                                    href={`/truyen/${slug}/nghe`}
+                                    aria-label="Nghe truyện"
+                                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl font-bold text-sm border-2 border-[#e8580a] text-[#e8580a] hover:bg-[#e8580a] hover:text-white transition-all"
+                                >
+                                    <svg
+                                        width="16" height="16" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" strokeWidth="2"
+                                        strokeLinecap="round" strokeLinejoin="round"
+                                        aria-hidden="true"
+                                    >
+                                        <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+                                        <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z" />
+                                        <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+                                    </svg>
+                                    Nghe Truyện
+                                </a>
+                            </div>
+                        </div>
+
+                        {/* GIỚI THIỆU */}
+                        <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-6 md:p-8">
+                            <h2 className="font-bold text-base mb-4 text-warm-ink flex items-center gap-2.5">
+                                <span className="w-1 h-5 rounded-sm bg-warm-primary shrink-0" aria-hidden="true" />
+                                GIỚI THIỆU
+                            </h2>
+                            <p className="text-base text-warm-ink whitespace-pre-line leading-relaxed">
+                                {story.description}
+                            </p>
+                        </div>
+
+                        {/* DANH SÁCH CHƯƠNG */}
+                        <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-6 md:p-8">
+                            <div className="flex items-center justify-between mb-5 pb-4 border-b border-warm-border-soft">
+                                <h2 className="font-bold text-base text-warm-ink flex items-center gap-2.5">
+                                    <span className="w-1 h-5 rounded-sm bg-warm-primary shrink-0" aria-hidden="true" />
+                                    DANH SÁCH CHƯƠNG
+                                </h2>
+                                <span className="text-sm text-warm-ink-soft font-medium">
+                                    Tổng: <b className="text-warm-ink-mid">{story.chapters}</b> chương
+                                </span>
+                            </div>
+
+                            {/* Mới cập nhật */}
+                            <div className="mb-5">
+                                <p className="text-sm font-black uppercase tracking-widest mb-2.5 flex items-center gap-1.5 text-warm-ink-soft">
+                                    <Clock className="h-3 w-3" aria-hidden="true" /> Mới cập nhật
+                                </p>
+                                <div className="border-t border-warm-border-soft">
+                                    {story.latestChapters.map(ch => (
+                                        <a
+                                            href={`/truyen/${slug}/nghe?chuong=${ch.id}`}
+                                            key={ch.id}
+                                            className="flex justify-between items-center py-2.5 border-b border-warm-border-soft group"
+                                        >
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" aria-hidden="true" />
+                                                <span className="text-base font-medium text-warm-ink group-hover:text-warm-primary transition-colors truncate">
+                                                    {ch.title}
+                                                </span>
+                                            </div>
+                                            <span className="text-sm text-warm-ink-soft shrink-0 ml-3">{ch.time}</span>
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Tất cả chương */}
+                            <div>
+                                <p className="text-sm font-black uppercase tracking-widest mb-3 flex items-center gap-1.5 text-warm-ink-soft">
+                                    <List className="h-3 w-3" aria-hidden="true" /> Tất cả chương
+                                </p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
+                                    {chapterDataReal.chapters.map(ch => (
+                                        <a
+                                            href={`/truyen/${slug}/nghe?chuong=${ch.index}`}
+                                            key={ch.id}
+                                            className="text-base text-warm-ink flex justify-between items-center py-2 border-b border-warm-border-soft group hover:text-warm-primary transition-colors"
+                                        >
+                                            <span className="truncate">{ch.title || `Chương ${ch.index}`}</span>
+                                            <ChevronRight
+                                                className="h-3 w-3 shrink-0 opacity-0 group-hover:opacity-100 text-warm-primary transition-all"
+                                                aria-hidden="true"
+                                            />
+                                        </a>
+                                    ))}
+                                </div>
+
+                                {/* Pagination */}
+                                {totalPages > 1 && (
+                                    <nav
+                                        className="mt-6 flex justify-center items-center gap-1.5 flex-wrap"
+                                        aria-label="Phân trang danh sách chương"
+                                    >
+                                        {currentPage > 1 && (
+                                            <a
+                                                href={pageUrl(currentPage - 1)}
+                                                aria-label="Trang trước"
+                                                className="px-3 py-2 rounded-lg text-sm font-bold bg-warm-border-soft text-warm-ink-soft hover:bg-warm-primary-pale hover:text-warm-primary transition-colors"
+                                            >
+                                                ‹
+                                            </a>
+                                        )}
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                            .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+                                            .reduce<(number | '...')[]>((acc, p, idx, arr) => {
+                                                if (idx > 0 && (arr[idx - 1] as number) + 1 < p) acc.push('...');
+                                                acc.push(p);
+                                                return acc;
+                                            }, [])
+                                            .map((p, idx) =>
+                                                p === '...' ? (
+                                                    <span key={`ellipsis-${idx}`} className="px-2 py-2 text-sm text-warm-ink-soft">
+                                                        ...
+                                                    </span>
+                                                ) : (
+                                                    <a
+                                                        key={p}
+                                                        href={pageUrl(p as number)}
+                                                        aria-label={`Trang ${p}`}
+                                                        aria-current={currentPage === p ? 'page' : undefined}
+                                                        className={`px-3.5 py-2 rounded-lg text-sm font-bold transition-colors ${
+                                                            currentPage === p
+                                                                ? 'bg-warm-primary text-white'
+                                                                : 'bg-warm-border-soft text-warm-ink-soft hover:bg-warm-primary-pale hover:text-warm-primary'
+                                                        }`}
+                                                    >
+                                                        {p}
+                                                    </a>
+                                                )
+                                            )}
+                                        {currentPage < totalPages && (
+                                            <a
+                                                href={pageUrl(currentPage + 1)}
+                                                aria-label="Trang sau"
+                                                className="px-3 py-2 rounded-lg text-sm font-bold bg-warm-border-soft text-warm-ink-soft hover:bg-warm-primary-pale hover:text-warm-primary transition-colors"
+                                            >
+                                                ›
+                                            </a>
+                                        )}
+                                    </nav>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* BÌNH LUẬN */}
+                        <CommentSectionWrapper storySlug={slug} />
+                    </div>
+
+                    {/* ── SIDEBAR ── */}
+                    <aside className="lg:col-span-3 space-y-5" aria-label="Sidebar">
+
+                        {/* TOP ĐỀ CỬ */}
+                        <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-5">
+                            <h2 className="font-bold text-sm mb-4 text-warm-ink flex items-center gap-2">
+                                <span className="w-1 h-4 rounded-sm bg-warm-primary shrink-0" aria-hidden="true" />
+                                TOP ĐỀ CỬ
+                            </h2>
+                            <div className="space-y-3">
+                                {topNominations.map((s: any, i: number) => (
+                                    <a
+                                        key={s.id}
+                                        href={`/truyen/${s.slug}/nghe`}
+                                        className="flex gap-2.5 group"
+                                        aria-label={`${s.title} - ${s.author}`}
+                                    >
+                                        <div className={`w-10 h-14 rounded-md shrink-0 flex items-center justify-center font-black text-lg ${
+                                            i === 0 ? 'bg-red-500 text-white' :
+                                            i === 1 ? 'bg-orange-500 text-white' :
+                                            i === 2 ? 'bg-amber-400 text-white' :
+                                            'bg-warm-border-soft text-warm-ink-mid'
+                                        }`} aria-label={`Hạng ${i + 1}`}>
+                                            {i + 1}
+                                        </div>
+                                        <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+                                            <h3 className="text-base font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">
+                                                {s.title}
+                                            </h3>
+
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                {s.genres[0] && (
+                                                    <span className="text-sm px-1.5 py-0.5 bg-warm-primary-pale text-[#8c3a08] rounded-full font-semibold border border-warm-primary/20">
+                                                        {s.genres[0].name}
+                                                    </span>
+                                                )}
+                                                <span className="text-sm text-warm-ink-soft">
+                                                    {s.nominationCount || 0} đề cử
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* TRUYỆN CÙNG THỂ LOẠI */}
+                        {relatedStoriesReal.length > 0 && (
+                            <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-5">
+                                <h2 className="font-bold text-sm mb-4 text-warm-ink flex items-center gap-2">
+                                    <span className="w-1 h-4 rounded-sm bg-warm-primary shrink-0" aria-hidden="true" />
+                                    CÙNG THỂ LOẠI
+                                </h2>
+                                <div className="space-y-3">
+                                    {relatedStoriesReal.map((s: any) => (
+                                        <a
+                                            key={s.id}
+                                            href={`/truyen/${s.slug}/nghe`}
+                                            className="flex gap-2.5 group"
+                                            aria-label={`${s.title} - ${s.author}`}
+                                        >
+                                            <div className="w-10 h-14 rounded-md overflow-hidden shrink-0 shadow-sm relative bg-warm-bg">
+                                                {s.coverImage ? (
+                                                    <Image src={s.coverImage} alt={`Ảnh bìa ${s.title}`} fill sizes="40px" className="object-cover" unoptimized={s.coverImage.startsWith('/covers/')} />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center">
+                                                        <BookOpen className="h-4 w-4 text-warm-ink-light" aria-hidden="true" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+                                                <h3 className="text-base font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">
+                                                    {s.title}
+                                                </h3>
+
+                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                    {s.genres.slice(0, 1).map((g: any) => (
+                                                        <span key={g.name} className="text-sm px-1.5 py-0.5 bg-warm-primary-pale text-[#8c3a08] rounded-full font-semibold border border-warm-primary/20">
+                                                            {g.name}
+                                                        </span>
+                                                    ))}
+                                                    <span className="text-sm text-warm-ink-soft">{s._count.chapters} chương</span>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TRUYỆN KHÁC CỦA TÁC GIẢ */}
+                        {authorStoriesReal.length > 0 && (
+                            <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-5">
+                                <h2 className="font-bold text-sm mb-4 text-warm-ink flex items-center gap-2">
+                                    <span className="w-1 h-4 rounded-sm bg-warm-primary shrink-0" aria-hidden="true" />
+                                    CÙNG TÁC GIẢ
+                                </h2>
+                                <p className="text-sm text-warm-ink-soft mb-3 font-medium">✍️ {story.author}</p>
+                                <div className="space-y-3">
+                                    {authorStoriesReal.map((s: any) => (
+                                        <a
+                                            key={s.id}
+                                            href={`/truyen/${s.slug}/nghe`}
+                                            className="flex gap-2.5 group"
+                                            aria-label={s.title}
+                                        >
+                                            <div className="w-10 h-14 rounded-md overflow-hidden shrink-0 shadow-sm relative bg-warm-bg">
+                                                {s.coverImage ? (
+                                                    <Image src={s.coverImage} alt={`Ảnh bìa ${s.title}`} fill sizes="40px" className="object-cover" unoptimized={s.coverImage.startsWith('/covers/')} />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center">
+                                                        <BookOpen className="h-4 w-4 text-warm-ink-light" aria-hidden="true" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+                                                <h3 className="text-base font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">
+                                                    {s.title}
+                                                </h3>
+                                                <p className="text-sm text-warm-ink-soft">{s._count.chapters} chương</p>
+                                                <span className={`text-sm w-fit px-1.5 py-0.5 rounded-full font-semibold mt-0.5 ${
+                                                    s.status === 'COMPLETED' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-500'
+                                                }`}>
+                                                    {s.status === 'COMPLETED' ? 'Hoàn thành' : 'Đang ra'}
+                                                </span>
+                                            </div>
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                    </aside>
+                </div>
             </div>
         </div>
     );
