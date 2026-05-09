@@ -2981,11 +2981,11 @@ export default function ListeningClient({
 
           {/* ── BOTTOM CONTROLS (shrink-0 — ghim xuống đáy) ── */}
           <div className="shrink-0 flex flex-col px-8 pb-5 pt-3 gap-3">
-            {/* 1 dòng: Trang chủ · tên truyện · tên chương */}
+            {/* 1 dòng: Back · tên truyện · tên chương */}
             <div className="flex items-center gap-2.5 min-w-0">
-              <Link href="/"
-                className="shrink-0 px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-sm border border-white/[0.25] text-[13px] font-bold text-white hover:border-white/50 transition-colors whitespace-nowrap">
-                Trang chủ
+              <Link href={`/truyen/${slug}`}
+                className="shrink-0 w-8 h-8 rounded-lg bg-black/60 backdrop-blur-sm border border-white/[0.25] flex items-center justify-center text-white hover:border-white/50 transition-colors">
+                <ArrowLeft size={15} />
               </Link>
               <span className="text-[#8a7e72] text-[11px] shrink-0">·</span>
               <span className="text-[13px] font-bold text-white truncate shrink-0 max-w-[30%]">{storyTitle}</span>

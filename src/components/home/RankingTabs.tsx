@@ -102,7 +102,7 @@ export default function RankingTabs({ topNominations, topViews, topLikes, topFol
             <div key={story.id} className="group relative rounded-lg overflow-hidden aspect-[3/4] shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
               style={{ background: "var(--card)", border: "1px solid var(--border)" }}
             >
-              <Link href={`/truyen/${story.slug}/nghe`} className="block absolute inset-0 z-0" aria-label={`Nghe hạng ${i + 1}: ${story.title}`}>
+              <Link href={`/truyen/${story.slug}`} className="block absolute inset-0 z-0" aria-label={`Chi tiết truyện ${story.title}`}>
                 {story.coverImage ? (
                   <Image
                     src={story.coverImage}

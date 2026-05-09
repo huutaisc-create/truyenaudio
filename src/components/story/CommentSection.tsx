@@ -333,7 +333,7 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
     return (
         <section
             aria-label="Bình luận"
-            className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-6 md:p-8"
+            className="rounded-2xl bg-warm-card p-6 md:p-8"
         >
             {/* Toast portal — fixed bottom-right */}
             <ToastPortal toasts={toasts} onDismiss={dismissToast} />
@@ -342,8 +342,8 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                 <span className="w-1 h-5 rounded-sm bg-warm-primary shrink-0" aria-hidden="true" />
                 Bình luận
                 {comments.length > 0 && (
-                    <span className="text-xs font-semibold text-warm-ink-soft ml-1">
-                        ({comments.length})
+                    <span className="text-[11px] font-bold text-warm-primary bg-warm-primary/10 px-2 py-0.5 rounded-full ml-1">
+                        {comments.length}
                     </span>
                 )}
             </h2>
@@ -373,11 +373,11 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                     Chưa có bình luận nào. Hãy là người đầu tiên! 💬
                 </p>
             ) : (
-                <ol className="space-y-3 mb-6" aria-label="Danh sách bình luận">
+                <ol className="space-y-1 mb-6" aria-label="Danh sách bình luận">
                     {comments.map(comment => (
                         <li
                             key={comment.id}
-                            className="flex gap-3 p-4 rounded-xl bg-warm-card border border-warm-border"
+                            className="flex gap-3 px-3 py-4 rounded-xl hover:bg-warm-bg/60 transition-colors"
                         >
                             <Avatar name={comment.user.name} image={comment.user.image} size={36} />
                             <div className="flex-1 min-w-0">
@@ -468,7 +468,7 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                         rows={3}
                         aria-label="Nội dung bình luận"
                         disabled={!currentUser || commentLocked}
-                        className="w-full px-4 py-3 text-sm rounded-xl resize-none outline-none transition-all bg-warm-bg border border-warm-border text-warm-ink placeholder:text-warm-ink-soft focus:border-warm-primary disabled:opacity-60"
+                        className="w-full px-4 py-3 text-sm rounded-2xl resize-none outline-none transition-all bg-warm-bg border-0 ring-1 ring-warm-border text-warm-ink placeholder:text-warm-ink-soft focus:ring-warm-primary disabled:opacity-60"
                     />
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                         <span className="text-xs text-warm-ink-soft" aria-hidden="true">
@@ -484,7 +484,7 @@ export default function CommentSection({ storySlug, currentUser }: CommentSectio
                                     ? "Đã bình luận truyện này hôm nay"
                                     : isSending ? "Đang gửi bình luận..." : "Gửi bình luận"
                             }
-                            className="flex items-center gap-2 px-5 py-2 rounded-xl text-base font-bold text-white bg-warm-primary hover:bg-warm-primary-soft transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold text-white bg-warm-primary hover:bg-warm-primary-soft transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isSending
                                 ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />

@@ -201,75 +201,80 @@ export default function StoryInteractions({
             {/* Toast portal — fixed bottom-right */}
             <ToastPortal toasts={toasts} onDismiss={dismissToast} />
 
-            {/* Interaction bar */}
-            <div className="flex rounded-xl overflow-hidden">
-
+            {/* 3 stat cards */}
+            <div className="grid grid-cols-3 gap-2">
                 {/* Yêu thích */}
                 <button
                     onClick={handleLike}
-                    className={`flex-1 flex flex-col items-center cursor-pointer transition-all active:scale-95 ${
-                        status.isLiked ? 'bg-red-50' : 'bg-warm-bg hover:bg-red-50'
+                    className={`flex flex-col items-center gap-1.5 py-4 px-2 rounded-2xl transition-all active:scale-95 cursor-pointer ${
+                        status.isLiked
+                            ? 'bg-red-500/10 ring-1 ring-red-500/30'
+                            : 'bg-warm-card hover:bg-red-500/10'
                     }`}
                 >
-                    <div className={`w-full text-center px-2 py-1 text-xs font-semibold border-b border-warm-border-soft ${
-                        status.isLiked ? 'text-red-400 bg-red-50' : 'text-warm-ink-soft bg-warm-bg'
-                    }`}>+ Yêu thích</div>
-                    <div className="flex items-center justify-center gap-1.5 py-2.5">
-                        <Heart className={`h-4 w-4 sm:h-5 sm:w-5 transition-all ${status.isLiked ? 'fill-current text-red-500 scale-110' : 'text-red-400'}`} />
-                        <span className={`text-sm sm:text-base font-bold ${status.isLiked ? 'text-red-500' : 'text-warm-ink'}`}>{stats.likeCount}</span>
-                    </div>
+                    <Heart className={`h-5 w-5 transition-all ${status.isLiked ? 'fill-current text-red-500 scale-110' : 'text-red-400'}`} />
+                    <span className={`text-lg font-bold leading-none ${status.isLiked ? 'text-red-500' : 'text-warm-ink'}`}>
+                        {stats.likeCount}
+                    </span>
+                    <span className={`text-[11px] font-medium ${status.isLiked ? 'text-red-400' : 'text-warm-ink-soft'}`}>
+                        {status.isLiked ? '✓ Yêu thích' : 'Yêu thích'}
+                    </span>
                 </button>
-
-                <div className="w-px bg-warm-border-soft" />
 
                 {/* Theo dõi */}
                 <button
                     onClick={handleFollow}
-                    className={`flex-1 flex flex-col items-center cursor-pointer transition-all active:scale-95 ${
-                        status.isFollowed ? 'bg-blue-50' : 'bg-warm-bg hover:bg-blue-50'
+                    className={`flex flex-col items-center gap-1.5 py-4 px-2 rounded-2xl transition-all active:scale-95 cursor-pointer ${
+                        status.isFollowed
+                            ? 'bg-blue-500/10 ring-1 ring-blue-500/30'
+                            : 'bg-warm-card hover:bg-blue-500/10'
                     }`}
                 >
-                    <div className={`w-full text-center px-2 py-1 text-xs font-semibold border-b border-warm-border-soft ${
-                        status.isFollowed ? 'text-blue-500 bg-blue-50' : 'text-warm-ink-soft bg-warm-bg'
-                    }`}>+ Theo dõi</div>
-                    <div className="flex items-center justify-center gap-1.5 py-2.5">
-                        <Bookmark className={`h-4 w-4 sm:h-5 sm:w-5 transition-all ${status.isFollowed ? 'fill-current text-blue-600 scale-110' : 'text-blue-400'}`} />
-                        <span className={`text-sm sm:text-base font-bold ${status.isFollowed ? 'text-blue-600' : 'text-warm-ink'}`}>{stats.followCount}</span>
-                    </div>
+                    <Bookmark className={`h-5 w-5 transition-all ${status.isFollowed ? 'fill-current text-blue-500 scale-110' : 'text-blue-400'}`} />
+                    <span className={`text-lg font-bold leading-none ${status.isFollowed ? 'text-blue-500' : 'text-warm-ink'}`}>
+                        {stats.followCount}
+                    </span>
+                    <span className={`text-[11px] font-medium ${status.isFollowed ? 'text-blue-400' : 'text-warm-ink-soft'}`}>
+                        {status.isFollowed ? '✓ Theo dõi' : 'Theo dõi'}
+                    </span>
                 </button>
-
-                <div className="w-px bg-warm-border-soft" />
 
                 {/* Đề cử */}
                 <button
                     onClick={handleNominate}
                     disabled={nominateLocked}
-                    className={`flex-1 flex flex-col items-center transition-all active:scale-95 ${
+                    className={`flex flex-col items-center gap-1.5 py-4 px-2 rounded-2xl transition-all active:scale-95 ${
                         nominateLocked
-                            ? 'opacity-60 cursor-not-allowed bg-warm-bg'
-                            : 'cursor-pointer bg-warm-bg hover:bg-amber-50'
+                            ? 'bg-amber-500/10 ring-1 ring-amber-500/30 cursor-not-allowed'
+                            : 'bg-warm-card hover:bg-amber-500/10 cursor-pointer'
                     }`}
                 >
-                    <div className="w-full text-center px-2 py-1 text-xs font-semibold border-b border-warm-border-soft text-warm-ink-soft bg-warm-bg">
-                        {nominateLocked ? '✓ Đã đề cử' : '+ Đề cử'}
-                    </div>
-                    <div className="flex items-center justify-center gap-1.5 py-2.5">
-                        <Trophy className={`h-4 w-4 sm:h-5 sm:w-5 ${nominateLocked ? 'text-amber-500 fill-current' : 'text-amber-400'}`} />
-                        <span className="text-sm sm:text-base font-bold text-warm-ink">{stats.nominationCount}</span>
-                    </div>
+                    <Trophy className={`h-5 w-5 ${nominateLocked ? 'text-amber-500 fill-current' : 'text-amber-400'}`} />
+                    <span className="text-lg font-bold leading-none text-warm-ink">{stats.nominationCount}</span>
+                    <span className={`text-[11px] font-medium ${nominateLocked ? 'text-amber-400' : 'text-warm-ink-soft'}`}>
+                        {nominateLocked ? '✓ Đề cử' : 'Đề cử'}
+                    </span>
                 </button>
             </div>
 
+            {/* CTA — Nghe truyện */}
+            <a
+                href={`/truyen/${storySlug}/nghe?chuong=1`}
+                className="block w-full text-center py-3.5 rounded-2xl font-bold text-white text-base tracking-wide transition-all active:scale-[0.98]"
+                style={{ background: 'linear-gradient(135deg, #e8580a 0%, #c94400 100%)' }}
+            >
+                ▶ Nghe Truyện
+            </a>
 
-            {/* Đọc gần đây */}
+            {/* Nghe gần đây */}
             {mounted && lastRead?.chapterIndex && (
                 <a
-                    href={`/truyen/${storySlug}/nghe?chuong=${lastRead?.chapterIndex || 1}`}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-warm-border-soft bg-warm-bg hover:bg-warm-primary-pale transition-colors group"
+                    href={`/truyen/${storySlug}/nghe?chuong=${lastRead.chapterIndex}`}
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-warm-card hover:bg-warm-primary-pale transition-colors group"
                 >
-                    <span aria-hidden="true" className="text-sm">🕐</span>
-                    <span className="text-sm font-medium text-warm-ink-soft">Nghe gần đây</span>
-                    <span className="text-sm font-bold text-[#8c3a08] group-hover:text-warm-primary transition-colors">
+                    <span className="w-2 h-2 rounded-full bg-warm-primary shrink-0" aria-hidden="true" />
+                    <span className="text-sm font-medium text-warm-ink-soft flex-1">Nghe gần đây</span>
+                    <span className="text-sm font-bold text-warm-primary group-hover:underline transition-colors">
                         Chương {lastRead.chapterIndex} →
                     </span>
                 </a>

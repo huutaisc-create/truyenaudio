@@ -1,4 +1,4 @@
-import { BookOpen, Eye, ChevronRight, Headphones } from 'lucide-react';
+import { BookOpen, Eye, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -261,19 +261,6 @@ const StoryDetail = async ({
                                     currentUser={currentUser}
                                 />
                             </div>
-
-                            {/* Nghe Truyện CTA */}
-                            <a
-                                href={`/truyen/${slug}/nghe`}
-                                className="mt-4 flex items-center justify-center gap-2.5 w-full py-3 rounded-xl font-black text-[15px] text-white transition-all active:scale-[0.98]"
-                                style={{
-                                    background: 'linear-gradient(135deg, #ff7c35, #c93d10)',
-                                    boxShadow: '0 4px 20px rgba(232,88,10,0.4)',
-                                }}
-                            >
-                                <Headphones className="h-5 w-5" />
-                                Nghe Truyện
-                            </a>
                         </div>
 
                         {/* ── GIỚI THIỆU ── */}
@@ -298,39 +285,40 @@ const StoryDetail = async ({
                     </div>
 
                     {/* ── SIDEBAR ── */}
-                    <aside className="lg:col-span-3 space-y-5" aria-label="Sidebar">
+                    <aside className="lg:col-span-3 space-y-4" aria-label="Sidebar">
 
                         {/* TOP ĐỀ CỬ */}
-                        <div className="bg-warm-card rounded-2xl p-5 shadow-lg" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
+                        <div className="bg-warm-card rounded-2xl p-5" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
                             <h2 className="font-black text-[11px] uppercase tracking-[.14em] mb-4 flex items-center gap-2 text-warm-ink-soft">
                                 <span className="w-4 h-[2px] rounded-full bg-warm-primary" />
-                                Top đề cử
+                                🏆 Top đề cử
                             </h2>
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                                 {topNominations.map((s: any, i: number) => (
-                                    <a key={s.id} href={`/truyen/${s.slug}/nghe`}
-                                        className="flex gap-3 group items-center">
-                                        <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center font-black text-sm shadow-sm ${
-                                            i === 0 ? 'bg-gradient-to-br from-red-400 to-red-600 text-white' :
-                                            i === 1 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white' :
-                                            i === 2 ? 'bg-gradient-to-br from-amber-300 to-amber-500 text-white' :
-                                            'bg-warm-border-soft text-warm-ink-mid'
+                                    <a key={s.id} href={`/truyen/${s.slug}`}
+                                        className="flex gap-3 group items-center py-1">
+                                        {/* Rank badge */}
+                                        <div className={`w-6 h-6 rounded-lg shrink-0 flex items-center justify-center font-black text-[11px] ${
+                                            i === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white shadow-sm' :
+                                            i === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-white shadow-sm' :
+                                            i === 2 ? 'bg-gradient-to-br from-orange-400 to-amber-600 text-white shadow-sm' :
+                                            'text-warm-ink-soft bg-warm-bg'
                                         }`}>
                                             {i + 1}
                                         </div>
+                                        {/* Cover thumbnail */}
+                                        {s.coverImage && (
+                                            <div className="w-9 h-12 rounded-lg overflow-hidden shrink-0 relative bg-warm-bg shadow-sm">
+                                                <Image src={s.coverImage} alt={s.title} fill sizes="36px" className="object-cover" unoptimized={s.coverImage?.startsWith('/covers/')} />
+                                            </div>
+                                        )}
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-[13px] font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-snug">
+                                            <p className="text-[12px] font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-snug">
                                                 {s.title}
                                             </p>
-                                            <div className="flex items-center gap-1.5 mt-1">
-                                                {s.genres[0] && (
-                                                    <span className="text-[10px] px-1.5 py-0.5 rounded-md font-bold"
-                                                        style={{ background: 'rgba(232,88,10,0.12)', color: '#e8580a' }}>
-                                                        {s.genres[0].name}
-                                                    </span>
-                                                )}
-                                                <span className="text-[11px] text-warm-ink-soft">{s.nominationCount || 0} đề cử</span>
-                                            </div>
+                                            <p className="text-[11px] text-warm-ink-soft mt-0.5">
+                                                🏅 {s.nominationCount || 0} đề cử
+                                            </p>
                                         </div>
                                     </a>
                                 ))}
@@ -339,15 +327,15 @@ const StoryDetail = async ({
 
                         {/* CÙNG THỂ LOẠI */}
                         {relatedStoriesReal.length > 0 && (
-                            <div className="bg-warm-card rounded-2xl p-5 shadow-lg" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
+                            <div className="bg-warm-card rounded-2xl p-5" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
                                 <h2 className="font-black text-[11px] uppercase tracking-[.14em] mb-4 flex items-center gap-2 text-warm-ink-soft">
                                     <span className="w-4 h-[2px] rounded-full bg-warm-primary" />
                                     Cùng thể loại
                                 </h2>
                                 <div className="space-y-3">
                                     {relatedStoriesReal.map((s: any) => (
-                                        <a key={s.id} href={`/truyen/${s.slug}/nghe`}
-                                            className="flex gap-3 group items-center">
+                                        <a key={s.id} href={`/truyen/${s.slug}`}
+                                            className="flex gap-3 group items-center py-1">
                                             <div className="w-10 h-14 rounded-xl overflow-hidden shrink-0 relative bg-warm-bg shadow-sm">
                                                 {s.coverImage ? (
                                                     <Image src={s.coverImage} alt={s.title} fill sizes="40px" className="object-cover" unoptimized={s.coverImage.startsWith('/covers/')} />
@@ -361,7 +349,7 @@ const StoryDetail = async ({
                                                 <p className="text-[13px] font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-snug">
                                                     {s.title}
                                                 </p>
-                                                <div className="flex items-center gap-1.5 mt-1">
+                                                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                                                     {s.genres.slice(0, 1).map((g: any) => (
                                                         <span key={g.name} className="text-[10px] px-1.5 py-0.5 rounded-md font-bold"
                                                             style={{ background: 'rgba(232,88,10,0.12)', color: '#e8580a' }}>
@@ -379,7 +367,7 @@ const StoryDetail = async ({
 
                         {/* CÙNG TÁC GIẢ */}
                         {authorStoriesReal.length > 0 && (
-                            <div className="bg-warm-card rounded-2xl p-5 shadow-lg" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
+                            <div className="bg-warm-card rounded-2xl p-5" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
                                 <h2 className="font-black text-[11px] uppercase tracking-[.14em] mb-1 flex items-center gap-2 text-warm-ink-soft">
                                     <span className="w-4 h-[2px] rounded-full bg-warm-primary" />
                                     Cùng tác giả
@@ -387,8 +375,8 @@ const StoryDetail = async ({
                                 <p className="text-[12px] text-warm-ink-soft mb-4 pl-6">✍️ {story.author}</p>
                                 <div className="space-y-3">
                                     {authorStoriesReal.map((s: any) => (
-                                        <a key={s.id} href={`/truyen/${s.slug}/nghe`}
-                                            className="flex gap-3 group items-center">
+                                        <a key={s.id} href={`/truyen/${s.slug}`}
+                                            className="flex gap-3 group items-center py-1">
                                             <div className="w-10 h-14 rounded-xl overflow-hidden shrink-0 relative bg-warm-bg shadow-sm">
                                                 {s.coverImage ? (
                                                     <Image src={s.coverImage} alt={s.title} fill sizes="40px" className="object-cover" unoptimized={s.coverImage.startsWith('/covers/')} />
