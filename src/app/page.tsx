@@ -405,21 +405,21 @@ export default async function Home() {
                   const ch = story.chapters[0];
                   return (
                     <Link
-                      href={`/truyen/${story.slug}/nghe`}
+                      href={`/truyen/${story.slug}`}
                       key={story.id}
-                      aria-label={`Nghe ${story.title}`}
+                      aria-label={`Chi tiết truyện ${story.title}`}
                       className="group new-story-row flex items-center gap-3 px-3 py-2.5 transition-colors"
                       style={{ borderBottom: "1px solid var(--border-soft)" }}
                     >
                       <div
-                        className="shrink-0 w-9 h-12 rounded overflow-hidden relative"
+                        className="shrink-0 w-12 h-16 rounded-lg overflow-hidden relative"
                         style={{ background: "var(--card2)", border: "1px solid var(--border)" }}
                       >
                         {story.coverImage ? (
-                          <Image src={story.coverImage} alt={`Ảnh bìa ${story.title}`} fill sizes="36px" className="object-cover" unoptimized={story.coverImage.startsWith('/covers/')} />
+                          <Image src={story.coverImage} alt={`Ảnh bìa ${story.title}`} fill sizes="48px" className="object-cover" unoptimized={story.coverImage.startsWith('/covers/')} />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center" style={{ color: "var(--text-soft)" }}>
-                            <BookOpen size={13} aria-hidden="true" />
+                            <BookOpen size={16} aria-hidden="true" />
                           </div>
                         )}
                       </div>
