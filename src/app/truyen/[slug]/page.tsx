@@ -1,4 +1,4 @@
-import { BookOpen, Eye, ChevronRight } from 'lucide-react';
+import { BookOpen, Eye, ChevronRight, Headphones } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -20,7 +20,6 @@ import { formatNumber } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
-
 const StoryDetail = async ({
     params,
     searchParams,
@@ -32,7 +31,6 @@ const StoryDetail = async ({
     const { page: pageParam } = await searchParams;
     const currentPage = Math.max(1, parseInt(pageParam || '1'));
 
-    // auth() chạy song song với getStoryBySlug — không block cache trang
     const [storyData, session] = await Promise.all([
         getStoryBySlug(slug),
         auth(),
@@ -44,8 +42,6 @@ const StoryDetail = async ({
         ? { id: session.user.id, name: session.user.name ?? '', image: session.user.image ?? null }
         : null;
 
-    // Round 2: tất cả query cần storyId chạy song song
-    // reviews fetch thẳng DB (không cache) → luôn fresh, không bị stale 60s
     const [chapterDataReal, relatedStoriesReal, authorStoriesReal, topNominations, freshReviews] =
         await Promise.all([
             getChaptersByStoryId(storyData.id, currentPage),
@@ -63,7 +59,6 @@ const StoryDetail = async ({
             }),
         ]);
 
-    // Check user đã review truyện này chưa (chỉ khi đã đăng nhập)
     let hasReviewed = false;
     if (currentUser) {
         const existing = await db.review.findFirst({
@@ -79,9 +74,9 @@ const StoryDetail = async ({
         author: storyData.author,
         genres: storyData.genres.map(g => g.name),
         status: storyData.status === 'COMPLETED' ? 'Hoàn thành' : 'Đang ra',
+        isCompleted: storyData.status === 'COMPLETED',
         storyType: (storyData as any).storyType as string ?? 'ORIGINAL',
-        translatorName: (storyData as any).translatorName as string | null ?? null,
-        isCompleted: (storyData as any).isCompleted as boolean ?? false,
+        isCompletedFlag: (storyData as any).isCompleted as boolean ?? false,
         chapters: formatNumber(storyData._count.chapters),
         views: formatNumber(storyData.viewCount),
         rating: storyData.ratingScore ?? 0,
@@ -91,131 +86,162 @@ const StoryDetail = async ({
             ...review,
             user: {
                 ...review.user,
-                name: review.user.name || "Khách ẩn danh",
-                image: review.user.image || "",
+                name: review.user.name || 'Khách ẩn danh',
+                image: review.user.image || '',
             },
-        })),
-        latestChapters: storyData.chapters.map(c => ({
-            id: c.index,
-            title: c.title,
-            time: new Date(c.updatedAt).toLocaleDateString('vi-VN'),
         })),
     };
 
-    const totalPages = chapterDataReal.totalPages;
-    const pageUrl = (p: number) => `/truyen/${slug}?page=${p}`;
-
     return (
-        <div className="min-h-screen bg-warm-bg pb-16">
+        <div className="min-h-screen bg-warm-bg">
 
-            {/* Breadcrumb */}
-            <div className="bg-warm-card border-b border-warm-border mb-7">
-                <div className="container mx-auto px-4 py-3 flex items-center gap-2 text-xs text-warm-ink-light">
-                    <a href="/" className="text-warm-ink-soft hover:text-warm-primary transition-colors">
-                        Truyện Audio Của Tôi
-                    </a>
-                    <ChevronRight className="h-3 w-3 text-warm-border" aria-hidden="true" />
-                    <span className="font-semibold text-warm-ink-mid truncate">{story.title}</span>
+            {/* ══════════════════════════════════════════
+                HERO — blurred cover banner
+            ══════════════════════════════════════════ */}
+            <div className="relative overflow-hidden" style={{ minHeight: 340 }}>
+                {/* Blurred BG */}
+                {story.coverImage && (
+                    <div
+                        className="absolute inset-0 bg-cover bg-center scale-110"
+                        style={{
+                            backgroundImage: `url(${story.coverImage})`,
+                            filter: 'blur(28px) brightness(0.35)',
+                        }}
+                    />
+                )}
+                {/* Gradient vignette */}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/40 to-warm-bg" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-transparent" />
+
+                {/* Breadcrumb */}
+                <div className="relative z-10 pt-5 pb-2 px-4 sm:px-6 lg:px-8 max-w-screen-xl mx-auto">
+                    <div className="flex items-center gap-2 text-[11px] font-medium tracking-wide uppercase text-white/40">
+                        <a href="/" className="hover:text-white/70 transition-colors">Trang chủ</a>
+                        <ChevronRight className="h-3 w-3" />
+                        <span className="text-white/60 truncate max-w-[200px]">{story.title}</span>
+                    </div>
+                </div>
+
+                {/* Hero content */}
+                <div className="relative z-10 px-4 sm:px-6 lg:px-8 max-w-screen-xl mx-auto pb-10 pt-4 flex gap-7 items-end">
+
+                    {/* Cover */}
+                    <div className="shrink-0 hidden sm:block">
+                        <div className="relative w-44 rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.7)]" style={{ aspectRatio: '3/4' }}>
+                            {story.coverImage ? (
+                                <Image
+                                    src={story.coverImage}
+                                    alt={story.title}
+                                    fill sizes="176px"
+                                    className="object-cover"
+                                    priority
+                                    unoptimized={story.coverImage.startsWith('/covers/')}
+                                />
+                            ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-[#2a1a0e] to-[#0f0d0a] flex items-center justify-center">
+                                    <BookOpen className="h-12 w-12 text-white/10" />
+                                </div>
+                            )}
+                            {/* Glow ring */}
+                            <div className="absolute inset-0 rounded-2xl ring-1 ring-white/10" />
+                        </div>
+                    </div>
+
+                    {/* Text info */}
+                    <div className="flex-1 min-w-0 pb-1">
+                        {/* Badges */}
+                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black tracking-widest uppercase ${
+                                story.isCompleted
+                                    ? 'bg-red-500/20 text-red-300 ring-1 ring-red-500/30'
+                                    : 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30'
+                            }`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${story.isCompleted ? 'bg-red-400' : 'bg-emerald-400'}`} />
+                                {story.status}
+                            </span>
+                            {story.storyType === 'CONVERT' && (
+                                <span className="px-3 py-1 rounded-full text-[11px] font-black tracking-widest uppercase bg-blue-500/20 text-blue-300 ring-1 ring-blue-500/30">
+                                    Convert
+                                </span>
+                            )}
+                            {story.storyType === 'TRANSLATED' && (
+                                <span className="px-3 py-1 rounded-full text-[11px] font-black tracking-widest uppercase bg-purple-500/20 text-purple-300 ring-1 ring-purple-500/30">
+                                    Dịch
+                                </span>
+                            )}
+                        </div>
+
+                        <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-white leading-tight mb-3 drop-shadow-lg">
+                            {story.title}
+                        </h1>
+
+                        <div className="flex items-center gap-4 text-[13px] text-white/50 mb-4">
+                            <span className="flex items-center gap-1.5">
+                                <Eye className="h-3.5 w-3.5" />
+                                {story.views} lượt nghe
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                                <BookOpen className="h-3.5 w-3.5" />
+                                {story.chapters} chương
+                            </span>
+                            <span className="text-white/30">✍️ {story.author}</span>
+                        </div>
+
+                        {/* Genre tags */}
+                        <div className="flex flex-wrap gap-1.5">
+                            {story.genres.map(g => (
+                                <Link
+                                    key={g}
+                                    href={`/tim-kiem?the-loai=${encodeURIComponent(g)}`}
+                                    className="px-3 py-1 rounded-full text-[11px] font-bold transition-all"
+                                    style={{
+                                        background: 'rgba(232,88,10,0.15)',
+                                        color: '#ff9a5c',
+                                        border: '1px solid rgba(232,88,10,0.3)',
+                                    }}
+                                >
+                                    {g}
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-7">
+            {/* ══════════════════════════════════════════
+                MAIN GRID
+            ══════════════════════════════════════════ */}
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 -mt-2">
 
                     {/* ── MAIN COLUMN ── */}
-                    <div className="lg:col-span-9 space-y-6">
+                    <div className="lg:col-span-9 space-y-5">
 
-                        {/* HERO CARD */}
-                        <div className="bg-warm-card rounded-2xl shadow-md p-6 md:p-8 flex flex-col md:flex-row gap-7">
-
-                            {/* Cover */}
-                            <div className="shrink-0 relative self-start mx-auto md:mx-0">
+                        {/* ── COVER mobile (chỉ hiện < sm) ── */}
+                        <div className="sm:hidden flex justify-center -mt-16 relative z-10">
+                            <div className="relative w-36 rounded-2xl overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.6)] ring-1 ring-white/10" style={{ aspectRatio: '3/4' }}>
                                 {story.coverImage ? (
-                                    <div
-                                        className="w-44 relative rounded-xl overflow-hidden shadow-xl"
-                                        style={{ aspectRatio: '3/4' }}
-                                    >
-                                        <Image
-                                            src={story.coverImage}
-                                            alt={`Ảnh bìa truyện ${story.title}`}
-                                            fill
-                                            sizes="176px"
-                                            className="object-cover"
-                                            priority={true}
-                                            unoptimized={story.coverImage.startsWith('/covers/')}
-                                        />
-                                    </div>
+                                    <Image src={story.coverImage} alt={story.title} fill sizes="144px" className="object-cover" priority unoptimized={story.coverImage.startsWith('/covers/')} />
                                 ) : (
-                                    <div
-                                        className="w-44 rounded-xl flex items-center justify-center bg-gradient-to-br from-[#f5e6d3] to-[#e8d5bf] shadow-xl"
-                                        style={{ aspectRatio: '3/4' }}
-                                    >
-                                        <BookOpen
-                                            className="h-14 w-14 text-warm-ink-light opacity-20"
-                                            aria-hidden="true"
-                                        />
+                                    <div className="w-full h-full bg-gradient-to-br from-[#2a1a0e] to-[#0f0d0a] flex items-center justify-center">
+                                        <BookOpen className="h-10 w-10 text-white/10" />
                                     </div>
-                                )}
-                                {story.status === 'Hoàn thành' && (
-                                    <span className="absolute top-2 left-2 bg-warm-primary text-white text-sm font-black px-2.5 py-1 rounded-md uppercase tracking-widest shadow">
-                                        FULL
-                                    </span>
                                 )}
                             </div>
+                        </div>
 
-                            {/* Info */}
-                            <div className="flex-1 min-w-0 flex flex-col gap-3">
-                                <h1 className="text-xl md:text-2xl font-bold leading-snug text-warm-ink">
-                                    {story.title}
-                                </h1>
-
-                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-base font-semibold text-warm-ink-soft">
-                                    {/* storyType badge */}
-                                    {story.storyType === 'CONVERT' && (
-                                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                                            Convert{story.isCompleted ? ' · Full' : ''}
-                                        </span>
-                                    )}
-                                    {story.storyType === 'TRANSLATED' && (
-                                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                                            Dịch{story.isCompleted ? ' · Full' : ''}
-                                        </span>
-                                    )}
-                                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-base font-bold bg-green-50 text-green-700 border border-green-200">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true" />
-                                        {story.status}
-                                    </span>
-                                    <span className="flex items-center gap-1.5">
-                                        <Eye className="h-3.5 w-3.5 text-warm-ink-light" aria-hidden="true" />
-                                        {story.views} lượt đọc
-                                    </span>
-                                </div>
-
-                                <div className="flex flex-wrap gap-1.5">
-                                    {story.genres.map(g => (
-                                        <Link
-                                            key={g}
-                                            href={`/tim-kiem?the-loai=${encodeURIComponent(g)}`}
-                                            className="px-3 py-0.5 rounded-full text-base font-semibold bg-warm-primary-pale text-warm-primary border border-warm-primary/20 hover:bg-warm-primary hover:text-white transition-all"
-                                        >
-                                            {g}
-                                        </Link>
-                                    ))}
-                                </div>
-
-                                {/* ── RATING + REVIEW + DANH SÁCH REVIEW ──
-                                    Tách ra Client Component để review hiện ngay sau submit
-                                    mà không cần router.refresh() hay đợi revalidate 60s       */}
-                                <StoryRatingClient
-                                    storyId={storyData.id}
-                                    currentUser={currentUser}
-                                    hasReviewed={hasReviewed}
-                                    initialRating={story.rating}
-                                    initialRatingCount={story.ratingCount}
-                                    initialReviews={story.reviews}
-                                />
-
-                                {/* StoryInteractions */}
+                        {/* ── INTERACTIONS + NGHE ── */}
+                        <div className="bg-warm-card rounded-2xl p-5 shadow-lg"
+                            style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
+                            <StoryRatingClient
+                                storyId={storyData.id}
+                                currentUser={currentUser}
+                                hasReviewed={hasReviewed}
+                                initialRating={story.rating}
+                                initialRatingCount={story.ratingCount}
+                                initialReviews={story.reviews}
+                            />
+                            <div className="mt-4">
                                 <StoryInteractions
                                     storyId={storyData.id}
                                     storySlug={slug}
@@ -234,82 +260,76 @@ const StoryDetail = async ({
                                     }}
                                     currentUser={currentUser}
                                 />
-
-                                {/* Nút Nghe Truyện */}
-                                <a
-                                    href={`/truyen/${slug}/nghe`}
-                                    aria-label="Nghe truyện"
-                                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl font-bold text-sm border-2 border-[#e8580a] text-[#e8580a] hover:bg-[#e8580a] hover:text-white transition-all"
-                                >
-                                    <svg
-                                        width="16" height="16" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" strokeWidth="2"
-                                        strokeLinecap="round" strokeLinejoin="round"
-                                        aria-hidden="true"
-                                    >
-                                        <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
-                                        <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z" />
-                                        <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
-                                    </svg>
-                                    Nghe Truyện
-                                </a>
                             </div>
+
+                            {/* Nghe Truyện CTA */}
+                            <a
+                                href={`/truyen/${slug}/nghe`}
+                                className="mt-4 flex items-center justify-center gap-2.5 w-full py-3 rounded-xl font-black text-[15px] text-white transition-all active:scale-[0.98]"
+                                style={{
+                                    background: 'linear-gradient(135deg, #ff7c35, #c93d10)',
+                                    boxShadow: '0 4px 20px rgba(232,88,10,0.4)',
+                                }}
+                            >
+                                <Headphones className="h-5 w-5" />
+                                Nghe Truyện
+                            </a>
                         </div>
 
-                        {/* GIỚI THIỆU */}
-                        <div className="bg-warm-card rounded-2xl shadow-sm p-6 md:p-8">
-                            <h2 className="font-bold text-base mb-4 text-warm-ink flex items-center gap-2.5">
-                                <span className="w-1 h-5 rounded-sm bg-warm-primary shrink-0" aria-hidden="true" />
-                                GIỚI THIỆU
+                        {/* ── GIỚI THIỆU ── */}
+                        <div className="bg-warm-card rounded-2xl p-6 shadow-lg" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
+                            <h2 className="font-black text-[11px] uppercase tracking-[.14em] mb-4 flex items-center gap-2.5 text-warm-ink-soft">
+                                <span className="w-4 h-[2px] rounded-full bg-warm-primary" />
+                                Giới thiệu
                             </h2>
-                            <p className="text-base text-warm-ink whitespace-pre-line leading-relaxed">
+                            <p className="text-[15px] text-warm-ink leading-relaxed whitespace-pre-line">
                                 {story.description}
                             </p>
                         </div>
 
-                        {/* BÌNH LUẬN */}
-                        <CommentSectionWrapper storySlug={slug} />
+                        {/* ── BÌNH LUẬN ── */}
+                        <div className="bg-warm-card rounded-2xl p-6 shadow-lg" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
+                            <h2 className="font-black text-[11px] uppercase tracking-[.14em] mb-5 flex items-center gap-2.5 text-warm-ink-soft">
+                                <span className="w-4 h-[2px] rounded-full bg-warm-primary" />
+                                Bình luận
+                            </h2>
+                            <CommentSectionWrapper storySlug={slug} />
+                        </div>
                     </div>
 
                     {/* ── SIDEBAR ── */}
                     <aside className="lg:col-span-3 space-y-5" aria-label="Sidebar">
 
                         {/* TOP ĐỀ CỬ */}
-                        <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-5">
-                            <h2 className="font-bold text-sm mb-4 text-warm-ink flex items-center gap-2">
-                                <span className="w-1 h-4 rounded-sm bg-warm-primary shrink-0" aria-hidden="true" />
-                                TOP ĐỀ CỬ
+                        <div className="bg-warm-card rounded-2xl p-5 shadow-lg" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
+                            <h2 className="font-black text-[11px] uppercase tracking-[.14em] mb-4 flex items-center gap-2 text-warm-ink-soft">
+                                <span className="w-4 h-[2px] rounded-full bg-warm-primary" />
+                                Top đề cử
                             </h2>
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 {topNominations.map((s: any, i: number) => (
-                                    <a
-                                        key={s.id}
-                                        href={`/truyen/${s.slug}/nghe`}
-                                        className="flex gap-2.5 group"
-                                        aria-label={`${s.title} - ${s.author}`}
-                                    >
-                                        <div className={`w-10 h-14 rounded-md shrink-0 flex items-center justify-center font-black text-lg ${
-                                            i === 0 ? 'bg-red-500 text-white' :
-                                            i === 1 ? 'bg-orange-500 text-white' :
-                                            i === 2 ? 'bg-amber-400 text-white' :
+                                    <a key={s.id} href={`/truyen/${s.slug}/nghe`}
+                                        className="flex gap-3 group items-center">
+                                        <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center font-black text-sm shadow-sm ${
+                                            i === 0 ? 'bg-gradient-to-br from-red-400 to-red-600 text-white' :
+                                            i === 1 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white' :
+                                            i === 2 ? 'bg-gradient-to-br from-amber-300 to-amber-500 text-white' :
                                             'bg-warm-border-soft text-warm-ink-mid'
-                                        }`} aria-label={`Hạng ${i + 1}`}>
+                                        }`}>
                                             {i + 1}
                                         </div>
-                                        <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                                            <h3 className="text-base font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[13px] font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-snug">
                                                 {s.title}
-                                            </h3>
-
-                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                            </p>
+                                            <div className="flex items-center gap-1.5 mt-1">
                                                 {s.genres[0] && (
-                                                    <span className="text-sm px-1.5 py-0.5 bg-warm-primary-pale text-[#8c3a08] rounded-full font-semibold border border-warm-primary/20">
+                                                    <span className="text-[10px] px-1.5 py-0.5 rounded-md font-bold"
+                                                        style={{ background: 'rgba(232,88,10,0.12)', color: '#e8580a' }}>
                                                         {s.genres[0].name}
                                                     </span>
                                                 )}
-                                                <span className="text-sm text-warm-ink-soft">
-                                                    {s.nominationCount || 0} đề cử
-                                                </span>
+                                                <span className="text-[11px] text-warm-ink-soft">{s.nominationCount || 0} đề cử</span>
                                             </div>
                                         </div>
                                     </a>
@@ -317,42 +337,38 @@ const StoryDetail = async ({
                             </div>
                         </div>
 
-                        {/* TRUYỆN CÙNG THỂ LOẠI */}
+                        {/* CÙNG THỂ LOẠI */}
                         {relatedStoriesReal.length > 0 && (
-                            <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-5">
-                                <h2 className="font-bold text-sm mb-4 text-warm-ink flex items-center gap-2">
-                                    <span className="w-1 h-4 rounded-sm bg-warm-primary shrink-0" aria-hidden="true" />
-                                    CÙNG THỂ LOẠI
+                            <div className="bg-warm-card rounded-2xl p-5 shadow-lg" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
+                                <h2 className="font-black text-[11px] uppercase tracking-[.14em] mb-4 flex items-center gap-2 text-warm-ink-soft">
+                                    <span className="w-4 h-[2px] rounded-full bg-warm-primary" />
+                                    Cùng thể loại
                                 </h2>
                                 <div className="space-y-3">
                                     {relatedStoriesReal.map((s: any) => (
-                                        <a
-                                            key={s.id}
-                                            href={`/truyen/${s.slug}/nghe`}
-                                            className="flex gap-2.5 group"
-                                            aria-label={`${s.title} - ${s.author}`}
-                                        >
-                                            <div className="w-10 h-14 rounded-md overflow-hidden shrink-0 shadow-sm relative bg-warm-bg">
+                                        <a key={s.id} href={`/truyen/${s.slug}/nghe`}
+                                            className="flex gap-3 group items-center">
+                                            <div className="w-10 h-14 rounded-xl overflow-hidden shrink-0 relative bg-warm-bg shadow-sm">
                                                 {s.coverImage ? (
-                                                    <Image src={s.coverImage} alt={`Ảnh bìa ${s.title}`} fill sizes="40px" className="object-cover" unoptimized={s.coverImage.startsWith('/covers/')} />
+                                                    <Image src={s.coverImage} alt={s.title} fill sizes="40px" className="object-cover" unoptimized={s.coverImage.startsWith('/covers/')} />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center">
-                                                        <BookOpen className="h-4 w-4 text-warm-ink-light" aria-hidden="true" />
+                                                        <BookOpen className="h-4 w-4 text-warm-ink-light" />
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                                                <h3 className="text-base font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[13px] font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-snug">
                                                     {s.title}
-                                                </h3>
-
-                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                </p>
+                                                <div className="flex items-center gap-1.5 mt-1">
                                                     {s.genres.slice(0, 1).map((g: any) => (
-                                                        <span key={g.name} className="text-sm px-1.5 py-0.5 bg-warm-primary-pale text-[#8c3a08] rounded-full font-semibold border border-warm-primary/20">
+                                                        <span key={g.name} className="text-[10px] px-1.5 py-0.5 rounded-md font-bold"
+                                                            style={{ background: 'rgba(232,88,10,0.12)', color: '#e8580a' }}>
                                                             {g.name}
                                                         </span>
                                                     ))}
-                                                    <span className="text-sm text-warm-ink-soft">{s._count.chapters} chương</span>
+                                                    <span className="text-[11px] text-warm-ink-soft">{s._count.chapters} chương</span>
                                                 </div>
                                             </div>
                                         </a>
@@ -361,48 +377,47 @@ const StoryDetail = async ({
                             </div>
                         )}
 
-                        {/* TRUYỆN KHÁC CỦA TÁC GIẢ */}
+                        {/* CÙNG TÁC GIẢ */}
                         {authorStoriesReal.length > 0 && (
-                            <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-5">
-                                <h2 className="font-bold text-sm mb-4 text-warm-ink flex items-center gap-2">
-                                    <span className="w-1 h-4 rounded-sm bg-warm-primary shrink-0" aria-hidden="true" />
-                                    CÙNG TÁC GIẢ
+                            <div className="bg-warm-card rounded-2xl p-5 shadow-lg" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
+                                <h2 className="font-black text-[11px] uppercase tracking-[.14em] mb-1 flex items-center gap-2 text-warm-ink-soft">
+                                    <span className="w-4 h-[2px] rounded-full bg-warm-primary" />
+                                    Cùng tác giả
                                 </h2>
-                                <p className="text-sm text-warm-ink-soft mb-3 font-medium">✍️ {story.author}</p>
+                                <p className="text-[12px] text-warm-ink-soft mb-4 pl-6">✍️ {story.author}</p>
                                 <div className="space-y-3">
                                     {authorStoriesReal.map((s: any) => (
-                                        <a
-                                            key={s.id}
-                                            href={`/truyen/${s.slug}/nghe`}
-                                            className="flex gap-2.5 group"
-                                            aria-label={s.title}
-                                        >
-                                            <div className="w-10 h-14 rounded-md overflow-hidden shrink-0 shadow-sm relative bg-warm-bg">
+                                        <a key={s.id} href={`/truyen/${s.slug}/nghe`}
+                                            className="flex gap-3 group items-center">
+                                            <div className="w-10 h-14 rounded-xl overflow-hidden shrink-0 relative bg-warm-bg shadow-sm">
                                                 {s.coverImage ? (
-                                                    <Image src={s.coverImage} alt={`Ảnh bìa ${s.title}`} fill sizes="40px" className="object-cover" unoptimized={s.coverImage.startsWith('/covers/')} />
+                                                    <Image src={s.coverImage} alt={s.title} fill sizes="40px" className="object-cover" unoptimized={s.coverImage.startsWith('/covers/')} />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center">
-                                                        <BookOpen className="h-4 w-4 text-warm-ink-light" aria-hidden="true" />
+                                                        <BookOpen className="h-4 w-4 text-warm-ink-light" />
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                                                <h3 className="text-base font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-tight">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[13px] font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-snug">
                                                     {s.title}
-                                                </h3>
-                                                <p className="text-sm text-warm-ink-soft">{s._count.chapters} chương</p>
-                                                <span className={`text-sm w-fit px-1.5 py-0.5 rounded-full font-semibold mt-0.5 ${
-                                                    s.status === 'COMPLETED' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-500'
-                                                }`}>
-                                                    {s.status === 'COMPLETED' ? 'Hoàn thành' : 'Đang ra'}
-                                                </span>
+                                                </p>
+                                                <div className="flex items-center gap-1.5 mt-1">
+                                                    <span className="text-[11px] text-warm-ink-soft">{s._count.chapters} chương</span>
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
+                                                        s.status === 'COMPLETED'
+                                                            ? 'bg-emerald-500/15 text-emerald-500'
+                                                            : 'bg-blue-500/15 text-blue-400'
+                                                    }`}>
+                                                        {s.status === 'COMPLETED' ? 'Full' : 'Đang ra'}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </a>
                                     ))}
                                 </div>
                             </div>
                         )}
-
                     </aside>
                 </div>
             </div>
