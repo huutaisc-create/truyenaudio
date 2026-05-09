@@ -412,8 +412,8 @@ export default async function Home() {
                       style={{ borderBottom: "1px solid var(--border-soft)" }}
                     >
                       <div
-                        className="shrink-0 w-9 h-12 rounded-lg flex items-center justify-center font-black text-base"
-                        style={{ background: "var(--card2)", color: "var(--accent)" }}
+                        className="shrink-0 w-9 h-12 rounded-lg flex items-center justify-center font-black text-lg"
+                        style={{ background: "rgba(232,88,10,0.15)", color: "var(--accent)", border: "1px solid rgba(232,88,10,0.3)" }}
                       >
                         {i + 1}
                       </div>

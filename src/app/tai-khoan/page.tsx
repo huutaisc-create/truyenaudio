@@ -188,7 +188,7 @@ export default async function TaiKhoanPage() {
           ) : (
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12">
               {library.map(({ story }) => (
-                <Link key={story.slug} href={`/truyen/${story.slug}/nghe`} className="group block">
+                <Link key={story.slug} href={`/truyen/${story.slug}`} className="group block">
                   <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-zinc-100 shadow-sm transition-all group-hover:shadow-md">
                     {story.coverImage ? (
                       <img src={story.coverImage} alt={story.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
@@ -226,12 +226,12 @@ export default async function TaiKhoanPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {history.map(({ story, chapter, visitedAt }) => (
-                <Link key={story.slug} href={`/truyen/${story.slug}/nghe${chapter ? `?chuong=${chapter.index}` : ''}`} className="group flex gap-3 p-2.5 rounded-xl hover:shadow-md transition-all" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div className="shrink-0 w-[56px] h-[76px] rounded-lg overflow-hidden bg-zinc-100">
+                <Link key={story.slug} href={`/truyen/${story.slug}`} className="group flex gap-3 p-2.5 rounded-xl hover:shadow-md transition-all" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="shrink-0 w-[96px] h-[128px] rounded-lg overflow-hidden bg-zinc-800">
                     {story.coverImage ? (
                       <img src={story.coverImage} alt={story.title} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-zinc-300"><BookOpen size={16} /></div>
+                      <div className="w-full h-full flex items-center justify-center text-zinc-300"><BookOpen size={20} /></div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">

@@ -49,8 +49,8 @@ export default function RecentReads() {
               onMouseLeave={e => ((e.currentTarget as HTMLElement).style.borderColor = "var(--border)")}
             >
               <div
-                className="w-[35px] aspect-[2/3] rounded shrink-0 flex items-center justify-center font-black text-base"
-                style={{ background: "var(--card2)", color: "var(--accent)" }}
+                className="w-[35px] aspect-[2/3] rounded-lg shrink-0 flex items-center justify-center font-black text-lg"
+                style={{ background: "rgba(232,88,10,0.15)", color: "var(--accent)", border: "1px solid rgba(232,88,10,0.3)" }}
               >
                 {i + 1}
               </div>
