@@ -2855,10 +2855,79 @@ export default function ListeningClient({
           </h1>
         </div>
 
-        {/* ── DEBUG + CONTROLS 1 DÒNG ── */}
+        {/* ── DEBUG + CONTROLS MOBILE (2 dòng) ── */}
         <div className="px-4 flex flex-col gap-2.5 pb-3">
           {DebugPanel}
-          {ControlsRow}
+
+          {/* Dòng 1: Playback buttons */}
+          <div className="flex items-center justify-center gap-2">
+            <button onClick={() => goChapter('prev')} disabled={!hasPrev}
+              className="w-9 h-9 rounded-full bg-[#2a2520] border border-white/[0.20] flex items-center justify-center text-white disabled:opacity-30 hover:border-white/40 transition-colors">
+              <SkipBack size={15} />
+            </button>
+            <button onClick={() => skip(-15)}
+              className="w-9 h-9 rounded-full bg-[#2a2520] border border-white/[0.20] flex items-center justify-center text-white hover:border-white/40 transition-colors">
+              <RotateCcw size={14} />
+            </button>
+            <button onClick={togglePlay} disabled={isGenerating && generatedRef.current === 0}
+              className="w-14 h-14 rounded-full bg-gradient-to-br from-[#e8580a] to-[#ff7c35] flex items-center justify-center text-white shadow-[0_4px_16px_rgba(232,88,10,0.5)] active:scale-95 transition-all disabled:opacity-60">
+              {isPlaying
+                ? <Pause size={22} fill="white" />
+                : <Play size={22} fill="white" className="translate-x-0.5" />}
+            </button>
+            <button onClick={() => skip(15)}
+              className="w-9 h-9 rounded-full bg-[#2a2520] border border-white/[0.20] flex items-center justify-center text-white hover:border-white/40 transition-colors">
+              <RotateCw size={14} />
+            </button>
+            <button onClick={() => goChapter('next')} disabled={!hasNext}
+              className="w-9 h-9 rounded-full bg-[#2a2520] border border-white/[0.20] flex items-center justify-center text-white disabled:opacity-30 hover:border-white/40 transition-colors">
+              <SkipForward size={15} />
+            </button>
+          </div>
+
+          {/* Dòng 2: Voice + Speed + Workers */}
+          <div className="flex items-center gap-2">
+            {/* Voice dropdown — flex-1 để co giãn */}
+            <div className="relative flex-1 min-w-0">
+              <button onClick={() => setShowVoiceMenu(v => !v)}
+                className="w-full flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#231f1a] border border-white/[0.07] hover:border-[#e8580a]/30 transition-colors overflow-hidden">
+                <span className="text-[13px] shrink-0">🎙</span>
+                <span className="text-[11px] font-bold text-white flex-1 text-left truncate">
+                  {voices.find(v => v.id === selectedVoice)?.name ?? 'Giọng'}
+                </span>
+                <ChevronDown size={10} className="text-[#c0b4a8] shrink-0" />
+              </button>
+              {showVoiceMenu && voices.length > 0 && (
+                <div className="absolute bottom-full left-0 right-0 mb-1 bg-[#1a1612] border border-white/[0.09] rounded-xl overflow-hidden shadow-xl z-20 max-h-48 overflow-y-auto">
+                  {voices.map(v => (
+                    <button key={v.id} onClick={() => { setSelectedVoice(v.id); setShowVoiceMenu(false); }}
+                      className={`w-full text-left px-3 py-2.5 text-[11px] font-medium transition-colors ${v.id === selectedVoice ? 'bg-[#e8580a]/15 text-[#ff7c35]' : 'text-[#f0ebe4] hover:bg-white/[0.05]'}`}>
+                      {v.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Speed */}
+            <div className="flex items-center gap-0.5 rounded-xl bg-[#231f1a] border border-[#e8580a]/35 overflow-hidden shrink-0">
+              <button onClick={decreaseSpeed} disabled={speed <= MIN_SPEED}
+                className="px-2.5 py-2 text-[#e8580a] text-[13px] font-black hover:bg-[#e8580a]/15 transition-colors disabled:opacity-30">−</button>
+              <span className="text-[#e8580a] text-[11px] font-black min-w-[34px] text-center">{speed.toFixed(2)}x</span>
+              <button onClick={increaseSpeed} disabled={speed >= MAX_SPEED}
+                className="px-2.5 py-2 text-[#e8580a] text-[13px] font-black hover:bg-[#e8580a]/15 transition-colors disabled:opacity-30">+</button>
+            </div>
+            {/* Workers */}
+            <div className="flex items-center gap-0.5 rounded-xl bg-[#231f1a] border border-white/[0.07] overflow-hidden shrink-0">
+              <button onClick={() => { const n = Math.max(2, workerCount-1); setWorkerCount(n); while(workerPoolRef.current.length < n) workerPoolRef.current.push(new Worker(`/workers/tts-worker.js?v=pcm1`,{type:'module'})); while(workerPoolRef.current.length > n) { try{workerPoolRef.current.pop()?.terminate();}catch{} } }}
+                disabled={workerCount <= 2}
+                className="px-2.5 py-2 text-[#c0b4a8] text-[13px] font-black hover:bg-white/[0.06] transition-colors disabled:opacity-30">−</button>
+              <span className="text-[#c0b4a8] text-[11px] font-black min-w-[28px] text-center">⚡{workerCount}</span>
+              <button onClick={() => { const n = Math.min(4, workerCount+1); setWorkerCount(n); while(workerPoolRef.current.length < n) workerPoolRef.current.push(new Worker(`/workers/tts-worker.js?v=pcm1`,{type:'module'})); while(workerPoolRef.current.length > n) { try{workerPoolRef.current.pop()?.terminate();}catch{} } }}
+                disabled={workerCount >= 4}
+                className="px-2.5 py-2 text-[#c0b4a8] text-[13px] font-black hover:bg-white/[0.06] transition-colors disabled:opacity-30">+</button>
+            </div>
+          </div>
+
           {WorkerPanel}
         </div>
 

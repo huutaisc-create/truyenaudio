@@ -77,7 +77,7 @@ const StoryCard = ({
       className="relative aspect-[3/4] overflow-hidden rounded-lg shadow-sm transition-all group-hover:shadow-lg group-hover:-translate-y-0.5"
       style={{ background: "var(--card)", border: "1px solid var(--border)" }}
     >
-      <Link href={`/truyen/${slug}/nghe`} className="block absolute inset-0 z-0" aria-label={`Nghe truyện ${title}`}>
+      <Link href={`/truyen/${slug}`} className="block absolute inset-0 z-0" aria-label={`Chi tiết truyện ${title}`}>
         {coverImage ? (
           <Image
             src={coverImage}
