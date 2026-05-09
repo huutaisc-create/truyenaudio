@@ -1,4 +1,4 @@
-import { BookOpen, User, Clock, Eye, List, ChevronRight } from 'lucide-react';
+import { BookOpen, Eye, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -126,7 +126,7 @@ const StoryDetail = async ({
                     <div className="lg:col-span-9 space-y-6">
 
                         {/* HERO CARD */}
-                        <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-md p-6 md:p-8 flex flex-col md:flex-row gap-7">
+                        <div className="bg-warm-card rounded-2xl shadow-md p-6 md:p-8 flex flex-col md:flex-row gap-7">
 
                             {/* Cover */}
                             <div className="shrink-0 relative self-start mx-auto md:mx-0">
@@ -257,7 +257,7 @@ const StoryDetail = async ({
                         </div>
 
                         {/* GIỚI THIỆU */}
-                        <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-6 md:p-8">
+                        <div className="bg-warm-card rounded-2xl shadow-sm p-6 md:p-8">
                             <h2 className="font-bold text-base mb-4 text-warm-ink flex items-center gap-2.5">
                                 <span className="w-1 h-5 rounded-sm bg-warm-primary shrink-0" aria-hidden="true" />
                                 GIỚI THIỆU
@@ -265,120 +265,6 @@ const StoryDetail = async ({
                             <p className="text-base text-warm-ink whitespace-pre-line leading-relaxed">
                                 {story.description}
                             </p>
-                        </div>
-
-                        {/* DANH SÁCH CHƯƠNG */}
-                        <div className="bg-warm-card rounded-2xl border border-warm-border-soft shadow-sm p-6 md:p-8">
-                            <div className="flex items-center justify-between mb-5 pb-4 border-b border-warm-border-soft">
-                                <h2 className="font-bold text-base text-warm-ink flex items-center gap-2.5">
-                                    <span className="w-1 h-5 rounded-sm bg-warm-primary shrink-0" aria-hidden="true" />
-                                    DANH SÁCH CHƯƠNG
-                                </h2>
-                                <span className="text-sm text-warm-ink-soft font-medium">
-                                    Tổng: <b className="text-warm-ink-mid">{story.chapters}</b> chương
-                                </span>
-                            </div>
-
-                            {/* Mới cập nhật */}
-                            <div className="mb-5">
-                                <p className="text-sm font-black uppercase tracking-widest mb-2.5 flex items-center gap-1.5 text-warm-ink-soft">
-                                    <Clock className="h-3 w-3" aria-hidden="true" /> Mới cập nhật
-                                </p>
-                                <div className="border-t border-warm-border-soft">
-                                    {story.latestChapters.map(ch => (
-                                        <a
-                                            href={`/truyen/${slug}/nghe?chuong=${ch.id}`}
-                                            key={ch.id}
-                                            className="flex justify-between items-center py-2.5 border-b border-warm-border-soft group"
-                                        >
-                                            <div className="flex items-center gap-2.5 min-w-0">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" aria-hidden="true" />
-                                                <span className="text-base font-medium text-warm-ink group-hover:text-warm-primary transition-colors truncate">
-                                                    {ch.title}
-                                                </span>
-                                            </div>
-                                            <span className="text-sm text-warm-ink-soft shrink-0 ml-3">{ch.time}</span>
-                                        </a>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Tất cả chương */}
-                            <div>
-                                <p className="text-sm font-black uppercase tracking-widest mb-3 flex items-center gap-1.5 text-warm-ink-soft">
-                                    <List className="h-3 w-3" aria-hidden="true" /> Tất cả chương
-                                </p>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
-                                    {chapterDataReal.chapters.map(ch => (
-                                        <a
-                                            href={`/truyen/${slug}/nghe?chuong=${ch.index}`}
-                                            key={ch.id}
-                                            className="text-base text-warm-ink flex justify-between items-center py-2 border-b border-warm-border-soft group hover:text-warm-primary transition-colors"
-                                        >
-                                            <span className="truncate">{ch.title || `Chương ${ch.index}`}</span>
-                                            <ChevronRight
-                                                className="h-3 w-3 shrink-0 opacity-0 group-hover:opacity-100 text-warm-primary transition-all"
-                                                aria-hidden="true"
-                                            />
-                                        </a>
-                                    ))}
-                                </div>
-
-                                {/* Pagination */}
-                                {totalPages > 1 && (
-                                    <nav
-                                        className="mt-6 flex justify-center items-center gap-1.5 flex-wrap"
-                                        aria-label="Phân trang danh sách chương"
-                                    >
-                                        {currentPage > 1 && (
-                                            <a
-                                                href={pageUrl(currentPage - 1)}
-                                                aria-label="Trang trước"
-                                                className="px-3 py-2 rounded-lg text-sm font-bold bg-warm-border-soft text-warm-ink-soft hover:bg-warm-primary-pale hover:text-warm-primary transition-colors"
-                                            >
-                                                ‹
-                                            </a>
-                                        )}
-                                        {Array.from({ length: totalPages }, (_, i) => i + 1)
-                                            .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
-                                            .reduce<(number | '...')[]>((acc, p, idx, arr) => {
-                                                if (idx > 0 && (arr[idx - 1] as number) + 1 < p) acc.push('...');
-                                                acc.push(p);
-                                                return acc;
-                                            }, [])
-                                            .map((p, idx) =>
-                                                p === '...' ? (
-                                                    <span key={`ellipsis-${idx}`} className="px-2 py-2 text-sm text-warm-ink-soft">
-                                                        ...
-                                                    </span>
-                                                ) : (
-                                                    <a
-                                                        key={p}
-                                                        href={pageUrl(p as number)}
-                                                        aria-label={`Trang ${p}`}
-                                                        aria-current={currentPage === p ? 'page' : undefined}
-                                                        className={`px-3.5 py-2 rounded-lg text-sm font-bold transition-colors ${
-                                                            currentPage === p
-                                                                ? 'bg-warm-primary text-white'
-                                                                : 'bg-warm-border-soft text-warm-ink-soft hover:bg-warm-primary-pale hover:text-warm-primary'
-                                                        }`}
-                                                    >
-                                                        {p}
-                                                    </a>
-                                                )
-                                            )}
-                                        {currentPage < totalPages && (
-                                            <a
-                                                href={pageUrl(currentPage + 1)}
-                                                aria-label="Trang sau"
-                                                className="px-3 py-2 rounded-lg text-sm font-bold bg-warm-border-soft text-warm-ink-soft hover:bg-warm-primary-pale hover:text-warm-primary transition-colors"
-                                            >
-                                                ›
-                                            </a>
-                                        )}
-                                    </nav>
-                                )}
-                            </div>
                         </div>
 
                         {/* BÌNH LUẬN */}

@@ -202,7 +202,7 @@ export default function StoryInteractions({
             <ToastPortal toasts={toasts} onDismiss={dismissToast} />
 
             {/* Interaction bar */}
-            <div className="flex rounded-xl overflow-hidden border border-warm-border-soft">
+            <div className="flex rounded-xl overflow-hidden">
 
                 {/* Yêu thích */}
                 <button
@@ -260,41 +260,6 @@ export default function StoryInteractions({
                 </button>
             </div>
 
-            {/* Chapter Navigation */}
-            <div className="flex flex-nowrap items-center gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-                <div className="flex h-9 shrink-0 rounded-xl overflow-hidden border border-warm-border">
-                    <input
-                        type="number"
-                        placeholder="Số chương..."
-                        value={jumpChapter}
-                        onChange={(e) => setJumpChapter(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleJumpToChapter()}
-                        className="w-[88px] px-3 text-base bg-warm-bg text-warm-ink outline-none placeholder:text-warm-ink-soft border-r border-warm-border"
-                    />
-                    <button
-                        onClick={handleJumpToChapter}
-                        className="px-3 text-base font-bold bg-warm-border-soft text-[#8c3a08] hover:bg-warm-primary-pale transition-colors whitespace-nowrap"
-                    >
-                        Đi
-                    </button>
-                </div>
-
-                <a
-                    href={`/truyen/${storySlug}/nghe?chuong=${firstChapterId || 1}`}
-                    className="shrink-0 px-3 sm:px-4 h-8 sm:h-9 flex items-center rounded-xl font-bold text-sm sm:text-base text-[#8c3a08] bg-warm-primary-pale border-2 border-warm-primary/50 hover:bg-warm-primary hover:text-white whitespace-nowrap transition-all active:scale-95"
-                >
-                    <span className="sm:hidden">▶ C.1</span>
-                    <span className="hidden sm:inline">▶ Chương 1</span>
-                </a>
-
-                <a
-                    href={`/truyen/${storySlug}/nghe?chuong=${latestChapterId || 1}`}
-                    className="shrink-0 px-3 sm:px-4 h-8 sm:h-9 flex items-center rounded-xl font-bold text-sm sm:text-base text-[#8c3a08] bg-warm-primary-pale border-2 border-warm-primary/50 hover:bg-warm-primary hover:text-white whitespace-nowrap transition-all active:scale-95"
-                >
-                    <span className="sm:hidden">⏭ C.End</span>
-                    <span className="hidden sm:inline">⏭ Chương cuối</span>
-                </a>
-            </div>
 
             {/* Đọc gần đây */}
             {mounted && lastRead?.chapterIndex && (
