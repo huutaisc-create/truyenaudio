@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
-import { Clock, BookOpen } from "lucide-react";
+import { Clock } from "lucide-react";
 import { useReadingHistory } from "@/hooks/useReadingHistory";
 
 export default function RecentReads() {
@@ -36,7 +35,7 @@ export default function RecentReads() {
           style={{ scrollbarWidth: "none" }}
         >
           <style>{`div::-webkit-scrollbar{display:none}`}</style>
-          {history.slice(0, 6).map((item) => (
+          {history.slice(0, 6).map((item, i) => (
             <Link
               key={item.slug}
               href={`/truyen/${item.slug}`}
@@ -50,23 +49,10 @@ export default function RecentReads() {
               onMouseLeave={e => ((e.currentTarget as HTMLElement).style.borderColor = "var(--border)")}
             >
               <div
-                className="w-[35px] aspect-[2/3] rounded overflow-hidden shrink-0 relative"
-                style={{ background: "var(--card2)", border: "1px solid var(--border)" }}
+                className="w-[35px] aspect-[2/3] rounded shrink-0 flex items-center justify-center font-black text-base"
+                style={{ background: "var(--card2)", color: "var(--accent)" }}
               >
-                {item.coverImage ? (
-                  <Image
-                    src={item.coverImage}
-                    fill
-                    sizes="35px"
-                    className="object-cover"
-                    alt={`Ảnh bìa ${item.title}`}
-                    unoptimized={item.coverImage.startsWith('/covers/')}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center" style={{ color: "var(--text-soft)" }}>
-                    <BookOpen className="h-3 w-3" aria-hidden="true" />
-                  </div>
-                )}
+                {i + 1}
               </div>
 
               <div className="flex-1 min-w-0">
