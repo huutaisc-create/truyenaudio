@@ -1,10 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { BookOpen } from "lucide-react";
 import { useReadingHistory } from "@/hooks/useReadingHistory";
 import Link from "next/link";
-import Image from "next/image";
 
 export default function ReadingHistoryWidget() {
   const { history } = useReadingHistory();
@@ -63,34 +61,21 @@ export default function ReadingHistoryWidget() {
 
       {/* List */}
       <div>
-        {history.slice(0, 5).map((item) => (
+        {history.slice(0, 5).map((item, i) => (
           <Link
             key={item.slug}
-            href={`/truyen/${item.slug}/nghe?chuong=${item.chapterIndex || 1}`}
-            aria-label={`Nghe tiếp ${item.title}, chương ${item.chapterIndex || 1}`}
+            href={`/truyen/${item.slug}`}
+            aria-label={`Chi tiết truyện ${item.title}`}
             className="group flex items-center gap-3 px-3 py-2.5 transition-colors"
             style={{ borderBottom: "1px solid var(--border-soft)" }}
             onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = "var(--card)")}
             onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = "transparent")}
           >
             <div
-              className="shrink-0 w-9 h-12 rounded overflow-hidden relative"
-              style={{ background: "var(--card2)", border: "1px solid var(--border)" }}
+              className="shrink-0 w-9 h-12 rounded-lg flex items-center justify-center font-black text-lg"
+              style={{ background: "rgba(232,88,10,0.15)", color: "var(--accent)", border: "1px solid rgba(232,88,10,0.3)" }}
             >
-              {item.coverImage ? (
-                <Image
-                  src={item.coverImage}
-                  alt={`Ảnh bìa ${item.title}`}
-                  fill
-                  sizes="36px"
-                  className="object-cover"
-                  unoptimized={item.coverImage.startsWith('/covers/')}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center" style={{ color: "var(--text-soft)" }}>
-                  <BookOpen size={13} aria-hidden="true" />
-                </div>
-              )}
+              {i + 1}
             </div>
             <div className="flex-1 min-w-0">
               <h3
