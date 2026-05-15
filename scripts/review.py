@@ -50,6 +50,9 @@ _BA_PASS         = os.getenv("BASIC_AUTH_PASS", "")
 _BASIC_AUTH      = (_BA_USER, _BA_PASS) if _BA_USER else None
 BATCH_MAX_BYTES  = int(os.getenv("BATCH_MAX_BYTES", str(15_000_000)))
 
+# Thư mục chứa file review do Gemini sinh (đã clean, mỗi file tên {slug}.txt)
+GEMINI_REVIEWS_DIR = os.getenv("GEMINI_REVIEWS_DIR", "")
+
 # Tham chiếu đến thư mục truyện — server dùng
 _STORIES_DIR_PATH: Path | None = None
 
@@ -705,6 +708,59 @@ class _Handler(BaseHTTPRequestHandler):
                 self._json({'error': str(e)}, 500)
             return
 
+        # ── Lưu review xuống local review.txt ──────────────────────────────────
+        if parsed.path == '/save-review':
+            try:
+                length = int(self.headers.get('Content-Length', 0))
+                body   = json.loads(self.rfile.read(length).decode('utf-8'))
+            except Exception as e:
+                return self._json({'error': f'Bad request: {e}'}, 400)
+            slug    = body.get('slug', '').strip()
+            content = body.get('content', '')
+            if not slug:
+                return self._json({'error': 'Thiếu slug'}, 400)
+            review_path = _STORIES_DIR_PATH / slug / 'review.txt'
+            if not (_STORIES_DIR_PATH / slug).exists():
+                return self._json({'error': f'Thư mục truyện không tồn tại: {slug}'}, 404)
+            try:
+                review_path.write_text(content, encoding='utf-8')
+                return self._json({'ok': True, 'path': str(review_path)})
+            except Exception as e:
+                return self._json({'error': str(e)}, 500)
+
+        # ── Push AI review lên webtruyen-app server ──────────────────────────
+        if parsed.path == '/push-review':
+            try:
+                length = int(self.headers.get('Content-Length', 0))
+                body   = json.loads(self.rfile.read(length).decode('utf-8'))
+            except Exception as e:
+                return self._json({'error': f'Bad request: {e}'}, 400)
+            slug      = body.get('slug', '').strip()
+            ai_review = body.get('ai_review', '').strip()
+            if not slug:
+                return self._json({'error': 'Thiếu slug'}, 400)
+            if not WEB_API_URL:
+                return self._json({'error': 'WEB_API_URL chưa được cấu hình trong .env.upload'}, 500)
+            # Gọi API endpoint cập nhật aiReview
+            import urllib.request
+            api_url = WEB_API_URL.rstrip('/').replace('/api/admin/stories', '') + f'/api/internal/stories/{slug}/review'
+            req_data = json.dumps({'ai_review': ai_review, 'secret': UPLOAD_SECRET}).encode('utf-8')
+            req = urllib.request.Request(
+                api_url,
+                data=req_data,
+                headers={'Content-Type': 'application/json', 'X-Internal-Secret': UPLOAD_SECRET},
+                method='PATCH',
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    resp_body = json.loads(resp.read().decode('utf-8'))
+                    return self._json({'ok': True, 'server': resp_body})
+            except urllib.error.HTTPError as e:
+                err_body = e.read().decode('utf-8', errors='replace')
+                return self._json({'error': f'Server trả về {e.code}: {err_body[:200]}'}, 502)
+            except Exception as e:
+                return self._json({'error': str(e)}, 502)
+
         if parsed.path != '/upload':
             return self._json({'error': 'not found'}, 404)
         try:
@@ -761,6 +817,60 @@ def start_local_server(stories_dir: Path, port: int = SERVER_PORT) -> bool:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+#  REVIEW CONTENT EXTRACTOR
+#  Tự động strip:
+#    - Dòng header: # Story: / # Generated:
+#    - Preamble thừa (Gemini hay thêm vào trước dấu ---)
+# ══════════════════════════════════════════════════════════════════════════════
+
+_HEADER_RE    = re.compile(r'^#\s*(Story|Generated)\s*:', re.IGNORECASE)
+_SEPARATOR_RE = re.compile(r'^\s*[-=*]{3,}\s*$')
+
+def _extract_review_content(text: str) -> str:
+    """Trả về nội dung review thực sự, đã bỏ header và preamble."""
+    lines = text.splitlines(keepends=True)
+    if not lines:
+        return ""
+
+    # Bước 1: bỏ qua các dòng header (# Story / # Generated) và blank ngay sau
+    i = 0
+    while i < len(lines):
+        stripped = lines[i].rstrip()
+        if _HEADER_RE.match(stripped) or (stripped == "" and i < 6 and i > 0):
+            i += 1
+        else:
+            break
+
+    # Bước 2: từ vị trí i, tìm separator --- (preamble Gemini)
+    # Nếu có separator → bỏ mọi thứ trước nó (preamble thừa)
+    j = i
+    sep_pos = None
+    while j < len(lines):
+        if _SEPARATOR_RE.match(lines[j]):
+            sep_pos = j
+            break
+        j += 1
+
+    if sep_pos is not None:
+        # Kiểm tra phần trước separator có phải preamble không
+        # (không phải nội dung review: không bắt đầu bằng # heading)
+        before = [l for l in lines[i:sep_pos] if l.strip()]
+        is_preamble = not any(l.lstrip().startswith('#') for l in before)
+        if is_preamble:
+            # Bỏ qua separator + blank lines tiếp theo
+            start = sep_pos + 1
+            while start < len(lines) and not lines[start].strip():
+                start += 1
+            content = "".join(lines[start:])
+        else:
+            content = "".join(lines[i:])
+    else:
+        content = "".join(lines[i:])
+
+    return content.strip()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 #  SCAN STORIES
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -798,6 +908,30 @@ def scan_stories(stories_dir: Path) -> list[dict]:
         has_upload = upload_path.exists()
         is_ready   = has_meta and has_upload and has_image
 
+        # ── Load AI review ──────────────────────────────────────────────────
+        ai_review = ""
+        # Thử theo thứ tự ưu tiên:
+        #   1. gemini-review.txt (Gemini tool sinh ra, còn header/preamble)
+        #   2. review.txt        (đã clean sẵn, không cần parse)
+        #   3. GEMINI_REVIEWS_DIR/{slug}.txt (config riêng)
+        _review_candidates = [
+            story_dir / "gemini-review.txt",
+            story_dir / "review.txt",
+        ]
+        if GEMINI_REVIEWS_DIR:
+            _review_candidates.append(Path(GEMINI_REVIEWS_DIR) / f"{slug}.txt")
+
+        for _rp in _review_candidates:
+            if not _rp.exists():
+                continue
+            try:
+                raw = _rp.read_text(encoding="utf-8")
+                ai_review = _extract_review_content(raw)
+                if ai_review:
+                    break
+            except Exception:
+                continue
+
         stories.append({
             "slug":           slug,
             "story_id":       meta.get("story_id") or upload.get("story_id") or "",
@@ -812,6 +946,7 @@ def scan_stories(stories_dir: Path) -> list[dict]:
             "is_ready":       is_ready,
             "ten_truyen":     upload.get("ten_truyen") or [],
             "van_an":         upload.get("van_an") or [],
+            "ai_review":      ai_review,
         })
 
     print(f"Đã đọc {len(stories)} truyện có dữ liệu.")
@@ -1017,6 +1152,47 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     padding: 3px 10px; border-radius: 20px; font-size: 17px;
     background: rgba(249,115,22,.1); color: var(--accent); border: 1px solid rgba(249,115,22,.3);
   }
+
+  /* ── AI Review section ── */
+  .review-tab-bar { display:flex; gap:6px; margin-bottom:8px; }
+  .review-tab {
+    padding:4px 14px; border-radius:6px; border:1px solid var(--border);
+    background:transparent; color:var(--muted); cursor:pointer; font-size:15px; transition:all .2s;
+  }
+  .review-tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .review-editor {
+    width:100%; min-height:200px; background:#0d111b; border:1px solid var(--border);
+    border-radius:8px; padding:10px 12px; color:#e2e8f0; font-size:15px;
+    font-family:'Segoe UI',sans-serif; line-height:1.7; resize:vertical; outline:none;
+    transition:border-color .2s;
+  }
+  .review-editor:focus { border-color:var(--accent); }
+  .review-preview {
+    display:none; min-height:100px; background:#0d111b; border:1px solid var(--border);
+    border-radius:8px; padding:14px 18px; color:#e2e8f0; font-size:15px; line-height:1.8;
+  }
+  .review-preview h1 { font-size:22px; font-weight:700; color:#f97316; margin:16px 0 8px; }
+  .review-preview h2 { font-size:18px; font-weight:700; color:#93c5fd; margin:14px 0 6px; }
+  .review-preview h3 { font-size:16px; font-weight:700; color:#a78bfa; margin:12px 0 4px; }
+  .review-preview p  { margin:6px 0; }
+  .review-preview ul, .review-preview ol { padding-left:18px; margin:6px 0; }
+  .review-preview li { margin:3px 0; }
+  .review-preview strong { color:#f1f5f9; }
+  .review-preview em { color:#94a3b8; font-style:italic; }
+  .btn-push-review {
+    padding:7px 14px; border-radius:8px; border:1px solid #f59e0b;
+    background:rgba(245,158,11,.1); color:#f59e0b; cursor:pointer;
+    font-size:17px; font-weight:600; transition:all .2s; white-space:nowrap;
+  }
+  .btn-push-review:hover    { background:rgba(245,158,11,.25); }
+  .btn-push-review:disabled { opacity:.5; cursor:wait; }
+  .btn-push-review.pushed   { border-color:var(--accent2); background:rgba(59,130,246,.15); color:var(--accent2); }
+  .btn-save-review {
+    padding:7px 14px; border-radius:8px; border:1px solid var(--border);
+    background:transparent; color:var(--muted); cursor:pointer; font-size:17px; transition:all .2s;
+  }
+  .btn-save-review:hover { border-color:var(--accent); color:var(--accent); }
+  .review-char-count { font-size:13px; color:var(--muted); align-self:center; }
 
   /* ── Toast ── */
   .toast {
@@ -1273,6 +1449,32 @@ function renderCard(s, i) {
 
       <div class="section-label">Chọn mô tả</div>
       <div class="option-list">${descOptions}</div>
+
+      <div class="section-label">AI Review <span style="font-weight:400;font-size:13px;color:var(--muted);text-transform:none;letter-spacing:0">(SEO content — Gemini)</span>
+        ${s.ai_review ? '<span style="background:rgba(34,197,94,.15);color:#22c55e;font-size:12px;padding:1px 8px;border-radius:10px;margin-left:6px;font-weight:600;text-transform:none">✓ Có review</span>' : '<span style="background:rgba(239,68,68,.1);color:#ef4444;font-size:12px;padding:1px 8px;border-radius:10px;margin-left:6px;font-weight:600;text-transform:none">Chưa có</span>'}
+      </div>
+      <div>
+        <div class="review-tab-bar">
+          <button class="review-tab active" id="tabEdit_${esc(s.slug)}"   onclick="switchReviewTab('${esc(s.slug)}','edit')">✏️ Chỉnh sửa</button>
+          <button class="review-tab"        id="tabPrev_${esc(s.slug)}"   onclick="switchReviewTab('${esc(s.slug)}','preview')">👁 Xem trước</button>
+          <span style="flex:1"></span>
+          <span class="review-char-count" id="reviewCharCount_${esc(s.slug)}">${(s.ai_review||'').length.toLocaleString()} ký tự</span>
+        </div>
+        <textarea class="review-editor" id="reviewEditor_${esc(s.slug)}"
+          placeholder="Dán nội dung AI review vào đây... (hỗ trợ Markdown: # H1, ## H2, **bold**)"
+          oninput="onReviewInput('${esc(s.slug)}')"
+        >${(s.ai_review||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+        <div class="review-preview" id="reviewPreview_${esc(s.slug)}"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn-save-review" onclick="saveReviewLocal('${esc(s.slug)}')">💾 Lưu local</button>
+          <button onclick="replaceTitleInReview('${esc(s.slug)}')"
+            style="padding:7px 14px;border-radius:8px;border:1px solid var(--purple);background:rgba(139,92,246,.1);color:var(--purple);cursor:pointer;font-size:17px;font-weight:600;transition:all .2s"
+            title="Thay thế tên truyện gốc bằng tên đã chọn trong toàn bộ review">
+            🔄 Thay tên truyện
+          </button>
+          <button class="btn-push-review" id="pushReviewBtn_${esc(s.slug)}" onclick="pushReview('${esc(s.slug)}', this)">📤 Push AI Review</button>
+        </div>
+      </div>
 
       <div class="card-actions">
         <button class="btn-ready ${st.status === 'done' ? 'active' : ''}"
@@ -1556,6 +1758,7 @@ function toggleCard(slug) {
 }
 function selectTitle(slug, idx) {
   const s = STORIES.find(x => x.slug === slug);
+  const prevTitle = state[slug].title || s.original_title;
   state[slug].titleIdx = idx;
   if (idx === 'original')     state[slug].title = s.original_title;
   else if (idx === 'manual')  state[slug].title = document.getElementById(`manualTitle_${slug}`)?.value || '';
@@ -1564,6 +1767,8 @@ function selectTitle(slug, idx) {
   document.querySelectorAll(`[name="title_${slug}"]`).forEach(r => r.closest('.option-item').classList.remove('selected'));
   const sel = document.querySelector(`[name="title_${slug}"][value="${idx}"]`);
   if (sel) sel.closest('.option-item').classList.add('selected');
+  // Auto-replace tên truyện trong review nếu đã có nội dung
+  _autoReplaceReviewTitle(slug, prevTitle, state[slug].title);
   autoSave();
 }
 function updateManualTitle(slug, value) {
@@ -1936,6 +2141,175 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  AI REVIEW — editor, preview, replace, save, push
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Chuyển tab Edit ↔ Preview
+function switchReviewTab(slug, tab) {
+  const editor  = document.getElementById('reviewEditor_' + slug);
+  const preview = document.getElementById('reviewPreview_' + slug);
+  const tabEdit = document.getElementById('tabEdit_' + slug);
+  const tabPrev = document.getElementById('tabPrev_' + slug);
+  if (!editor || !preview) return;
+  if (tab === 'preview') {
+    preview.innerHTML = renderMarkdown(editor.value);
+    preview.style.display = 'block';
+    editor.style.display  = 'none';
+    tabEdit.classList.remove('active');
+    tabPrev.classList.add('active');
+  } else {
+    preview.style.display = 'none';
+    editor.style.display  = 'block';
+    tabEdit.classList.add('active');
+    tabPrev.classList.remove('active');
+  }
+}
+
+// Render Markdown đơn giản → HTML (H1, H2, H3, bold, italic, list, p)
+function renderMarkdown(md) {
+  if (!md) return '<span style="color:var(--muted);font-style:italic">Chưa có nội dung review.</span>';
+  let html = md
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    // Headers
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,  '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm,   '<h1>$1</h1>')
+    // Bold & italic
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g,     '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,         '<em>$1</em>')
+    // Unordered list
+    .replace(/^\* (.+)$/gm,  '<li>$1</li>')
+    .replace(/^- (.+)$/gm,   '<li>$1</li>')
+    // Ordered list
+    .replace(/^\d+\. (.+)$/gm,'<li>$1</li>')
+    // Horizontal rule
+    .replace(/^---+$/gm, '<hr style="border-color:var(--border);margin:10px 0">')
+    // Line breaks → paragraphs (blank line = new paragraph)
+    .split(/\n{2,}/)
+    .map(block => {
+      block = block.trim();
+      if (!block) return '';
+      if (/^<(h[1-6]|li|hr)/.test(block)) return block;
+      // wrap list items
+      if (block.includes('<li>')) return '<ul>' + block + '</ul>';
+      return '<p>' + block.replace(/\n/g, '<br>') + '</p>';
+    })
+    .join('\n');
+  return html;
+}
+
+// Cập nhật char count khi user gõ vào textarea
+function onReviewInput(slug) {
+  const editor = document.getElementById('reviewEditor_' + slug);
+  if (!editor) return;
+  const count = document.getElementById('reviewCharCount_' + slug);
+  if (count) count.textContent = editor.value.length.toLocaleString() + ' ký tự';
+  // Cập nhật state (không lưu DB, chỉ giữ trong bộ nhớ)
+  if (!state[slug]) state[slug] = {};
+  state[slug].aiReview = editor.value;
+}
+
+// Internal: auto-replace khi chọn tên (oldTitle → newTitle)
+function _autoReplaceReviewTitle(slug, oldTitle, newTitle) {
+  if (!oldTitle || !newTitle || oldTitle === newTitle) return;
+  const editor = document.getElementById('reviewEditor_' + slug);
+  if (!editor || !editor.value) return;
+  const escaped = oldTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const updated = editor.value.replace(new RegExp(escaped, 'g'), newTitle);
+  if (updated !== editor.value) {
+    editor.value = updated;
+    onReviewInput(slug);
+    showToast(`🔄 Đã thay "${oldTitle}" → "${newTitle}" trong review`);
+  }
+}
+
+// Nút "Thay tên truyện" thủ công
+function replaceTitleInReview(slug) {
+  const s   = STORIES.find(x => x.slug === slug);
+  const st  = state[slug];
+  const newTitle = st.title || s.original_title;
+  const orig = s.original_title;
+  // Thay tên gốc và bất kỳ tên nào đã chọn trước đó
+  const editor = document.getElementById('reviewEditor_' + slug);
+  if (!editor || !editor.value) { showToast('⚠️ Chưa có nội dung review'); return; }
+
+  let text = editor.value;
+  let replaced = 0;
+
+  // Thay tên gốc (original_title)
+  if (orig && orig !== newTitle) {
+    const esc = orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const before = text;
+    text = text.replace(new RegExp(esc, 'g'), newTitle);
+    if (text !== before) replaced++;
+  }
+  // Thay thêm từ tất cả tên trong ten_truyen (phòng review dùng tên cũ)
+  (s.ten_truyen || []).forEach(t => {
+    if (t.ten && t.ten !== newTitle) {
+      const esc = t.ten.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const before = text;
+      text = text.replace(new RegExp(esc, 'g'), newTitle);
+      if (text !== before) replaced++;
+    }
+  });
+
+  editor.value = text;
+  onReviewInput(slug);
+  showToast(replaced > 0 ? `✅ Đã thay tên truyện → "${newTitle}"` : `ℹ️ Không tìm thấy tên cần thay`);
+}
+
+// Lưu review xuống local (file review.txt trong thư mục truyện)
+async function saveReviewLocal(slug) {
+  const editor = document.getElementById('reviewEditor_' + slug);
+  if (!editor) return;
+  const content = editor.value.trim();
+  try {
+    const res = await fetch(`${API}/save-review`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ slug, content }),
+    });
+    const d = await res.json();
+    if (d.ok) showToast('💾 Đã lưu review.txt local');
+    else      showToast('❌ ' + (d.error || 'Lỗi lưu review'));
+  } catch(e) {
+    showToast('❌ Không kết nối server: ' + e.message);
+  }
+}
+
+// Push AI review lên server (chỉ cập nhật cột aiReview, không upload chapter)
+async function pushReview(slug, btn) {
+  const editor = document.getElementById('reviewEditor_' + slug);
+  if (!editor || !editor.value.trim()) {
+    showToast('⚠️ Chưa có nội dung review để push'); return;
+  }
+  const s = STORIES.find(x => x.slug === slug);
+  const title = (state[slug] && state[slug].title) || s.original_title;
+  if (!confirm(`Push AI Review cho "${title}" lên server?`)) return;
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang push…'; }
+  try {
+    const res = await fetch(`${API}/push-review`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ slug, ai_review: editor.value.trim() }),
+    });
+    const d = await res.json();
+    if (d.ok) {
+      showToast(`✅ Đã push AI Review cho "${title}"`);
+      if (btn) { btn.classList.add('pushed'); btn.textContent = '✅ Đã push'; btn.disabled = false; }
+    } else {
+      showToast('❌ ' + (d.error || 'Push thất bại'));
+      if (btn) { btn.disabled = false; btn.textContent = '📤 Push AI Review'; }
+    }
+  } catch(e) {
+    showToast('❌ Lỗi kết nối: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '📤 Push AI Review'; }
+  }
 }
 
 init();

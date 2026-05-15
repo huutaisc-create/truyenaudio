@@ -83,6 +83,9 @@ model Story {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  // AI-generated SEO review (Gemini)
+  aiReview        String?
+
   // Admin fields
   storyType       String    @default("ORIGINAL")  // "ORIGINAL" | "CONVERT" | "TRANSLATED"
   isCompleted     Boolean   @default(false)        // dành cho convert/dịch: đã hoàn thành chưa

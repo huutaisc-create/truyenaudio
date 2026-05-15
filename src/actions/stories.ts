@@ -211,6 +211,7 @@ function getCachedStory(slug: string) {
                     translatorName: true,
                     sourceUrl: true,
                     isCompleted: true,
+                    aiReview: true,
                     // reviews fetch riêng trong page.tsx (không cache) → luôn fresh
                     _count: { select: { chapters: true } },
                 },

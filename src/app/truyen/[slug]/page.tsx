@@ -20,6 +20,59 @@ import { formatNumber } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
+/** Chuyển Markdown đơn giản → HTML tĩnh (server-side, SEO-friendly).
+ *  Hỗ trợ: # H1, ## H2, ### H3, **bold**, *italic*, - list, numbered list, ---.
+ */
+function markdownToHtml(md: string): string {
+    if (!md) return '';
+    const lines = md.split('\n');
+    const out: string[] = [];
+    let inList = false;
+
+    const escHtml = (s: string) =>
+        s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const inlineFormat = (s: string) =>
+        escHtml(s)
+            .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+            .replace(/\*\*(.+?)\*\*/g,     '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g,          '<em>$1</em>');
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trim = line.trim();
+
+        if (!trim) {
+            if (inList) { out.push('</ul>'); inList = false; }
+            continue;
+        }
+        if (/^---+$/.test(trim)) {
+            if (inList) { out.push('</ul>'); inList = false; }
+            out.push('<hr>');
+            continue;
+        }
+        if (trim.startsWith('### ')) {
+            if (inList) { out.push('</ul>'); inList = false; }
+            out.push(`<h3>${inlineFormat(trim.slice(4))}</h3>`);
+        } else if (trim.startsWith('## ')) {
+            if (inList) { out.push('</ul>'); inList = false; }
+            out.push(`<h2>${inlineFormat(trim.slice(3))}</h2>`);
+        } else if (trim.startsWith('# ')) {
+            if (inList) { out.push('</ul>'); inList = false; }
+            out.push(`<h1>${inlineFormat(trim.slice(2))}</h1>`);
+        } else if (/^(\*|-|\d+\.) /.test(trim)) {
+            if (!inList) { out.push('<ul>'); inList = true; }
+            const text = trim.replace(/^(\*|-|\d+\.) /, '');
+            out.push(`<li>${inlineFormat(text)}</li>`);
+        } else {
+            if (inList) { out.push('</ul>'); inList = false; }
+            out.push(`<p>${inlineFormat(trim)}</p>`);
+        }
+    }
+    if (inList) out.push('</ul>');
+    return out.join('\n');
+}
+
 const StoryDetail = async ({
     params,
     searchParams,
@@ -82,6 +135,7 @@ const StoryDetail = async ({
         rating: storyData.ratingScore ?? 0,
         ratingCount: storyData.ratingCount || 0,
         description: storyData.description || 'Chưa có giới thiệu.',
+        aiReview: (storyData as any).aiReview as string | null ?? null,
         reviews: freshReviews.map(review => ({
             ...review,
             user: {
@@ -274,6 +328,26 @@ const StoryDetail = async ({
                             </p>
                         </div>
 
+                        {/* ── AI REVIEW (SEO) ── chỉ render khi có nội dung */}
+                        {story.aiReview && (
+                            <div className="bg-warm-card rounded-2xl p-6 shadow-lg" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
+                                <h2 className="font-black text-[11px] uppercase tracking-[.14em] mb-5 flex items-center gap-2.5 text-warm-ink-soft">
+                                    <span className="w-4 h-[2px] rounded-full bg-warm-primary" />
+                                    Đánh giá chi tiết
+                                </h2>
+                                {/* prose-warm: styled article cho Google đọc — toàn bộ render server-side */}
+                                <article
+                                    className="ai-review-body"
+                                    dangerouslySetInnerHTML={{ __html: markdownToHtml(story.aiReview) }}
+                                    style={{
+                                        color: 'var(--color-warm-ink, #e5ddd0)',
+                                        fontSize: '15px',
+                                        lineHeight: '1.85',
+                                    }}
+                                />
+                            </div>
+                        )}
+
                         {/* ── BÌNH LUẬN ── */}
                         <div className="bg-warm-card rounded-2xl p-6 shadow-lg" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
                             <h2 className="font-black text-[11px] uppercase tracking-[.14em] mb-5 flex items-center gap-2.5 text-warm-ink-soft">
@@ -365,48 +439,7 @@ const StoryDetail = async ({
                             </div>
                         )}
 
-                        {/* CÙNG TÁC GIẢ */}
-                        {authorStoriesReal.length > 0 && (
-                            <div className="bg-warm-card rounded-2xl p-5" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
-                                <h2 className="font-black text-[11px] uppercase tracking-[.14em] mb-1 flex items-center gap-2 text-warm-ink-soft">
-                                    <span className="w-4 h-[2px] rounded-full bg-warm-primary" />
-                                    Cùng tác giả
-                                </h2>
-                                <p className="text-[12px] text-warm-ink-soft mb-4 pl-6">✍️ {story.author}</p>
-                                <div className="space-y-3">
-                                    {authorStoriesReal.map((s: any) => (
-                                        <a key={s.id} href={`/truyen/${s.slug}`}
-                                            className="flex gap-3 group items-center py-1">
-                                            <div className="w-10 h-14 rounded-xl overflow-hidden shrink-0 relative bg-warm-bg shadow-sm">
-                                                {s.coverImage ? (
-                                                    <Image src={s.coverImage} alt={s.title} fill sizes="40px" className="object-cover" unoptimized={s.coverImage.startsWith('/covers/')} />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center">
-                                                        <BookOpen className="h-4 w-4 text-warm-ink-light" />
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-[13px] font-bold text-warm-ink-mid group-hover:text-warm-primary transition-colors line-clamp-2 leading-snug">
-                                                    {s.title}
-                                                </p>
-                                                <div className="flex items-center gap-1.5 mt-1">
-                                                    <span className="text-[11px] text-warm-ink-soft">{s._count.chapters} chương</span>
-                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
-                                                        s.status === 'COMPLETED'
-                                                            ? 'bg-emerald-500/15 text-emerald-500'
-                                                            : 'bg-blue-500/15 text-blue-400'
-                                                    }`}>
-                                                        {s.status === 'COMPLETED' ? 'Full' : 'Đang ra'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </a>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </aside>
+                                  </aside>
                 </div>
             </div>
         </div>

@@ -206,6 +206,32 @@ body {
 }
 
 /* ══════════════════════════════════════════
+   AI REVIEW — server-rendered SEO content
+══════════════════════════════════════════ */
+.ai-review-body h1 {
+  font-size: 1.35rem; font-weight: 800; color: #e8580a;
+  margin: 1.4rem 0 .6rem; line-height: 1.35;
+}
+.ai-review-body h2 {
+  font-size: 1.1rem; font-weight: 700; color: #93c5fd;
+  margin: 1.2rem 0 .5rem; line-height: 1.4;
+  padding-bottom: .3rem; border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.ai-review-body h3 {
+  font-size: 1rem; font-weight: 700; color: #c4b5fd;
+  margin: 1rem 0 .4rem;
+}
+.ai-review-body p  { margin: .55rem 0; }
+.ai-review-body ul { padding-left: 1.4rem; margin: .55rem 0; list-style: disc; }
+.ai-review-body li { margin: .3rem 0; }
+.ai-review-body strong { color: #f1f5f9; font-weight: 700; }
+.ai-review-body em { color: #94a3b8; font-style: italic; }
+.ai-review-body hr {
+  border: none; border-top: 1px solid rgba(255,255,255,.08);
+  margin: 1.2rem 0;
+}
+
+/* ══════════════════════════════════════════
    THEME TRANSITION — smooth swap
 ══════════════════════════════════════════ */
 *, *::before, *::after {
