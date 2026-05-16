@@ -1,12 +1,5 @@
 "use client";
 
-// D:\Webtruyen\webtruyen-app\src\components\story\StoryRatingClient.tsx
-//
-// Client Component bọc phần rating + danh sách review trên trang truyện.
-// Lý do tách ra: page.tsx là Server Component (revalidate=60), không có state.
-// Component này giữ reviews trong useState → review mới hiện ngay sau submit,
-// không cần refresh.
-
 import { useState } from "react";
 import { Star } from "lucide-react";
 import ReviewButton from "./ReviewButton";
@@ -30,7 +23,6 @@ type StoryRatingClientProps = {
     initialRatingCount: number;
     initialReviews: ReviewItem[];
     reviewButtonClassName?: string;
-    /** Nếu false, chỉ render dòng stars+rating, không render danh sách review */
     showReviewList?: boolean;
 };
 
@@ -49,19 +41,17 @@ export default function StoryRatingClient({
     const [ratingCount, setRatingCount] = useState(initialRatingCount);
 
     const handleReviewSubmitted = (review: { rating: number; content: string }) => {
-        // Thêm review mới vào đầu list ngay lập tức
         const newReview: ReviewItem = {
             rating: review.rating,
             content: review.content,
             createdAt: new Date(),
             user: {
-                name: currentUser?.name ?? "Bạn",
+                name: currentUser?.name ?? "Ban",
                 image: currentUser?.image ?? null,
             },
         };
         setReviews(prev => [newReview, ...prev]);
 
-        // Cập nhật rating score ngay (tính lại trung bình tạm thời)
         const newCount = ratingCount + 1;
         const newScore = parseFloat(
             ((ratingScore * ratingCount + review.rating) / newCount).toFixed(1)
@@ -72,11 +62,10 @@ export default function StoryRatingClient({
 
     return (
         <>
-            {/* Dòng rating + nút Đánh giá */}
             <div className="flex items-center gap-2 flex-wrap">
                 <span
                     role="img"
-                    aria-label={ratingCount === 0 ? "Chưa có đánh giá" : `Điểm đánh giá: ${ratingScore} trên 5 sao`}
+                    aria-label={ratingCount === 0 ? "Chua co danh gia" : `Diem danh gia: ${ratingScore} tren 5 sao`}
                     className="flex"
                 >
                     {[1, 2, 3, 4, 5].map(i => (
@@ -103,7 +92,7 @@ export default function StoryRatingClient({
                 )}
                 <ReviewButton
                     storyId={storyId}
-                    text="Đánh giá"
+                    text="Danh gia"
                     currentUser={currentUser}
                     hasReviewed={hasReviewed}
                     onReviewSubmitted={handleReviewSubmitted}
@@ -114,7 +103,6 @@ export default function StoryRatingClient({
                 />
             </div>
 
-            {/* Danh sách reviews — hiện ngay khi submit */}
             {showReviewList && reviews.length > 0 && (
                 <div className="mt-3 space-y-2">
                     {reviews.map((r, i) => (
@@ -146,12 +134,6 @@ export default function StoryRatingClient({
                                 )}
                             </div>
                         </div>
-                    ))}
-                </div>
-            )}
-        </>
-    );
-}
                     ))}
                 </div>
             )}
