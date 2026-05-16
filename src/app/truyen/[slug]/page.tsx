@@ -13,6 +13,7 @@ import {
     getStoriesByAuthor,
     getTopNominations,
 } from '@/actions/stories';
+import { getStoryInteractions } from '@/actions/interactions';
 import db from '@/lib/db';
 import { auth } from '@/auth';
 import { notFound } from 'next/navigation';
@@ -95,7 +96,7 @@ const StoryDetail = async ({
         ? { id: session.user.id, name: session.user.name ?? '', image: session.user.image ?? null }
         : null;
 
-    const [chapterDataReal, relatedStoriesReal, authorStoriesReal, topNominations, freshReviews] =
+    const [chapterDataReal, relatedStoriesReal, authorStoriesReal, topNominations, freshReviews, interactionsData] =
         await Promise.all([
             getChaptersByStoryId(storyData.id, currentPage),
             getRelatedStories(storyData.id, storyData.genres.map(g => g.name), 5),
@@ -110,16 +111,12 @@ const StoryDetail = async ({
                     user: { select: { name: true, image: true } },
                 },
             }),
+            getStoryInteractions(storyData.id),
         ]);
 
-    let hasReviewed = false;
-    if (currentUser) {
-        const existing = await db.review.findFirst({
-            where: { userId: currentUser.id, storyId: storyData.id },
-            select: { id: true },
-        });
-        hasReviewed = !!existing;
-    }
+    const { userStatus: interactionStatus } = interactionsData;
+
+    const hasReviewed = interactionStatus.hasReviewed;
 
     const story = {
         title: storyData.title,
@@ -314,9 +311,10 @@ const StoryDetail = async ({
                                         viewCount: storyData.viewCount,
                                     }}
                                     userStatus={{
-                                        isLiked: false,
-                                        isFollowed: false,
-                                        lastReadChapterId: null,
+                                        isLiked: interactionStatus.isLiked,
+                                        isFollowed: interactionStatus.isFollowed,
+                                        lastReadChapterId: interactionStatus.lastReadChapterId,
+                                        isNominatedToday: interactionStatus.isNominatedToday,
                                     }}
                                     currentUser={currentUser}
                                 />

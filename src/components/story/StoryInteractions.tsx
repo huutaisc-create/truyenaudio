@@ -22,6 +22,7 @@ type StoryInteractionsProps = {
         isFollowed: boolean;
         lastReadChapterId: number | null;
         nominationCount?: number;
+        isNominatedToday?: boolean;
     };
     currentUser: any;
 };
@@ -109,7 +110,7 @@ export default function StoryInteractions({
     const { history } = useReadingHistory();
     const lastRead = history.find(h => h.slug === storySlug);
     const [status, setStatus] = useState(initialStatus);
-    const [nominateLocked, setNominateLocked] = useState(false);
+    const [nominateLocked, setNominateLocked] = useState(initialStatus.isNominatedToday ?? false);
     const { toasts, addToast, dismissToast } = useToast();
     const router = useRouter();
 
@@ -132,9 +133,18 @@ export default function StoryInteractions({
         setStats(prev => ({ ...prev, likeCount: prev.likeCount + (newLiked ? 1 : -1) }));
         const res = await toggleLike(storyId);
         if (res.error) {
+            // Revert optimistic update on error
             setStatus(prev => ({ ...prev, isLiked: !newLiked }));
             setStats(prev => ({ ...prev, likeCount: prev.likeCount + (newLiked ? -1 : 1) }));
             addToast(res.error, 'info');
+        } else if (res.liked !== undefined) {
+            // Sync with actual server state to prevent drift
+            const actualLiked = res.liked as boolean;
+            setStatus(prev => ({ ...prev, isLiked: actualLiked }));
+            setStats(prev => ({
+                ...prev,
+                likeCount: prev.likeCount + (actualLiked === newLiked ? 0 : actualLiked ? 1 : -1),
+            }));
         }
     };
 
@@ -145,9 +155,18 @@ export default function StoryInteractions({
         setStats(prev => ({ ...prev, followCount: prev.followCount + (newFollowed ? 1 : -1) }));
         const res = await toggleFollow(storyId);
         if (res.error) {
+            // Revert optimistic update on error
             setStatus(prev => ({ ...prev, isFollowed: !newFollowed }));
             setStats(prev => ({ ...prev, followCount: prev.followCount + (newFollowed ? -1 : 1) }));
             addToast(res.error, 'info');
+        } else if (res.followed !== undefined) {
+            // Sync with actual server state to prevent drift
+            const actualFollowed = res.followed as boolean;
+            setStatus(prev => ({ ...prev, isFollowed: actualFollowed }));
+            setStats(prev => ({
+                ...prev,
+                followCount: prev.followCount + (actualFollowed === newFollowed ? 0 : actualFollowed ? 1 : -1),
+            }));
         }
     };
 
@@ -267,6 +286,11 @@ export default function StoryInteractions({
                     <span className={`text-[10px] font-medium ${nominateLocked ? 'text-amber-400' : 'text-[#6B5744]'}`}>
                         {nominateLocked ? 'Da de cu' : 'De cu'}
                     </span>
+                </button>
+            </div>
+        </div>
+    );
+}
                 </button>
             </div>
         </div>

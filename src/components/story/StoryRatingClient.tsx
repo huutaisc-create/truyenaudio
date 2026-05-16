@@ -128,7 +128,7 @@ export default function StoryRatingClient({
                                     </span>
                                 </div>
                                 {r.content && (
-                                    <p className="text-sm text-warm-ink-soft leading-relaxed">
+                                    <p className="text-sm text-white/80 leading-relaxed">
                                         {r.content}
                                     </p>
                                 )}

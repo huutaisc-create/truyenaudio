@@ -280,7 +280,7 @@ export default function ReviewModal({
                             onChange={e => { setContent(e.target.value); setValidationError(null); }}
                             placeholder="Chia sẻ cảm nghĩ của bạn..."
                             disabled={locked}
-                            className={`w-full h-32 p-4 rounded-xl border bg-gray-50 dark:bg-zinc-900 focus:ring-2 focus:outline-none resize-none disabled:opacity-60 transition-colors ${
+                            className={`w-full h-32 p-4 rounded-xl border bg-gray-50 dark:bg-zinc-900 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-zinc-500 focus:ring-2 focus:outline-none resize-none disabled:opacity-60 transition-colors ${
                                 validationError
                                     ? 'border-red-400 focus:ring-red-400'
                                     : charCount > 0 && charCount < MIN_LENGTH
