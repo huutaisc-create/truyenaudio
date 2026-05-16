@@ -265,7 +265,7 @@ const StoryDetail = async ({
             {/* ══════════════════════════════════════════
                 MAIN GRID
             ══════════════════════════════════════════ */}
-            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 -mt-2">
 
                     {/* ── MAIN COLUMN ── */}
@@ -286,10 +286,10 @@ const StoryDetail = async ({
 
                         {/* ── INTERACTIONS + NGHE ── */}
                         <div style={{
-                            background: 'linear-gradient(135deg, #261b10 0%, #1c1208 100%)',
+                            background: 'linear-gradient(135deg,#261b10 0%,#1c1208 100%)',
                             borderRadius: '1.25rem',
                             border: '1px solid rgba(232,88,10,0.2)',
-                            boxShadow: '0 8px 32px rgba(0,0,0,0.35), 0 0 0 1px rgba(232,88,10,0.06), inset 0 1px 0 rgba(255,255,255,0.04)',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.04)',
                             padding: '1.25rem',
                         }}>
                             <StoryRatingClient
@@ -323,43 +323,17 @@ const StoryDetail = async ({
                         </div>
 
                         {/* ── GIỚI THIỆU ── */}
-                        <div style={{
-                            background: 'linear-gradient(135deg, #231a0e 0%, #181008 100%)',
-                            borderRadius: '1.25rem',
-                            border: '1px solid rgba(232,88,10,0.14)',
-                            boxShadow: '0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04)',
-                            overflow: 'hidden',
-                            position: 'relative',
-                        }}>
-                            {/* Accent bar trái */}
-                            <div style={{
-                                position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px',
-                                background: 'linear-gradient(180deg, #E8580A, #F5A623 50%, transparent)',
-                            }} />
-                            {/* Ambient glow góc */}
-                            <div style={{
-                                position: 'absolute', top: 0, left: 0, width: '200px', height: '120px',
-                                background: 'radial-gradient(ellipse at top left, rgba(232,88,10,0.08) 0%, transparent 70%)',
-                                pointerEvents: 'none',
-                            }} />
+                        <div style={{ background: 'linear-gradient(135deg,#231a0e 0%,#181008 100%)', borderRadius: '1.25rem', border: '1px solid rgba(232,88,10,0.14)', boxShadow: '0 8px 32px rgba(0,0,0,0.35)', overflow: 'hidden', position: 'relative' }}>
+                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: 'linear-gradient(180deg,#E8580A,#F5A623 50%,transparent)' }} />
+                            <div style={{ position: 'absolute', top: 0, left: 0, width: '200px', height: '120px', background: 'radial-gradient(ellipse at top left,rgba(232,88,10,0.08) 0%,transparent 70%)', pointerEvents: 'none' }} />
                             <div style={{ padding: '1.5rem 1.5rem 1.5rem 1.75rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
-                                    <div style={{
-                                        width: '28px', height: '28px', borderRadius: '8px',
-                                        background: 'rgba(232,88,10,0.15)', border: '1px solid rgba(232,88,10,0.25)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                                    }}>
+                                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(232,88,10,0.15)', border: '1px solid rgba(232,88,10,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                         <BookOpen style={{ width: '14px', height: '14px', color: '#E8580A' }} />
                                     </div>
-                                    <h2 style={{
-                                        fontSize: '11px', fontWeight: 900, letterSpacing: '0.12em',
-                                        textTransform: 'uppercase', color: '#c97a3a', margin: 0,
-                                    }}>Giới thiệu</h2>
+                                    <h2 style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#c97a3a', margin: 0 }}>Gioi thieu</h2>
                                 </div>
-                                <p style={{
-                                    fontSize: '15px', color: '#e8ddd0', lineHeight: '1.9',
-                                    whiteSpace: 'pre-line', position: 'relative', zIndex: 1, margin: 0,
-                                }}>
+                                <p style={{ fontSize: '15px', color: '#e8ddd0', lineHeight: '1.9', whiteSpace: 'pre-line', position: 'relative', zIndex: 1, margin: 0 }}>
                                     {story.description}
                                 </p>
                             </div>
@@ -367,71 +341,33 @@ const StoryDetail = async ({
 
                         {/* ── AI REVIEW (SEO) ── chỉ render khi có nội dung */}
                         {story.aiReview && (
-                            <div style={{
-                                background: 'linear-gradient(160deg, #1e1a0c 0%, #17120a 60%, #110e08 100%)',
-                                borderRadius: '1.25rem',
-                                border: '1px solid rgba(245,166,35,0.18)',
-                                boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 0 40px rgba(245,166,35,0.04)',
-                                overflow: 'hidden',
-                                position: 'relative',
-                            }}>
-                                {/* Top accent bar */}
-                                <div style={{
-                                    height: '2px',
-                                    background: 'linear-gradient(90deg, transparent, #E8580A 20%, #F5A623 50%, #E8580A 80%, transparent)',
-                                }} />
-                                <div style={{
-                                    position: 'absolute', top: 0, right: 0, width: '300px', height: '200px',
-                                    background: 'radial-gradient(ellipse at top right, rgba(245,166,35,0.06) 0%, transparent 70%)',
-                                    pointerEvents: 'none',
-                                }} />
+                            <div style={{ background: 'linear-gradient(160deg,#1e1a0c 0%,#17120a 60%,#110e08 100%)', borderRadius: '1.25rem', border: '1px solid rgba(245,166,35,0.18)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', overflow: 'hidden', position: 'relative' }}>
+                                <div style={{ height: '2px', background: 'linear-gradient(90deg,transparent,#E8580A 20%,#F5A623 50%,#E8580A 80%,transparent)' }} />
+                                <div style={{ position: 'absolute', top: 0, right: 0, width: '300px', height: '200px', background: 'radial-gradient(ellipse at top right,rgba(245,166,35,0.06) 0%,transparent 70%)', pointerEvents: 'none' }} />
                                 <div style={{ padding: '1.5rem', position: 'relative', zIndex: 1 }}>
                                     <div style={{ marginBottom: '1.25rem' }}>
-                                        <div style={{
-                                            display: 'inline-flex', alignItems: 'center', gap: '7px',
-                                            padding: '5px 14px', borderRadius: '99px',
-                                            background: 'linear-gradient(90deg, rgba(232,88,10,0.2), rgba(245,166,35,0.15))',
-                                            border: '1px solid rgba(245,166,35,0.28)',
-                                            fontSize: '11px', fontWeight: 900, letterSpacing: '0.1em',
-                                            textTransform: 'uppercase' as const, color: '#F5A623',
-                                        }}>
-                                            ⭐ Đánh giá chi tiết
-                                        </div>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 14px', borderRadius: '99px', background: 'linear-gradient(90deg,rgba(232,88,10,0.2),rgba(245,166,35,0.15))', border: '1px solid rgba(245,166,35,0.28)', fontSize: '11px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: '#F5A623' }}>
+                                            Danh gia chi tiet
+                                        </span>
                                     </div>
                                     <article
                                         className="ai-review-body"
                                         dangerouslySetInnerHTML={{ __html: markdownToHtml(story.aiReview) }}
-                                        style={{ color: 'var(--text, #e5ddd0)', fontSize: '15px', lineHeight: '1.85' }}
+                                        style={{ color: 'var(--text,#e5ddd0)', fontSize: '15px', lineHeight: '1.85' }}
                                     />
                                 </div>
                             </div>
                         )}
 
                         {/* ── BÌNH LUẬN ── */}
-                        <div style={{
-                            background: 'linear-gradient(135deg, #1e1510 0%, #161008 100%)',
-                            borderRadius: '1.25rem',
-                            border: '1px solid rgba(255,255,255,0.07)',
-                            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-                            overflow: 'hidden',
-                            position: 'relative',
-                        }}>
-                            <div style={{
-                                position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px',
-                                background: 'linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.03))',
-                            }} />
+                        <div style={{ background: 'linear-gradient(135deg,#1e1510 0%,#161008 100%)', borderRadius: '1.25rem', border: '1px solid rgba(255,255,255,0.07)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', overflow: 'hidden', position: 'relative' }}>
+                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: 'linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))' }} />
                             <div style={{ padding: '1.5rem 1.5rem 1.5rem 1.75rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem' }}>
-                                    <div style={{
-                                        width: '28px', height: '28px', borderRadius: '8px',
-                                        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                                        fontSize: '14px',
-                                    }}>💬</div>
-                                    <h2 style={{
-                                        fontSize: '11px', fontWeight: 900, letterSpacing: '0.12em',
-                                        textTransform: 'uppercase', color: '#6B5744', margin: 0,
-                                    }}>Bình luận</h2>
+                                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        <Eye style={{ width: '14px', height: '14px', color: '#6B5744' }} />
+                                    </div>
+                                    <h2 style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#6B5744', margin: 0 }}>Binh luan</h2>
                                 </div>
                                 <CommentSectionWrapper storySlug={slug} />
                             </div>
@@ -442,126 +378,77 @@ const StoryDetail = async ({
                     <aside className="lg:col-span-3 space-y-4" aria-label="Sidebar">
 
                         {/* TOP ĐỀ CỬ */}
-                        <div style={{
-                            background: 'linear-gradient(160deg, #1f1a0a 0%, #161008 100%)',
-                            borderRadius: '1.25rem',
-                            border: '1px solid rgba(245,166,35,0.2)',
-                            boxShadow: '0 8px 32px rgba(0,0,0,0.35), 0 0 30px rgba(245,166,35,0.04)',
-                            overflow: 'hidden',
-                        }}>
-                            <div style={{ height: '2px', background: 'linear-gradient(90deg, #F5A623, rgba(245,166,35,0.15) 80%, transparent)' }} />
+                        <div style={{ background: 'linear-gradient(160deg,#1f1a0a 0%,#161008 100%)', borderRadius: '1.25rem', border: '1px solid rgba(245,166,35,0.2)', boxShadow: '0 8px 32px rgba(0,0,0,0.35)', overflow: 'hidden' }}>
+                            <div style={{ height: '2px', background: 'linear-gradient(90deg,#F5A623,rgba(245,166,35,0.15) 80%,transparent)' }} />
                             <div style={{ padding: '1rem 1.1rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.875rem' }}>
-                                    <span style={{ fontSize: '15px' }}>🏆</span>
-                                    <h2 style={{
-                                        fontSize: '11px', fontWeight: 900, letterSpacing: '0.13em',
-                                        textTransform: 'uppercase', color: '#c8963a', margin: 0,
-                                    }}>Top đề cử</h2>
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    {topNominations.map((s: any, i: number) => (
-                                        <a key={s.id} href={`/truyen/${s.slug}`} style={{
-                                            display: 'flex', gap: '10px', alignItems: 'center',
-                                            padding: '8px', borderRadius: '10px', textDecoration: 'none',
-                                            transition: 'background 0.2s',
-                                        }}
-                                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(245,166,35,0.07)')}
-                                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                                            <div style={{
-                                                width: '24px', height: '24px', borderRadius: '7px', flexShrink: 0,
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontWeight: 900, fontSize: '11px',
-                                                ...(i === 0
-                                                    ? { background: 'linear-gradient(135deg, #FFD700, #F5A623)', color: '#3d1f00', boxShadow: '0 2px 8px rgba(245,166,35,0.4)' }
-                                                    : i === 1
-                                                    ? { background: 'linear-gradient(135deg, #C0C8D4, #8fa0b0)', color: '#1a2530' }
-                                                    : i === 2
-                                                    ? { background: 'linear-gradient(135deg, #CD7F32, #A0522D)', color: '#2a1000' }
-                                                    : { background: 'rgba(255,255,255,0.06)', color: '#6b5744' }),
-                                            }}>
-                                                {i + 1}
-                                            </div>
-                                            {s.coverImage && (
-                                                <div style={{
-                                                    width: '36px', height: '48px', borderRadius: '7px',
-                                                    overflow: 'hidden', flexShrink: 0, position: 'relative',
-                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                                                }}>
-                                                    <Image src={s.coverImage} alt={s.title} fill sizes="36px" className="object-cover" unoptimized={s.coverImage?.startsWith('/covers/')} />
+                                <h2 style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.13em', textTransform: 'uppercase' as const, color: '#c8963a', margin: '0 0 0.875rem 0' }}>
+                                    Top de cu
+                                </h2>
+                                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '2px' }}>
+                                    {topNominations.map((s: any, i: number) => {
+                                        const badgeStyle = i === 0
+                                            ? { background: 'linear-gradient(135deg,#FFD700,#F5A623)', color: '#3d1f00' }
+                                            : i === 1
+                                            ? { background: 'linear-gradient(135deg,#C0C8D4,#8fa0b0)', color: '#1a2530' }
+                                            : i === 2
+                                            ? { background: 'linear-gradient(135deg,#CD7F32,#A0522D)', color: '#2a1000' }
+                                            : { background: 'rgba(255,255,255,0.06)', color: '#6b5744' };
+                                        return (
+                                            <a key={s.id} href={`/truyen/${s.slug}`} className="group" style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '8px', borderRadius: '10px', textDecoration: 'none' }}>
+                                                <div style={{ width: '24px', height: '24px', borderRadius: '7px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '11px', ...badgeStyle }}>
+                                                    {i + 1}
                                                 </div>
-                                            )}
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <p style={{
-                                                    fontSize: '12px', fontWeight: 700, color: '#d4c4b0',
-                                                    lineHeight: 1.35, margin: '0 0 3px',
-                                                    overflow: 'hidden', display: '-webkit-box',
-                                                    WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
-                                                }}>{s.title}</p>
-                                                <p style={{ fontSize: '11px', color: '#c8963a', margin: 0 }}>
-                                                    🏅 {s.nominationCount || 0} đề cử
-                                                </p>
-                                            </div>
-                                        </a>
-                                    ))}
+                                                {s.coverImage && (
+                                                    <div style={{ width: '36px', height: '48px', borderRadius: '7px', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+                                                        <Image src={s.coverImage} alt={s.title} fill sizes="36px" className="object-cover" unoptimized={s.coverImage?.startsWith('/covers/')} />
+                                                    </div>
+                                                )}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-[12px] font-bold line-clamp-2 leading-snug group-hover:text-accent transition-colors" style={{ color: '#d4c4b0' }}>
+                                                        {s.title}
+                                                    </p>
+                                                    <p style={{ fontSize: '11px', color: '#c8963a', margin: '3px 0 0' }}>
+                                                        {s.nominationCount || 0} de cu
+                                                    </p>
+                                                </div>
+                                            </a>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
 
                         {/* CÙNG THỂ LOẠI */}
                         {relatedStoriesReal.length > 0 && (
-                            <div style={{
-                                background: 'linear-gradient(160deg, #1c1610 0%, #161008 100%)',
-                                borderRadius: '1.25rem',
-                                border: '1px solid rgba(232,88,10,0.14)',
-                                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-                                overflow: 'hidden',
-                            }}>
-                                <div style={{ height: '2px', background: 'linear-gradient(90deg, #E8580A, rgba(232,88,10,0.12) 80%, transparent)' }} />
+                            <div style={{ background: 'linear-gradient(160deg,#1c1610 0%,#161008 100%)', borderRadius: '1.25rem', border: '1px solid rgba(232,88,10,0.14)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+                                <div style={{ height: '2px', background: 'linear-gradient(90deg,#E8580A,rgba(232,88,10,0.12) 80%,transparent)' }} />
                                 <div style={{ padding: '1rem 1.1rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.875rem' }}>
-                                        <span style={{ fontSize: '15px' }}>📚</span>
-                                        <h2 style={{
-                                            fontSize: '11px', fontWeight: 900, letterSpacing: '0.13em',
-                                            textTransform: 'uppercase', color: '#a06030', margin: 0,
-                                        }}>Cùng thể loại</h2>
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <h2 style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.13em', textTransform: 'uppercase' as const, color: '#a06030', margin: '0 0 0.875rem 0' }}>
+                                        Cung the loai
+                                    </h2>
+                                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '2px' }}>
                                         {relatedStoriesReal.map((s: any) => (
-                                            <a key={s.id} href={`/truyen/${s.slug}`} style={{
-                                                display: 'flex', gap: '10px', alignItems: 'center',
-                                                padding: '8px', borderRadius: '10px', textDecoration: 'none', transition: 'background 0.2s',
-                                            }}
-                                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(232,88,10,0.07)')}
-                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                                                <div style={{
-                                                    width: '40px', height: '54px', borderRadius: '8px',
-                                                    overflow: 'hidden', flexShrink: 0, position: 'relative',
-                                                    boxShadow: '0 3px 10px rgba(0,0,0,0.5)', background: '#1a1208',
-                                                }}>
+                                            <a key={s.id} href={`/truyen/${s.slug}`} className="group" style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '8px', borderRadius: '10px', textDecoration: 'none' }}>
+                                                <div style={{ width: '40px', height: '54px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, position: 'relative', background: '#1a1208' }}>
                                                     {s.coverImage ? (
                                                         <Image src={s.coverImage} alt={s.title} fill sizes="40px" className="object-cover" unoptimized={s.coverImage.startsWith('/covers/')} />
                                                     ) : (
-                                                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            <BookOpen style={{ width: '16px', height: '16px', color: '#4a3526' }} />
+                                                        <div className="w-full h-full flex items-center justify-center">
+                                                            <BookOpen className="h-4 w-4" style={{ color: '#4a3526' }} />
                                                         </div>
                                                     )}
                                                 </div>
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <p style={{
-                                                        fontSize: '13px', fontWeight: 700, color: '#d0c0aa',
-                                                        lineHeight: 1.35, margin: '0 0 5px',
-                                                        overflow: 'hidden', display: '-webkit-box',
-                                                        WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
-                                                    }}>{s.title}</p>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-[13px] font-bold line-clamp-2 leading-snug group-hover:text-accent transition-colors" style={{ color: '#d0c0aa', marginBottom: '5px' }}>
+                                                        {s.title}
+                                                    </p>
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
                                                         {s.genres.slice(0, 1).map((g: any) => (
-                                                            <span key={g.name} style={{
-                                                                fontSize: '10px', padding: '2px 7px', borderRadius: '5px',
-                                                                fontWeight: 700, background: 'rgba(232,88,10,0.12)',
-                                                                color: '#e8580a', border: '1px solid rgba(232,88,10,0.2)',
-                                                            }}>{g.name}</span>
+                                                            <span key={g.name} style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '5px', fontWeight: 700, background: 'rgba(232,88,10,0.12)', color: '#e8580a', border: '1px solid rgba(232,88,10,0.2)' }}>
+                                                                {g.name}
+                                                            </span>
                                                         ))}
-                                                        <span style={{ fontSize: '11px', color: '#6b5744' }}>{s._count.chapters} chương</span>
+                                                        <span style={{ fontSize: '11px', color: '#6b5744' }}>{s._count.chapters} chuong</span>
                                                     </div>
                                                 </div>
                                             </a>
@@ -571,7 +458,7 @@ const StoryDetail = async ({
                             </div>
                         )}
 
-                    </aside>
+                                  </aside>
                 </div>
             </div>
         </div>
