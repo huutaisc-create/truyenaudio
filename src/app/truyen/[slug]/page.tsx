@@ -299,6 +299,7 @@ const StoryDetail = async ({
                                 initialRating={story.rating}
                                 initialRatingCount={story.ratingCount}
                                 initialReviews={story.reviews}
+                                showReviewList={false}
                             />
                             <div className="mt-4">
                                 <StoryInteractions
@@ -320,6 +321,29 @@ const StoryDetail = async ({
                                     currentUser={currentUser}
                                 />
                             </div>
+                            {story.reviews.length > 0 && (
+                                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px' }}>
+                                        {story.reviews.map((r, i) => (
+                                            <div key={r.id ?? `review-${i}`} style={{ display: 'flex', gap: '10px', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' as const }}>
+                                                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#d4c4b0' }}>{r.user.name}</span>
+                                                        <span style={{ display: 'flex', gap: '2px' }}>
+                                                            {[1,2,3,4,5].map(s => (
+                                                                <span key={s} style={{ color: s <= r.rating ? '#F5A623' : '#3a3020', fontSize: '12px' }}>&#9733;</span>
+                                                            ))}
+                                                        </span>
+                                                    </div>
+                                                    {r.content && (
+                                                        <p style={{ fontSize: '13px', color: '#8B7355', lineHeight: '1.6', margin: 0 }}>{r.content}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* ── GIỚI THIỆU ── */}
@@ -327,11 +351,11 @@ const StoryDetail = async ({
                             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: 'linear-gradient(180deg,#E8580A,#F5A623 50%,transparent)' }} />
                             <div style={{ position: 'absolute', top: 0, left: 0, width: '200px', height: '120px', background: 'radial-gradient(ellipse at top left,rgba(232,88,10,0.08) 0%,transparent 70%)', pointerEvents: 'none' }} />
                             <div style={{ padding: '1.5rem 1.5rem 1.5rem 1.75rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
-                                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(232,88,10,0.15)', border: '1px solid rgba(232,88,10,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                        <BookOpen style={{ width: '14px', height: '14px', color: '#E8580A' }} />
-                                    </div>
-                                    <h2 style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#c97a3a', margin: 0 }}>Gioi thieu</h2>
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 14px', borderRadius: '99px', background: 'linear-gradient(90deg,rgba(232,88,10,0.18),rgba(245,166,35,0.12))', border: '1px solid rgba(232,88,10,0.3)', fontSize: '11px', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#E8580A' }}>
+                                        <BookOpen style={{ width: '12px', height: '12px' }} />
+                                        Gioi thieu
+                                    </span>
                                 </div>
                                 <p style={{ fontSize: '15px', color: '#e8ddd0', lineHeight: '1.9', whiteSpace: 'pre-line', position: 'relative', zIndex: 1, margin: 0 }}>
                                     {story.description}
@@ -363,11 +387,11 @@ const StoryDetail = async ({
                         <div style={{ background: 'linear-gradient(135deg,#1e1510 0%,#161008 100%)', borderRadius: '1.25rem', border: '1px solid rgba(255,255,255,0.07)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', overflow: 'hidden', position: 'relative' }}>
                             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: 'linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))' }} />
                             <div style={{ padding: '1.5rem 1.5rem 1.5rem 1.75rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem' }}>
-                                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                        <Eye style={{ width: '14px', height: '14px', color: '#6B5744' }} />
-                                    </div>
-                                    <h2 style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#6B5744', margin: 0 }}>Binh luan</h2>
+                                <div style={{ marginBottom: '1.25rem' }}>
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 14px', borderRadius: '99px', background: 'linear-gradient(90deg,rgba(232,88,10,0.18),rgba(245,166,35,0.12))', border: '1px solid rgba(232,88,10,0.3)', fontSize: '11px', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#E8580A' }}>
+                                        <Eye style={{ width: '12px', height: '12px' }} />
+                                        Binh luan
+                                    </span>
                                 </div>
                                 <CommentSectionWrapper storySlug={slug} />
                             </div>
@@ -381,9 +405,11 @@ const StoryDetail = async ({
                         <div style={{ background: 'linear-gradient(160deg,#1f1a0a 0%,#161008 100%)', borderRadius: '1.25rem', border: '1px solid rgba(245,166,35,0.2)', boxShadow: '0 8px 32px rgba(0,0,0,0.35)', overflow: 'hidden' }}>
                             <div style={{ height: '2px', background: 'linear-gradient(90deg,#F5A623,rgba(245,166,35,0.15) 80%,transparent)' }} />
                             <div style={{ padding: '1rem 1.1rem' }}>
-                                <h2 style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.13em', textTransform: 'uppercase' as const, color: '#c8963a', margin: '0 0 0.875rem 0' }}>
-                                    Top de cu
-                                </h2>
+                                <div style={{ marginBottom: '0.875rem' }}>
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 14px', borderRadius: '99px', background: 'linear-gradient(90deg,rgba(232,88,10,0.2),rgba(245,166,35,0.15))', border: '1px solid rgba(245,166,35,0.28)', fontSize: '11px', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#F5A623' }}>
+                                        Top de cu
+                                    </span>
+                                </div>
                                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '2px' }}>
                                     {topNominations.map((s: any, i: number) => {
                                         const badgeStyle = i === 0
@@ -423,9 +449,11 @@ const StoryDetail = async ({
                             <div style={{ background: 'linear-gradient(160deg,#1c1610 0%,#161008 100%)', borderRadius: '1.25rem', border: '1px solid rgba(232,88,10,0.14)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
                                 <div style={{ height: '2px', background: 'linear-gradient(90deg,#E8580A,rgba(232,88,10,0.12) 80%,transparent)' }} />
                                 <div style={{ padding: '1rem 1.1rem' }}>
-                                    <h2 style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.13em', textTransform: 'uppercase' as const, color: '#a06030', margin: '0 0 0.875rem 0' }}>
-                                        Cung the loai
-                                    </h2>
+                                    <div style={{ marginBottom: '0.875rem' }}>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 14px', borderRadius: '99px', background: 'linear-gradient(90deg,rgba(232,88,10,0.18),rgba(245,166,35,0.12))', border: '1px solid rgba(232,88,10,0.3)', fontSize: '11px', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#E8580A' }}>
+                                            Cung the loai
+                                        </span>
+                                    </div>
                                     <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '2px' }}>
                                         {relatedStoriesReal.map((s: any) => (
                                             <a key={s.id} href={`/truyen/${s.slug}`} className="group" style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '8px', borderRadius: '10px', textDecoration: 'none' }}>

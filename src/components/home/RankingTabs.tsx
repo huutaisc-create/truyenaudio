@@ -8,6 +8,7 @@ type Story = {
   id: string; title: string; slug: string;
   nominationCount: number; viewCount: number; likeCount: number; followCount: number;
   genres: { name: string }[];
+  chapters?: { index: number }[];
   coverImage?: string | null;
   status?: string;
 };
@@ -167,17 +168,28 @@ export default function RankingTabs({ topNominations, topViews, topLikes, topFol
                 Nghe
               </Link>
 
-              <div className="absolute inset-x-0 bottom-0 p-2 pt-10 flex flex-col justify-end z-0"
-                style={{ background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 55%, transparent 100%)" }}
-              >
-                <h3 className="text-xs font-bold text-white line-clamp-2 leading-tight group-hover:text-orange-300 transition-colors">
-                  {story.title}
-                </h3>
-                <div className="flex items-center justify-between mt-1">
-                  <span className="text-[10px] text-white/60">{story.genres[0]?.name}</span>
-                  <span className="text-[10px] font-bold" style={{ color: "var(--accent2)" }} aria-hidden="true">
-                    {statOf(story)}
-                  </span>
+              <div className="absolute inset-x-0 bottom-0 z-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.55) 65%, transparent 100%)' }}>
+                <div className="p-2 pt-10">
+                  <h3 className="text-xs font-bold text-white line-clamp-2 leading-tight group-hover:text-orange-300 transition-colors">
+                    {story.title}
+                  </h3>
+                </div>
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', background: 'rgba(10,6,0,0.6)', padding: '5px 8px 7px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  {story.genres[0]?.name && (
+                    <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', fontSize: '10px', color: 'rgba(255,255,255,0.88)', fontWeight: 600 }}>
+                      {story.genres[0].name}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {story.chapters && story.chapters[0] && (
+                      <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.88)', fontWeight: 600 }}>
+                        {story.chapters[0].index} ch
+                      </span>
+                    )}
+                    <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.88)', fontWeight: 600 }} aria-hidden="true">
+                      {statOf(story)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

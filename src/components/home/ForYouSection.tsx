@@ -12,6 +12,9 @@ interface Story {
     slug: string
     coverImage: string | null
     status: string
+    genres?: string[]
+    chapterCount?: number
+    viewCount?: number
 }
 
 interface Props {
@@ -211,13 +214,35 @@ function ForYouCard({ story, priority }: { story: Story; priority?: boolean }) {
                             <BookOpen className="h-10 w-10 opacity-20" style={{ color: 'var(--text-muted)' }} />
                         </div>
                     )}
-                    <div
-                        className="absolute inset-x-0 bottom-0 p-2 pt-10 flex flex-col justify-end"
-                        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 55%, transparent 100%)' }}
-                    >
-                        <h3 className="line-clamp-2 text-sm font-bold text-white leading-tight group-hover:text-orange-300 transition-colors">
-                            {story.title}
-                        </h3>
+                    <div className="absolute inset-x-0 bottom-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.55) 65%, transparent 100%)' }}>
+                        <div className="p-2 pt-10">
+                            <h3 className="line-clamp-2 text-sm font-bold text-white leading-tight group-hover:text-orange-300 transition-colors">
+                                {story.title}
+                            </h3>
+                        </div>
+                        {(story.genres && story.genres.length > 0 || story.chapterCount !== undefined || story.viewCount !== undefined) && (
+                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', background: 'rgba(10,6,0,0.6)', padding: '5px 8px 7px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                {story.genres && story.genres.length > 0 && (
+                                    <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', fontSize: '10px', color: 'rgba(255,255,255,0.88)', fontWeight: 600 }}>
+                                        {story.genres.join(' · ')}
+                                    </div>
+                                )}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    {story.chapterCount !== undefined && (
+                                        <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.88)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                            <BookOpen style={{ width: '9px', height: '9px', opacity: 0.55 }} aria-hidden="true" />
+                                            {story.chapterCount} ch
+                                        </span>
+                                    )}
+                                    {story.viewCount !== undefined && (
+                                        <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.88)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                            <Headphones style={{ width: '9px', height: '9px', opacity: 0.55 }} aria-hidden="true" />
+                                            {story.viewCount >= 1000 ? `${Math.round(story.viewCount / 1000)}K` : story.viewCount} nghe
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </Link>
                 {story.status === 'COMPLETED' && (

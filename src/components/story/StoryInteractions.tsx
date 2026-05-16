@@ -201,41 +201,82 @@ export default function StoryInteractions({
             {/* Toast portal — fixed bottom-right */}
             <ToastPortal toasts={toasts} onDismiss={dismissToast} />
 
-            {/* 3 stat cards */}
-            <div className="grid grid-cols-3 gap-2">
+            {/* Row: Nghe Truyện + Nghe gần đây + Chương 1 */}
+            <div className="flex gap-2 items-stretch flex-wrap">
+                {/* Nút Nghe Truyện — chiếm ~50% */}
+                <a
+                    href={`/truyen/${storySlug}/nghe?chuong=1`}
+                    className="flex items-center justify-center gap-2 py-3 px-6 rounded-2xl font-bold text-white text-sm tracking-wide transition-all active:scale-[0.98] flex-1"
+                    style={{ background: 'linear-gradient(135deg,#e8580a 0%,#c94400 100%)', minWidth: '160px', boxShadow: '0 4px 16px rgba(232,88,10,0.3)' }}
+                >
+                    ▶ Nghe Truyện
+                </a>
+
+                {/* Nghe gần đây — pill nổi */}
+                {mounted && lastRead?.chapterIndex ? (
+                    <a
+                        href={`/truyen/${storySlug}/nghe?chuong=${lastRead.chapterIndex}`}
+                        className="flex items-center gap-2 px-4 py-3 rounded-2xl font-bold text-sm transition-all active:scale-[0.98] shrink-0"
+                        style={{ background: 'rgba(232,88,10,0.1)', border: '1px solid rgba(232,88,10,0.3)', color: '#E8580A' }}
+                    >
+                        <Clock className="h-4 w-4" />
+                        <span>Ch.{lastRead.chapterIndex}</span>
+                    </a>
+                ) : (
+                    <a
+                        href={`/truyen/${storySlug}/nghe?chuong=1`}
+                        className="flex items-center gap-2 px-4 py-3 rounded-2xl font-bold text-sm transition-all active:scale-[0.98] shrink-0"
+                        style={{ background: 'rgba(232,88,10,0.08)', border: '1px solid rgba(232,88,10,0.2)', color: '#c97a3a' }}
+                    >
+                        <span>Ch.1</span>
+                        <span style={{ fontSize: '12px' }}>→</span>
+                    </a>
+                )}
+
+                {/* Chương cuối — pill nổi */}
+                <a
+                    href={`/truyen/${storySlug}/nghe?chuong=${latestChapterId}`}
+                    className="flex items-center gap-2 px-4 py-3 rounded-2xl font-bold text-sm transition-all active:scale-[0.98] shrink-0"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#8B7355' }}
+                >
+                    <span>Mới nhất</span>
+                    <span style={{ fontSize: '12px' }}>→</span>
+                </a>
+            </div>
+
+            {/* Stats row — gộp 1 dải có border */}
+            <div className="grid grid-cols-3 rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
                 {/* Yêu thích */}
                 <button
                     onClick={handleLike}
-                    className={`flex flex-col items-center gap-1.5 py-4 px-2 rounded-2xl transition-all active:scale-95 cursor-pointer ${
-                        status.isLiked
-                            ? 'bg-red-500/10 ring-1 ring-red-500/30'
-                            : 'bg-warm-card hover:bg-red-500/10'
+                    className={`flex flex-col items-center gap-1.5 py-3 px-2 transition-all active:scale-95 cursor-pointer ${
+                        status.isLiked ? 'bg-red-500/10' : 'hover:bg-red-500/10'
                     }`}
+                    style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}
                 >
                     <Heart className={`h-5 w-5 transition-all ${status.isLiked ? 'fill-current text-red-500 scale-110' : 'text-red-400'}`} />
-                    <span className={`text-lg font-bold leading-none ${status.isLiked ? 'text-red-500' : 'text-warm-ink'}`}>
+                    <span className={`text-base font-bold leading-none ${status.isLiked ? 'text-red-500' : 'text-white'}`}>
                         {stats.likeCount}
                     </span>
-                    <span className={`text-[11px] font-medium ${status.isLiked ? 'text-red-400' : 'text-warm-ink-soft'}`}>
-                        {status.isLiked ? '✓ Yêu thích' : 'Yêu thích'}
+                    <span className={`text-[10px] font-medium ${status.isLiked ? 'text-red-400' : 'text-[#6B5744]'}`}>
+                        {status.isLiked ? 'Da thich' : 'Yeu thich'}
                     </span>
                 </button>
 
                 {/* Theo dõi */}
                 <button
                     onClick={handleFollow}
-                    className={`flex flex-col items-center gap-1.5 py-4 px-2 rounded-2xl transition-all active:scale-95 cursor-pointer ${
-                        status.isFollowed
-                            ? 'bg-blue-500/10 ring-1 ring-blue-500/30'
-                            : 'bg-warm-card hover:bg-blue-500/10'
+                    className={`flex flex-col items-center gap-1.5 py-3 px-2 transition-all active:scale-95 cursor-pointer ${
+                        status.isFollowed ? 'bg-blue-500/10' : 'hover:bg-blue-500/10'
                     }`}
+                    style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}
                 >
                     <Bookmark className={`h-5 w-5 transition-all ${status.isFollowed ? 'fill-current text-blue-500 scale-110' : 'text-blue-400'}`} />
-                    <span className={`text-lg font-bold leading-none ${status.isFollowed ? 'text-blue-500' : 'text-warm-ink'}`}>
+                    <span className={`text-base font-bold leading-none ${status.isFollowed ? 'text-blue-500' : 'text-white'}`}>
                         {stats.followCount}
                     </span>
-                    <span className={`text-[11px] font-medium ${status.isFollowed ? 'text-blue-400' : 'text-warm-ink-soft'}`}>
-                        {status.isFollowed ? '✓ Theo dõi' : 'Theo dõi'}
+                    <span className={`text-[10px] font-medium ${status.isFollowed ? 'text-blue-400' : 'text-[#6B5744]'}`}>
+                        {status.isFollowed ? 'Da theo' : 'Theo doi'}
                     </span>
                 </button>
 
@@ -243,42 +284,41 @@ export default function StoryInteractions({
                 <button
                     onClick={handleNominate}
                     disabled={nominateLocked}
-                    className={`flex flex-col items-center gap-1.5 py-4 px-2 rounded-2xl transition-all active:scale-95 ${
-                        nominateLocked
-                            ? 'bg-amber-500/10 ring-1 ring-amber-500/30 cursor-not-allowed'
-                            : 'bg-warm-card hover:bg-amber-500/10 cursor-pointer'
+                    className={`flex flex-col items-center gap-1.5 py-3 px-2 transition-all active:scale-95 ${
+                        nominateLocked ? 'bg-amber-500/10 cursor-not-allowed' : 'hover:bg-amber-500/10 cursor-pointer'
                     }`}
                 >
                     <Trophy className={`h-5 w-5 ${nominateLocked ? 'text-amber-500 fill-current' : 'text-amber-400'}`} />
-                    <span className="text-lg font-bold leading-none text-warm-ink">{stats.nominationCount}</span>
-                    <span className={`text-[11px] font-medium ${nominateLocked ? 'text-amber-400' : 'text-warm-ink-soft'}`}>
-                        {nominateLocked ? '✓ Đề cử' : 'Đề cử'}
+                    <span className="text-base font-bold leading-none text-white">{stats.nominationCount}</span>
+                    <span className={`text-[10px] font-medium ${nominateLocked ? 'text-amber-400' : 'text-[#6B5744]'}`}>
+                        {nominateLocked ? 'Da de cu' : 'De cu'}
                     </span>
                 </button>
             </div>
+        </div>
+    );
+}
 
-            {/* CTA — Nghe truyện */}
-            <a
-                href={`/truyen/${storySlug}/nghe?chuong=1`}
-                className="block w-full text-center py-3.5 rounded-2xl font-bold text-white text-base tracking-wide transition-all active:scale-[0.98]"
-                style={{ background: 'linear-gradient(135deg, #e8580a 0%, #c94400 100%)' }}
-            >
-                ▶ Nghe Truyện
-            </a>
-
-            {/* Nghe gần đây */}
-            {mounted && lastRead?.chapterIndex && (
-                <a
-                    href={`/truyen/${storySlug}/nghe?chuong=${lastRead.chapterIndex}`}
-                    className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-warm-card hover:bg-warm-primary-pale transition-colors group"
-                >
-                    <span className="w-2 h-2 rounded-full bg-warm-primary shrink-0" aria-hidden="true" />
-                    <span className="text-sm font-medium text-warm-ink-soft flex-1">Nghe gần đây</span>
-                    <span className="text-sm font-bold text-warm-primary group-hover:underline transition-colors">
-                        Chương {lastRead.chapterIndex} →
+                    <span className={`text-[10px] font-medium ${status.isFollowed ? 'text-blue-400' : 'text-[#6B5744]'}`}>
+                        {status.isFollowed ? 'Da theo' : 'Theo doi'}
                     </span>
-                </a>
-            )}
+                </button>
+
+                {/* Đề cử */}
+                <button
+                    onClick={handleNominate}
+                    disabled={nominateLocked}
+                    className={`flex flex-col items-center gap-1.5 py-3 px-2 transition-all active:scale-95 ${
+                        nominateLocked ? 'bg-amber-500/10 cursor-not-allowed' : 'hover:bg-amber-500/10 cursor-pointer'
+                    }`}
+                >
+                    <Trophy className={`h-5 w-5 ${nominateLocked ? 'text-amber-500 fill-current' : 'text-amber-400'}`} />
+                    <span className="text-base font-bold leading-none text-white">{stats.nominationCount}</span>
+                    <span className={`text-[10px] font-medium ${nominateLocked ? 'text-amber-400' : 'text-[#6B5744]'}`}>
+                        {nominateLocked ? 'Da de cu' : 'De cu'}
+                    </span>
+                </button>
+            </div>
         </div>
     );
 }

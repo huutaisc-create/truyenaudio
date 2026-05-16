@@ -29,8 +29,9 @@ type StoryRatingClientProps = {
     initialRating: number;
     initialRatingCount: number;
     initialReviews: ReviewItem[];
-    // class của nút ReviewButton (khớp với style hiện tại trên page.tsx)
     reviewButtonClassName?: string;
+    /** Nếu false, chỉ render dòng stars+rating, không render danh sách review */
+    showReviewList?: boolean;
 };
 
 export default function StoryRatingClient({
@@ -41,6 +42,7 @@ export default function StoryRatingClient({
     initialRatingCount,
     initialReviews,
     reviewButtonClassName,
+    showReviewList = true,
 }: StoryRatingClientProps) {
     const [reviews, setReviews] = useState<ReviewItem[]>(initialReviews);
     const [ratingScore, setRatingScore] = useState(initialRating);
@@ -113,7 +115,7 @@ export default function StoryRatingClient({
             </div>
 
             {/* Danh sách reviews — hiện ngay khi submit */}
-            {reviews.length > 0 && (
+            {showReviewList && reviews.length > 0 && (
                 <div className="mt-3 space-y-2">
                     {reviews.map((r, i) => (
                         <div
@@ -144,6 +146,12 @@ export default function StoryRatingClient({
                                 )}
                             </div>
                         </div>
+                    ))}
+                </div>
+            )}
+        </>
+    );
+}
                     ))}
                 </div>
             )}

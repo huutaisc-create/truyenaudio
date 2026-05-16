@@ -1,4 +1,4 @@
-import { BookOpen, BookMarked, Star, Sparkles } from "lucide-react";
+import { BookOpen, BookMarked, Star, Sparkles, Headphones } from "lucide-react";
 import Image from "next/image";
 import ReadingHistoryWidget from "@/components/common/ReadingHistoryWidget";
 import db from "@/lib/db";
@@ -67,10 +67,11 @@ const SeeAllLink = ({ href, label }: { href: string; label: string }) => (
 
 // ── StoryCard ──
 const StoryCard = ({
-  title, status, slug, coverImage, priority = false,
+  title, status, slug, coverImage, priority = false, genres, chapterCount, viewCount,
 }: {
   title: string; status?: string; slug: string;
   coverImage?: string | null; priority?: boolean;
+  genres?: string[]; chapterCount?: number; viewCount?: number;
 }) => (
   <div className="group cursor-pointer relative">
     <div
@@ -96,13 +97,36 @@ const StoryCard = ({
             <BookOpen className="h-10 w-10 opacity-20" aria-hidden="true" style={{ color: "var(--text-muted)" }} />
           </div>
         )}
-        {/* Gradient overlay */}
-        <div className="absolute inset-x-0 bottom-0 p-2 pt-10 flex flex-col justify-end"
-          style={{ background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 55%, transparent 100%)" }}
-        >
-          <h3 className="line-clamp-2 text-sm font-bold text-white leading-tight group-hover:text-orange-300 transition-colors">
-            {title}
-          </h3>
+        {/* Gradient overlay + info bar */}
+        <div className="absolute inset-x-0 bottom-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.55) 65%, transparent 100%)' }}>
+          <div className="p-2 pt-10">
+            <h3 className="line-clamp-2 text-sm font-bold text-white leading-tight group-hover:text-orange-300 transition-colors">
+              {title}
+            </h3>
+          </div>
+          {(genres && genres.length > 0 || chapterCount !== undefined || viewCount !== undefined) && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', background: 'rgba(10,6,0,0.6)', padding: '5px 8px 7px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              {genres && genres.length > 0 && (
+                <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', fontSize: '10px', color: 'rgba(255,255,255,0.88)', fontWeight: 600 }}>
+                  {genres.join(' · ')}
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {chapterCount !== undefined && (
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.88)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    <BookOpen style={{ width: '9px', height: '9px', opacity: 0.55 }} aria-hidden="true" />
+                    {chapterCount} ch
+                  </span>
+                )}
+                {viewCount !== undefined && (
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.88)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    <Headphones style={{ width: '9px', height: '9px', opacity: 0.55 }} aria-hidden="true" />
+                    {viewCount >= 1000 ? `${Math.round(viewCount / 1000)}K` : viewCount} nghe
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </Link>
 
@@ -227,12 +251,12 @@ export default async function Home() {
     createdStories, completedStories,
     totalStories, totalChapters,
   ] = await Promise.all([
-    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { nominationCount: "desc" }, include: { genres: { take: 1 } } }),
-    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { viewCount: "desc" }, include: { genres: { take: 1 } } }),
-    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { likeCount: "desc" }, include: { genres: { take: 1 } } }),
-    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { followCount: "desc" }, include: { genres: { take: 1 } } }),
-    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { createdAt: "desc" }, include: { genres: { take: 1 } } }),
-    db.story.findMany({ where: { status: "COMPLETED", isHidden: false }, take: 8, orderBy: { updatedAt: "desc" }, include: { genres: { take: 1 } } }),
+    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { nominationCount: "desc" }, include: { genres: { take: 1 }, chapters: { orderBy: { index: "desc" as const }, take: 1, select: { index: true } } } }),
+    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { viewCount: "desc" }, include: { genres: { take: 1 }, chapters: { orderBy: { index: "desc" as const }, take: 1, select: { index: true } } } }),
+    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { likeCount: "desc" }, include: { genres: { take: 1 }, chapters: { orderBy: { index: "desc" as const }, take: 1, select: { index: true } } } }),
+    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { followCount: "desc" }, include: { genres: { take: 1 }, chapters: { orderBy: { index: "desc" as const }, take: 1, select: { index: true } } } }),
+    db.story.findMany({ where: { isHidden: false }, take: 8, orderBy: { createdAt: "desc" }, include: { genres: { take: 1 }, chapters: { orderBy: { index: "desc" as const }, take: 1, select: { index: true } } } }),
+    db.story.findMany({ where: { status: "COMPLETED", isHidden: false }, take: 8, orderBy: { updatedAt: "desc" }, include: { genres: { take: 1 }, chapters: { orderBy: { index: "desc" as const }, take: 1, select: { index: true } } } }),
     db.story.count({ where: { isHidden: false } }),
     db.chapter.count(),
   ]);
@@ -257,14 +281,14 @@ export default async function Home() {
               </div>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                 {hotStories.map((story, i) => (
-                  <StoryCard key={story.id} title={story.title} status={story.status} slug={story.slug} coverImage={story.coverImage} priority={i < 4} />
+                  <StoryCard key={story.id} title={story.title} status={story.status} slug={story.slug} coverImage={story.coverImage} priority={i < 4} genres={(story.genres as any[]).map(g => g.name)} chapterCount={(story.chapters as any[])[0]?.index} viewCount={story.viewCount} />
                 ))}
               </div>
             </section>
 
             {/* DÀNH CHO BẠN */}
             <ForYouSection
-              stories={forYouStories.map(s => ({ id: s.id, title: s.title, slug: s.slug, coverImage: s.coverImage, status: s.status }))}
+              stories={forYouStories.map(s => ({ id: s.id, title: s.title, slug: s.slug, coverImage: s.coverImage, status: s.status, genres: (s.genres as any[]).map((g: any) => g.name), chapterCount: (s.chapters as any[])[0]?.index, viewCount: s.viewCount }))}
               genrePrefs={genrePrefs}
               showPicker={showPicker}
             />
@@ -290,7 +314,7 @@ export default async function Home() {
                 </div>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                   {createdStories.map(story => (
-                    <StoryCard key={story.id} title={story.title} status={story.status} slug={story.slug} coverImage={story.coverImage} />
+                    <StoryCard key={story.id} title={story.title} status={story.status} slug={story.slug} coverImage={story.coverImage} genres={(story.genres as any[]).map((g: any) => g.name)} chapterCount={(story.chapters as any[])[0]?.index} viewCount={story.viewCount} />
                   ))}
                 </div>
               </div>
@@ -305,7 +329,7 @@ export default async function Home() {
                 </div>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                   {completedStories.map(story => (
-                    <StoryCard key={story.id} title={story.title} status={story.status} slug={story.slug} coverImage={story.coverImage} />
+                    <StoryCard key={story.id} title={story.title} status={story.status} slug={story.slug} coverImage={story.coverImage} genres={(story.genres as any[]).map((g: any) => g.name)} chapterCount={(story.chapters as any[])[0]?.index} viewCount={story.viewCount} />
                   ))}
                 </div>
               </div>
