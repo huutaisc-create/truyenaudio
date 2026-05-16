@@ -45,6 +45,7 @@ SERVER_PORT  = 8765
 # Upload API
 WEB_API_URL      = os.getenv("WEB_API_URL", "")
 UPLOAD_SECRET    = os.getenv("UPLOAD_SECRET", "")
+NEON_DB_URL      = os.getenv("NEON_DB_URL", "")
 _BA_USER         = os.getenv("BASIC_AUTH_USER", "")
 _BA_PASS         = os.getenv("BASIC_AUTH_PASS", "")
 _BASIC_AUTH      = (_BA_USER, _BA_PASS) if _BA_USER else None
@@ -472,7 +473,7 @@ def _split_batches(chapters: list, story_part: dict) -> list[list]:
 
 
 def upload_story_card(slug: str, title: str, description: str,
-                      genres: list, category: str) -> dict:
+                      genres: list, category: str, book_status: str = "Ongoing") -> dict:
     """Upload 1 truyện từ review card — không cần Neon DB."""
     import requests as _req
     import time as _t
@@ -501,7 +502,7 @@ def upload_story_card(slug: str, title: str, description: str,
     story_part = {
         "slug": resolved_slug, "title": title or slug, "author": "Unknown",
         "description": description or "", "cover_url": cover_url,
-        "book_status": "Ongoing", "genres": genres,
+        "book_status": book_status if book_status in ("Ongoing", "Full") else "Ongoing", "genres": genres,
         "boiCanh": [], "luuPhai": [], "tinhCach": [], "thiGiac": [],
         "viewCount": 0, "likeCount": 0, "ratingScore": 0.0,
     }
@@ -736,28 +737,107 @@ class _Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 return self._json({'error': f'Bad request: {e}'}, 400)
             slug      = body.get('slug', '').strip()
+            title     = body.get('title', '').strip()
             ai_review = body.get('ai_review', '').strip()
             if not slug:
                 return self._json({'error': 'Thiếu slug'}, 400)
             if not WEB_API_URL:
                 return self._json({'error': 'WEB_API_URL chưa được cấu hình trong .env.upload'}, 500)
-            # Gọi API endpoint cập nhật aiReview
-            import urllib.request
-            api_url = WEB_API_URL.rstrip('/').replace('/api/admin/stories', '') + f'/api/internal/stories/{slug}/review'
-            req_data = json.dumps({'ai_review': ai_review, 'secret': UPLOAD_SECRET}).encode('utf-8')
-            req = urllib.request.Request(
-                api_url,
-                data=req_data,
-                headers={'Content-Type': 'application/json', 'X-Internal-Secret': UPLOAD_SECRET},
-                method='PATCH',
-            )
+            # Slug trong DB được tính từ title đã chọn (giống lúc upload)
+            # Nếu có title → normalize giống upload_story_card, ngược lại dùng slug gốc
+            resolved_slug = _normalize_slug(title) if title else slug
+            # Gọi API endpoint cập nhật aiReview — dùng requests (xử lý UTF-8 đúng)
+            from urllib.parse import quote as _url_quote
+            base_url  = WEB_API_URL.rstrip('/')
+            # Bỏ path suffix /api/admin/stories nếu có, giữ lại origin
+            for _suffix in ['/api/admin/stories', '/api/admin', '/api']:
+                if base_url.endswith(_suffix):
+                    base_url = base_url[:-len(_suffix)]
+                    break
+            slug_encoded = _url_quote(resolved_slug, safe='')
+            api_url  = f'{base_url}/api/internal/stories/{slug_encoded}/review'
+            req_data = json.dumps(
+                {'ai_review': ai_review, 'secret': UPLOAD_SECRET},
+                ensure_ascii=False
+            ).encode('utf-8')
             try:
-                with urllib.request.urlopen(req, timeout=15) as resp:
-                    resp_body = json.loads(resp.read().decode('utf-8'))
+                import requests as _requests
+                resp = _requests.patch(
+                    api_url,
+                    data=req_data,
+                    headers={
+                        'Content-Type':    'application/json; charset=utf-8',
+                        'X-Internal-Secret': UPLOAD_SECRET,
+                    },
+                    timeout=15,
+                )
+                resp_body = resp.json()
+                if resp.ok:
                     return self._json({'ok': True, 'server': resp_body})
-            except urllib.error.HTTPError as e:
-                err_body = e.read().decode('utf-8', errors='replace')
-                return self._json({'error': f'Server trả về {e.code}: {err_body[:200]}'}, 502)
+                return self._json({'error': f'Server trả về {resp.status_code}: {str(resp_body)[:200]}'}, 502)
+            except ImportError:
+                # Fallback: urllib nếu requests chưa cài
+                import urllib.request, urllib.error
+                req = urllib.request.Request(
+                    api_url.encode('ascii', errors='ignore').decode(),
+                    data=req_data,
+                    headers={
+                        'Content-Type':    'application/json; charset=utf-8',
+                        'X-Internal-Secret': UPLOAD_SECRET,
+                    },
+                    method='PATCH',
+                )
+                try:
+                    with urllib.request.urlopen(req, timeout=15) as r:
+                        return self._json({'ok': True, 'server': json.loads(r.read().decode('utf-8'))})
+                except urllib.error.HTTPError as e:
+                    return self._json({'error': f'Server {e.code}: {e.read().decode("utf-8","replace")[:200]}'}, 502)
+                except Exception as e:
+                    return self._json({'error': str(e)}, 502)
+            except Exception as e:
+                return self._json({'error': str(e)}, 502)
+
+        if parsed.path == '/push-status':
+            try:
+                length = int(self.headers.get('Content-Length', 0))
+                body   = json.loads(self.rfile.read(length).decode('utf-8'))
+            except Exception as e:
+                return self._json({'error': f'Bad request: {e}'}, 400)
+            slug       = body.get('slug', '').strip()
+            title      = body.get('title', '').strip()
+            book_status= body.get('book_status', 'Ongoing').strip()
+            if not slug:
+                return self._json({'error': 'Thiếu slug'}, 400)
+            if not WEB_API_URL:
+                return self._json({'error': 'WEB_API_URL chưa được cấu hình'}, 500)
+            from urllib.parse import quote as _url_quote
+            base_url = WEB_API_URL.rstrip('/')
+            for _suffix in ['/api/admin/stories', '/api/admin', '/api']:
+                if base_url.endswith(_suffix):
+                    base_url = base_url[:-len(_suffix)]
+                    break
+            resolved_slug = _normalize_slug(title) if title else slug
+            slug_encoded  = _url_quote(resolved_slug, safe='')
+            api_url  = f'{base_url}/api/internal/stories/{slug_encoded}/status'
+            req_data = json.dumps(
+                {'book_status': book_status, 'secret': UPLOAD_SECRET},
+                ensure_ascii=False
+            ).encode('utf-8')
+            try:
+                import requests as _requests
+                resp = _requests.patch(
+                    api_url,
+                    data=req_data,
+                    headers={
+                        'Content-Type':      'application/json; charset=utf-8',
+                        'X-Internal-Secret': UPLOAD_SECRET,
+                    },
+                    timeout=15,
+                )
+                resp_body = resp.json()
+                if resp.ok:
+                    return self._json({'ok': True, 'server': resp_body})
+                return self._json({'error': f'Server trả về {resp.status_code}: {str(resp_body)[:200]}'}, 502)
             except Exception as e:
                 return self._json({'error': str(e)}, 502)
 
@@ -780,6 +860,7 @@ class _Handler(BaseHTTPRequestHandler):
                 description = body.get('description', ''),
                 genres      = body.get('genres', []),
                 category    = body.get('category', ''),
+                book_status = body.get('book_status', 'Ongoing'),
             )
             if result.get('success'):
                 save_upload_status(slug, {
@@ -788,6 +869,7 @@ class _Handler(BaseHTTPRequestHandler):
                     'inserted':    result.get('inserted', 0),
                     'cover':       result.get('cover', ''),
                     'title':       body.get('title', ''),
+                    'book_status': body.get('book_status', 'Ongoing'),
                 })
             self._json(result)
         except Exception as e:
@@ -871,6 +953,43 @@ def _extract_review_content(text: str) -> str:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+#  PDCRAW DB — đọc book_status cho từng slug
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _fetch_book_statuses(slugs: list[str]) -> dict[str, str]:
+    """Query pdcraw Neon DB lấy book_status cho danh sách slug.
+    Trả về dict {slug: book_status_str} — chỉ những slug có trong DB.
+    """
+    if not NEON_DB_URL or not slugs:
+        return {}
+    try:
+        import psycopg2
+    except ImportError:
+        try:
+            import subprocess, sys
+            subprocess.run([sys.executable, "-m", "pip", "install", "psycopg2-binary", "-q"],
+                           check=True, capture_output=True)
+            import psycopg2
+        except Exception as e:
+            print(f"  [!] Không cài được psycopg2: {e}")
+            return {}
+    try:
+        conn = psycopg2.connect(NEON_DB_URL)
+        cur  = conn.cursor()
+        cur.execute(
+            "SELECT slug, book_status FROM stories WHERE slug = ANY(%s)",
+            (slugs,)
+        )
+        rows   = cur.fetchall()
+        cur.close()
+        conn.close()
+        return {row[0]: (row[1] or "") for row in rows}
+    except Exception as e:
+        print(f"  [!] Không đọc được pdcraw DB: {e}")
+        return {}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 #  SCAN STORIES
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -947,7 +1066,24 @@ def scan_stories(stories_dir: Path) -> list[dict]:
             "ten_truyen":     upload.get("ten_truyen") or [],
             "van_an":         upload.get("van_an") or [],
             "ai_review":      ai_review,
+            "book_status":    "",   # sẽ được điền sau khi query DB
         })
+
+    # Query pdcraw DB lấy book_status cho tất cả slugs một lần
+    print("  Đang query pdcraw DB lấy tình trạng truyện...")
+    all_slugs    = [s["slug"] for s in stories]
+    db_statuses  = _fetch_book_statuses(all_slugs)
+    found = 0
+    for s in stories:
+        raw = db_statuses.get(s["slug"], "")
+        # pdcraw dùng: "Full", "Ongoing", "full", "ongoing", hoặc tiếng Việt
+        if raw.lower() in ("full", "completed", "hoàn thành", "hoan thanh"):
+            s["book_status"] = "Full"
+            found += 1
+        elif raw:
+            s["book_status"] = "Ongoing"
+        # else: giữ "" để JS biết là chưa có thông tin
+    print(f"  → {found}/{len(stories)} truyện có tình trạng 'Full/Hoàn thành' từ DB.")
 
     print(f"Đã đọc {len(stories)} truyện có dữ liệu.")
     return stories
@@ -1239,6 +1375,12 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
            background:rgba(22,163,74,.15);color:#86efac;cursor:pointer;font-size:15px;font-weight:600;white-space:nowrap">
     🚀 Upload tất cả
   </button>
+  <button id="batchStatusBtn" onclick="startBatchPushStatus()"
+    style="padding:4px 14px;border-radius:20px;border:1px solid #6366f1;
+           background:rgba(99,102,241,.15);color:#a5b4fc;cursor:pointer;font-size:15px;font-weight:600;white-space:nowrap"
+    title="Cập nhật tình trạng (Đang ra/Hoàn thành) cho tất cả truyện đã upload theo lựa chọn hiện tại">
+    🔄 Đổi tình trạng hàng loạt
+  </button>
 </div>
 
 <div class="story-list" id="storyList"></div>
@@ -1276,6 +1418,7 @@ function applyState(selections, uploadStatus) {
         description: prev.description || null,
         hashtags:    prev.hashtags    || [],
         genres:      prev.genres      || null,   // null = dùng mặc định từ meta
+        bookStatus:  prev.bookStatus  || (up && up.book_status) || s.book_status || 'Ongoing',
         status:      prev.skipped ? 'skip' : prev.ready ? 'done' : null,
         uploaded:    up,
         descIdx, titleIdx,
@@ -1283,6 +1426,7 @@ function applyState(selections, uploadStatus) {
     } else {
       state[s.slug] = {
         title: null, description: null, hashtags: [], genres: null,
+        bookStatus: s.book_status || 'Ongoing',
         status: null, uploaded: up, descIdx: null, titleIdx: null,
       };
     }
@@ -1444,6 +1588,20 @@ function renderCard(s, i) {
         </button>
       </div>
 
+      <div class="section-label">Tình trạng</div>
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        ${['Ongoing','Full'].map(v => {
+          const label = v === 'Full' ? '✅ Hoàn thành' : '📖 Đang ra';
+          const active = (st.bookStatus || 'Ongoing') === v;
+          return `<button onclick="selectBookStatus('${esc(s.slug)}','${v}')"
+            id="btnStatus_${esc(s.slug)}_${v}"
+            style="padding:5px 14px;border-radius:20px;border:1px solid ${active ? '#22c55e' : '#4b5563'};
+                   background:${active ? 'rgba(34,197,94,.15)' : 'transparent'};
+                   color:${active ? '#22c55e' : '#9ca3af'};cursor:pointer;font-size:13px;font-weight:${active ? '700' : '400'};
+                   transition:all .2s">${label}</button>`;
+        }).join('')}
+      </div>
+
       <div class="section-label">Chọn tên truyện</div>
       <div class="option-list">${titleOptions}</div>
 
@@ -1473,6 +1631,11 @@ function renderCard(s, i) {
             🔄 Thay tên truyện
           </button>
           <button class="btn-push-review" id="pushReviewBtn_${esc(s.slug)}" onclick="pushReview('${esc(s.slug)}', this)">📤 Push AI Review</button>
+          ${st.uploaded ? `<button id="pushStatusBtn_${esc(s.slug)}" onclick="pushStatus('${esc(s.slug)}', this)"
+            style="padding:7px 14px;border-radius:8px;border:1px solid #6366f1;background:rgba(99,102,241,.1);color:#818cf8;cursor:pointer;font-size:17px;font-weight:600;transition:all .2s"
+            title="Cập nhật tình trạng truyện (Đang ra / Hoàn thành) lên server">
+            🔄 Sửa tình trạng
+          </button>` : ''}
         </div>
       </div>
 
@@ -1704,6 +1867,7 @@ async function uploadStory(slug, btn, fromHeader = false) {
         description: st.description || s.description_raw || '',
         genres,
         category: s.category || '',
+        book_status: st.bookStatus || 'Ongoing',
       })
     });
     const d = await res.json();
@@ -1802,6 +1966,19 @@ function resetGenres(slug) {
   if (el) el.value = s.category || '';
   autoSave();
 }
+function selectBookStatus(slug, val) {
+  state[slug].bookStatus = val;
+  ['Ongoing','Full'].forEach(v => {
+    const btn = document.getElementById(`btnStatus_${slug}_${v}`);
+    if (!btn) return;
+    const active = v === val;
+    btn.style.borderColor  = active ? '#22c55e' : '#4b5563';
+    btn.style.background   = active ? 'rgba(34,197,94,.15)' : 'transparent';
+    btn.style.color        = active ? '#22c55e' : '#9ca3af';
+    btn.style.fontWeight   = active ? '700' : '400';
+  });
+  autoSave();
+}
 function updateManualDesc(slug, value) {
   state[slug].descIdx      = 'manual';
   state[slug].description  = value;
@@ -1823,7 +2000,7 @@ function buildSelectionsPayload() {
       hashtags:    st.hashtags || [],
       genres:      st.genres !== null && st.genres !== undefined ? st.genres : null,
       category:    s.category,
-      genres,
+      bookStatus:  st.bookStatus || 'Ongoing',
       ready:       st.status === 'done',
       skipped:     st.status === 'skip',
     };
@@ -2296,7 +2473,7 @@ async function pushReview(slug, btn) {
     const res = await fetch(`${API}/push-review`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ slug, ai_review: editor.value.trim() }),
+      body: JSON.stringify({ slug, title, ai_review: editor.value.trim() }),
     });
     const d = await res.json();
     if (d.ok) {
@@ -2312,6 +2489,92 @@ async function pushReview(slug, btn) {
   }
 }
 
+async function pushStatus(slug, btn) {
+  const s          = STORIES.find(x => x.slug === slug);
+  const st         = state[slug];
+  const bookStatus = st.bookStatus || 'Ongoing';
+  const title      = st.title || s.original_title;
+  const label      = bookStatus === 'Full' ? 'Hoàn thành' : 'Đang ra';
+  if (!confirm(`Cập nhật tình trạng "${title}" thành "${label}" trên server?`)) return;
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang cập nhật…'; }
+  try {
+    const res = await fetch(`${API}/push-status`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ slug, title, book_status: bookStatus }),
+    });
+    const d = await res.json();
+    if (d.ok) {
+      showToast(`✅ Đã cập nhật tình trạng "${title}" → ${label}`);
+      if (btn) { btn.style.borderColor='#22c55e'; btn.style.color='#22c55e'; btn.textContent='✅ Đã cập nhật'; btn.disabled = false; }
+    } else {
+      showToast('❌ ' + (d.error || 'Cập nhật thất bại'));
+      if (btn) { btn.disabled = false; btn.textContent = '🔄 Sửa tình trạng'; }
+    }
+  } catch(e) {
+    showToast('❌ Lỗi kết nối: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Sửa tình trạng'; }
+  }
+}
+
+async function startBatchPushStatus() {
+  // Gom tất cả truyện đã upload
+  const targets = STORIES.filter(s => {
+    const st = state[s.slug];
+    return st && st.uploaded;
+  });
+  if (!targets.length) {
+    showToast('⚠️ Không có truyện nào đã upload'); return;
+  }
+
+  // Đếm thống kê
+  const ongoing   = targets.filter(s => (state[s.slug].bookStatus || 'Ongoing') === 'Ongoing').length;
+  const completed = targets.filter(s => (state[s.slug].bookStatus || 'Ongoing') === 'Full').length;
+
+  if (!confirm(
+    `Cập nhật tình trạng cho ${targets.length} truyện đã upload?\\n` +
+    `  📖 Đang ra: ${ongoing} truyện\\n` +
+    `  ✅ Hoàn thành: ${completed} truyện\\n\\n` +
+    `(Tình trạng theo lựa chọn hiện tại của mỗi truyện)`
+  )) return;
+
+  const btn = document.getElementById('batchStatusBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang cập nhật…'; }
+
+  let ok = 0, fail = 0;
+  for (const s of targets) {
+    const st         = state[s.slug];
+    const bookStatus = st.bookStatus || 'Ongoing';
+    const title      = st.title || s.original_title;
+    try {
+      const res = await fetch(`${API}/push-status`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ slug: s.slug, title, book_status: bookStatus }),
+      });
+      const d = await res.json();
+      if (d.ok) ok++;
+      else { fail++; console.warn(`[${s.slug}] ${d.error}`); }
+    } catch(e) {
+      fail++;
+      console.warn(`[${s.slug}] lỗi kết nối: ${e.message}`);
+    }
+    // Cập nhật nút trên card nếu đang hiển thị
+    const cardBtn = document.getElementById(`pushStatusBtn_${s.slug}`);
+    if (cardBtn) {
+      cardBtn.style.borderColor = '#22c55e';
+      cardBtn.style.color = '#22c55e';
+      cardBtn.textContent = '✅ Đã cập nhật';
+    }
+    if (btn) btn.textContent = `⏳ ${ok + fail}/${targets.length}…`;
+    await new Promise(r => setTimeout(r, 150)); // tránh spam server
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = '🔄 Đổi tình trạng hàng loạt'; }
+  showToast(`✅ Hoàn tất: ${ok} thành công${fail ? ', ' + fail + ' thất bại' : ''}`);
+}
+
 init();
 </script>
 </body>
@@ -2319,7 +2582,7 @@ init();
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  SELECTIONS RESTORE
+#  SELECTIONS & UPLOAD STATUS (persistent JSON)
 # ══════════════════════════════════════════════════════════════════════════════
 
 SELECTIONS_JSON    = Path(__file__).parent / "selections.json"
@@ -2327,12 +2590,24 @@ UPLOAD_STATUS_JSON = Path(__file__).parent / "upload_status.json"
 _upload_status_lock = threading.Lock()
 
 
+def load_prev_selections() -> dict:
+    if SELECTIONS_JSON.exists():
+        try:
+            data = json.loads(SELECTIONS_JSON.read_text(encoding="utf-8"))
+            rows = data.get("selections", [])
+            return {r["slug"]: r for r in rows if "slug" in r}
+        except Exception:
+            pass
+    return {}
+
+
 def load_upload_status() -> dict:
-    if not UPLOAD_STATUS_JSON.exists(): return {}
-    try:
-        return json.loads(UPLOAD_STATUS_JSON.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
+    if UPLOAD_STATUS_JSON.exists():
+        try:
+            return json.loads(UPLOAD_STATUS_JSON.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {}
 
 
 def save_upload_status(slug: str, data: dict):
@@ -2347,32 +2622,15 @@ def save_upload_status(slug: str, data: dict):
             print(f"  [!] Không ghi được upload_status.json: {e}")
 
 
-def load_prev_selections() -> dict:
-    if not SELECTIONS_JSON.exists(): return {}
-    try:
-        data = json.loads(SELECTIONS_JSON.read_text(encoding="utf-8"))
-        result = {}
-        for item in data.get("selections", []):
-            slug = item.get("slug")
-            if slug:
-                result[slug] = {
-                    "title":       item.get("title"),
-                    "description": item.get("description"),
-                    "hashtags":    item.get("hashtags", []),
-                    "ready":       item.get("ready", False),
-                    "skipped":     item.get("skipped", False),
-                }
-        return result
-    except Exception as e:
-        print(f"  [!] Không đọc được selections.json: {e}")
-        return {}
+# ══════════════════════════════════════════════════════════════════════════════
+#  GENERATE HTML
+# ══════════════════════════════════════════════════════════════════════════════
 
-
-def generate_html(stories: list[dict], prev_selections: dict,
+def generate_html(stories: list, prev_selections: dict,
                   upload_status: dict, port: int) -> str:
-    stories_json  = json.dumps(stories,        ensure_ascii=False, indent=2)
-    prev_sel_json = json.dumps(prev_selections, ensure_ascii=False, indent=2)
-    up_status_json = json.dumps(upload_status,  ensure_ascii=False, indent=2)
+    stories_json   = json.dumps(stories,         ensure_ascii=False, indent=2)
+    prev_sel_json  = json.dumps(prev_selections,  ensure_ascii=False, indent=2)
+    up_status_json = json.dumps(upload_status,    ensure_ascii=False, indent=2)
     return (HTML_TEMPLATE
             .replace("__STORIES_DATA__",    stories_json)
             .replace("__PREV_SELECTIONS__", prev_sel_json)
@@ -2385,55 +2643,46 @@ def generate_html(stories: list[dict], prev_selections: dict,
 # ══════════════════════════════════════════════════════════════════════════════
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate review.html từ data_import/")
-    parser.add_argument("--dir",  help="Override STORIES_DIR")
-    parser.add_argument("--port", type=int, default=SERVER_PORT, help="Port cho local API server")
-    args = parser.parse_args()
+    import webbrowser, tempfile
 
-    stories_dir = Path(args.dir) if args.dir else Path(STORIES_DIR)
-    print(f"\n{'═'*55}")
-    print(f"  WebTruyen Review Generator")
-    print(f"  Thư mục: {stories_dir}")
-    print(f"{'═'*55}\n")
+    stories_dir = Path(STORIES_DIR)
+    port        = SERVER_PORT
 
+    print("=" * 60)
+    print("  WebTruyen Review Tool")
+    print("=" * 60)
+    print(f"  Thu muc truyen : {stories_dir}")
+    print(f"  Port API       : {port}")
+    print()
+
+    print("  [1/3] Dang quet truyen...")
     stories = scan_stories(stories_dir)
-    if not stories:
-        print("[!] Không có truyện nào để review.")
-        return
+    print(f"        Tim thay {len(stories)} truyen.")
 
+    print("  [2/3] Dang khoi dong API server...")
+    start_local_server(stories_dir, port)
+
+    print("  [3/3] Dang tao giao dien...")
     prev_selections = load_prev_selections()
-    if prev_selections:
-        print(f"↩  Restore {len(prev_selections)} selections từ selections.json")
+    upload_status   = load_upload_status()
+    html_content    = generate_html(stories, prev_selections, upload_status, port)
 
-    upload_status = load_upload_status()
-    if upload_status:
-        print(f"📦 Upload status: {len(upload_status)} truyện đã upload trước đó")
+    tmp = Path(tempfile.gettempdir()) / "webtruyen_review.html"
+    tmp.write_text(html_content, encoding="utf-8")
 
-    # Khởi động local API server
-    start_local_server(stories_dir, args.port)
+    print()
+    print(f"  Mo trinh duyet: {tmp}")
+    print("  Nhan Ctrl+C de thoat.")
+    print("=" * 60)
 
-    html = generate_html(stories, prev_selections, upload_status, args.port)
-    OUTPUT_HTML.write_text(html, encoding="utf-8")
-
-    print(f"\n✅ Đã tạo: {OUTPUT_HTML}")
-    print(f"   → Mở file đó bằng Chrome/Edge để review")
-    print(f"   → Server đang chạy tại localhost:{args.port} — GIỮ CỬA SỔ NÀY MỞ\n")
+    webbrowser.open(tmp.as_uri())
 
     try:
-        import webbrowser
-        webbrowser.open(OUTPUT_HTML.as_uri())
-        print("   → Đang mở trình duyệt...")
-    except Exception:
-        pass
-
-    # Giữ process sống để server hoạt động (dùng sleep loop — tương thích Windows)
-    print("\n[Ctrl+C để thoát]\n")
-    try:
-        import time
         while True:
-            time.sleep(0.5)
+            import time
+            time.sleep(1)
     except KeyboardInterrupt:
-        print("\n👋 Đã tắt server.")
+        print("\n  Da thoat.")
 
 
 if __name__ == "__main__":
