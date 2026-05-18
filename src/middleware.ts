@@ -1,9 +1,27 @@
 import NextAuth from 'next-auth';
 import { authConfig } from './auth.config';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 const { auth } = NextAuth(authConfig);
 
-export default auth((req) => {
+// ── Maintenance mode ────────────────────────────────────────────────────────
+const MAINTENANCE = process.env.MAINTENANCE_MODE === 'true';
+
+// Các path được miễn trừ khi maintenance (admin + trang maintenance chính nó)
+const EXEMPT = ['/maintenance', '/admin'];
+
+export default auth((req: NextRequest & { auth?: unknown }) => {
+  if (MAINTENANCE) {
+    const { pathname } = req.nextUrl;
+    const isExempt = EXEMPT.some(p => pathname === p || pathname.startsWith(p + '/'));
+    if (!isExempt) {
+      const url = req.nextUrl.clone();
+      url.pathname = '/maintenance';
+      return NextResponse.redirect(url);
+    }
+  }
+
   // ── Auth check (NextAuth xử lý bên trong auth wrapper) ──────────────
   return;
 });
