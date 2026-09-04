@@ -166,14 +166,18 @@ export default function BulkChapterUpload({ storyId }: { storyId: string }) {
 
             const flush = async () => {
                 if (batch.length === 0) return;
-                const res = await createChaptersBulk(storyId, batch, overwrite);
-                if ('error' in res && res.error) {
-                    for (const b of batch) agg.failed.push({ index: b.index, error: res.error! });
-                } else if ('success' in res) {
-                    agg.created += res.created;
-                    agg.updated += res.updated;
-                    agg.skipped += res.skipped;
-                    agg.failed.push(...res.failed);
+                const res = await createChaptersBulk(storyId, batch, overwrite) as {
+                    error?: string; success?: boolean;
+                    created?: number; updated?: number; skipped?: number;
+                    failed?: { index: number; error: string }[];
+                };
+                if (res.error) {
+                    for (const b of batch) agg.failed.push({ index: b.index, error: res.error });
+                } else {
+                    agg.created += res.created ?? 0;
+                    agg.updated += res.updated ?? 0;
+                    agg.skipped += res.skipped ?? 0;
+                    agg.failed.push(...(res.failed ?? []));
                 }
                 done += batch.length;
                 setProgress({ done, total: targets.length });
