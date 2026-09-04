@@ -1081,3 +1081,103 @@ export async function updateStoryRequest(id: string, status: string, storyId?: s
         return { error: 'Cập nhật thất bại' };
     }
 }
+
+// ── BULK CHAPTER UPLOAD (chọn thư mục local qua trình duyệt) ──────────────
+
+/**
+ * Trả về danh sách index chương đã tồn tại của 1 truyện.
+ * Dùng để đánh dấu badge "Đã có" trong UI upload hàng loạt.
+ */
+export async function getExistingChapterIndexes(storyId: string): Promise<number[]> {
+    await checkAdmin();
+    const rows = await db.chapter.findMany({
+        where: { storyId },
+        select: { index: true },
+    });
+    return rows.map(r => r.index);
+}
+
+type BulkChapterInput = { index: number; title: string; content: string };
+
+/**
+ * Upload nhiều chương cùng lúc từ payload trình duyệt (đọc file .txt phía client).
+ * - Mặc định bỏ qua chương có index đã tồn tại; nếu overwrite=true thì ghi đè.
+ * - Lưu content ra đĩa (CHAPTERS_STORAGE_PATH/<slug>/<index>.txt) rồi tạo/cập nhật row.
+ * Gọi theo từng batch nhỏ từ client để tránh vượt giới hạn payload của Server Action.
+ */
+export async function createChaptersBulk(
+    storyId: string,
+    items: BulkChapterInput[],
+    overwrite = false,
+) {
+    await checkAdmin();
+
+    if (!Array.isArray(items) || items.length === 0) {
+        return { error: 'Không có chương nào để upload' };
+    }
+
+    const story = await db.story.findUnique({
+        where: { id: storyId },
+        select: { slug: true },
+    });
+    if (!story) return { error: 'Không tìm thấy truyện' };
+
+    const existing = await db.chapter.findMany({
+        where: { storyId },
+        select: { id: true, index: true },
+    });
+    const existingMap = new Map<number, string>();
+    for (const c of existing) existingMap.set(c.index, c.id);
+
+    let created = 0, updated = 0, skipped = 0;
+    const failed: { index: number; error: string }[] = [];
+
+    for (const item of items) {
+        const index = Number(item?.index);
+        const title = (item?.title || '').trim() || `Chương ${index}`;
+        const content = (item?.content ?? '').toString();
+
+        if (!Number.isInteger(index) || index <= 0) {
+            failed.push({ index: item?.index as unknown as number, error: 'Index không hợp lệ' });
+            continue;
+        }
+        if (!content.trim()) {
+            failed.push({ index, error: 'Nội dung rỗng' });
+            continue;
+        }
+
+        const existingId = existingMap.get(index);
+        if (existingId && !overwrite) { skipped++; continue; }
+
+        try {
+            const contentUrl = await saveChapterToDisk(story.slug, index, content);
+            if (existingId && existingId !== '__new__') {
+                await db.chapter.update({
+                    where: { id: existingId },
+                    data: { title, contentUrl },
+                });
+                updated++;
+            } else {
+                await db.chapter.create({
+                    data: { storyId, index, title, contentUrl },
+                });
+                created++;
+                existingMap.set(index, '__new__'); // tránh tạo trùng trong cùng payload
+            }
+        } catch (e: unknown) {
+            failed.push({ index, error: e instanceof Error ? e.message : 'Lỗi ghi chương' });
+        }
+    }
+
+    // Đồng bộ lại totalChapters theo số thực tế trong DB
+    const actualTotal = await db.chapter.count({ where: { storyId } });
+    await db.story.update({
+        where: { id: storyId },
+        data: { totalChapters: actualTotal, updatedAt: new Date() },
+    });
+
+    revalidatePath(`/admin/stories/${storyId}`);
+    revalidatePath(`/admin/stories/${storyId}/chapters`);
+
+    return { success: true as const, created, updated, skipped, failed, total: actualTotal };
+}

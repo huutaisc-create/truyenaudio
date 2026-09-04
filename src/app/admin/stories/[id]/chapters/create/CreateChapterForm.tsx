@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 
-export default function CreateChapterForm({ storyId, defaultIndex }: { storyId: string, defaultIndex: number }) {
+export default function CreateChapterForm({ storyId, defaultIndex, embedded = false }: { storyId: string, defaultIndex: number, embedded?: boolean }) {
     const router = useRouter();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,18 +26,7 @@ export default function CreateChapterForm({ storyId, defaultIndex }: { storyId: 
         }
     }
 
-    return (
-        <div className="max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Thêm Chương Mới</h1>
-                <Link
-                    href={`/admin/stories/${storyId}`}
-                    className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                >
-                    Hủy bỏ
-                </Link>
-            </div>
-
+    const formEl = (
             <form action={handleSubmit} className="space-y-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm dark:bg-zinc-800 dark:border-zinc-700">
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
                     <div className="col-span-1">
@@ -89,6 +78,22 @@ export default function CreateChapterForm({ storyId, defaultIndex }: { storyId: 
                     </button>
                 </div>
             </form>
+    );
+
+    if (embedded) return formEl;
+
+    return (
+        <div className="max-w-4xl mx-auto space-y-6">
+            <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Thêm Chương Mới</h1>
+                <Link
+                    href={`/admin/stories/${storyId}`}
+                    className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                >
+                    Hủy bỏ
+                </Link>
+            </div>
+            {formEl}
         </div>
     );
 }
