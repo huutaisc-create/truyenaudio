@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
     if (sort === "viewCount")   orderBy = { viewCount:   "desc" };
     if (sort === "ratingCount") orderBy = { ratingCount: "desc" };
     if (sort === "popular")     orderBy = [{ viewCount: "desc" }, { ratingCount: "desc" }];
+    if (sort === "newest")      orderBy = { createdAt:   "desc" }; // truyện mới tạo gần đây
 
     // ── Query ──────────────────────────────────────────────────────────────
     const [stories, totalItems] = await Promise.all([
