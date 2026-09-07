@@ -13,6 +13,7 @@ type Row = {
 };
 
 const INDEX_RE = /_(\d+)\.txt$/i;               // đuôi _NNNN.txt → index chuẩn
+const CHUONG_PREFIX_RE = /^chuong\s*(\d+)/i;    // "chuongN_polished.txt" → index ở đầu tên file
 const CHUONG_RE = /Chương\s*\d+.*/i;  // "Chương N ..." → tên chương
 const SMALL_BYTES = 800;                         // cảnh báo file quá nhỏ
 const BATCH_MAX_ITEMS = 25;
@@ -26,6 +27,29 @@ function deriveTitle(fileName: string): string {
     let title = (m ? m[0] : stem).trim();
     title = title.replace(/\s+/g, ' ').trim();
     return title;
+}
+
+/**
+ * Đọc index + tên chương từ tên file, hỗ trợ 2 kiểu đặt tên:
+ *   1) Đuôi "_NNNN.txt"                → index = NNNN, tên lấy từ "Chương N …".
+ *   2) Đầu tên "chuongN…" (vd chuong1_polished.txt)
+ *                                       → index = N, tên hiển thị là "Chương N" (bỏ "_polished"/hậu tố khác).
+ * Trả về null nếu không nhận ra chương.
+ */
+function parseFile(fileName: string): { index: number; title: string } | null {
+    // Kiểu cũ: đuôi _NNNN.txt (ưu tiên để giữ tên chương có phụ đề).
+    const tail = fileName.match(INDEX_RE);
+    if (tail) {
+        return { index: parseInt(tail[1], 10), title: deriveTitle(fileName) };
+    }
+    // Kiểu "chuongN_polished.txt": số ngay sau "chuong" là index, tên = "Chương N".
+    const stem = fileName.replace(/\.txt$/i, '');
+    const pre = stem.match(CHUONG_PREFIX_RE);
+    if (pre) {
+        const index = parseInt(pre[1], 10);
+        return { index, title: `Chương ${index}` };
+    }
+    return null;
 }
 
 export default function BulkChapterUpload({ storyId }: { storyId: string }) {
@@ -77,12 +101,12 @@ export default function BulkChapterUpload({ storyId }: { storyId: string }) {
         for (const f of fileList) {
             const name = f.name;
             if (!name.toLowerCase().endsWith('.txt')) { continue; }
-            const m = name.match(INDEX_RE);
-            if (!m) { skipped++; continue; }            // không có _NNNN.txt → bỏ (meta, map...)
-            const index = parseInt(m[1], 10);
+            const info = parseFile(name);
+            if (!info) { skipped++; continue; }         // không nhận ra index → bỏ (meta, map...)
+            const { index } = info;
             if (map.has(index)) { continue; }           // trùng index → giữ file đầu
             map.set(index, f);
-            parsed.push({ index, title: deriveTitle(name), fileName: name, size: f.size });
+            parsed.push({ index, title: info.title, fileName: name, size: f.size });
         }
 
         parsed.sort((a, b) => a.index - b.index);
@@ -244,7 +268,7 @@ export default function BulkChapterUpload({ storyId }: { storyId: string }) {
                     )}
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
-                    Chọn thư mục chứa các file <code>.txt</code>. Số chương lấy từ đuôi <code>_NNNN.txt</code>, tên chương lấy từ phần &quot;Chương N …&quot; (có thể sửa trước khi upload).
+                    Chọn thư mục chứa các file <code>.txt</code>. Hỗ trợ 2 kiểu đặt tên: đuôi <code>_NNNN.txt</code> (tên lấy từ &quot;Chương N …&quot;), hoặc <code>chuongN_polished.txt</code> (số sau &quot;chuong&quot; là số chương, hiển thị &quot;Chương N&quot;). Có thể sửa tên trước khi upload.
                 </p>
             </div>
 
