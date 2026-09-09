@@ -40,6 +40,23 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 7,
   },
 
+  // ── DEV: proxy ảnh (uploads/covers/avatars) sang server thật ──────────────
+  // Khi chạy local, file ảnh nằm trên VPS chứ không có trong public/ máy dev,
+  // nên cover hiện lỗi. Set DEV_ASSET_PROXY_ORIGIN trong .env.local (vd
+  // https://mytruyenaudio.com) để các request /uploads,/covers,/avatars KHÔNG
+  // tìm thấy file local sẽ được proxy sang server thật. Prod để trống → bỏ qua.
+  async rewrites() {
+    const origin = process.env.DEV_ASSET_PROXY_ORIGIN?.replace(/\/$/, '');
+    if (!origin) return [];
+    return {
+      afterFiles: [
+        { source: '/uploads/:path*', destination: `${origin}/uploads/:path*` },
+        { source: '/covers/:path*',  destination: `${origin}/covers/:path*` },
+        { source: '/avatars/:path*', destination: `${origin}/avatars/:path*` },
+      ],
+    };
+  },
+
   async headers() {
     return [
       {
