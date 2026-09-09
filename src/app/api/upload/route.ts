@@ -36,14 +36,14 @@ export async function POST(request: NextRequest) {
                 .webp({ quality: 80 })
                 .toBuffer();
             filename = `avatar-${timestamp}.webp`;
-            folder = 'avatars';
+            folder = 'uploads';
         } else if (type === 'cover') {
             outputBuffer = await sharp(inputBuffer)
                 .resize(600, 800, { fit: 'inside', withoutEnlargement: true })
                 .webp({ quality: 85 })
                 .toBuffer();
             filename = `cover-${timestamp}.webp`;
-            folder = 'covers';
+            folder = 'uploads';
         } else {
             outputBuffer = await sharp(inputBuffer)
                 .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
@@ -62,9 +62,12 @@ export async function POST(request: NextRequest) {
         await mkdir(saveDir, { recursive: true });
         await writeFile(`${saveDir}/${filename}`, outputBuffer);
 
+        // Trả URL qua route động /api/uploads/<file> (đọc thẳng từ đĩa).
+        // KHÔNG dùng /uploads/<file> vì Next production không serve file thêm
+        // vào public/ sau khi build → ảnh mới upload bị 404.
         return NextResponse.json({
             success: true,
-            url: `/${folder}/${filename}`,
+            url: `/api/uploads/${filename}`,
             size: outputBuffer.length,
         });
     } catch (error) {
