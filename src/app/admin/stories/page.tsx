@@ -110,12 +110,12 @@ export default async function AdminStoriesPage({
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Tên Truyện</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hidden sm:table-cell">Tác Giả</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Loại</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hidden md:table-cell">Trạng Thái</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hidden md:table-cell">Chương</th>
-                            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Hành Động</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 w-full">Tên Truyện</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hidden sm:table-cell whitespace-nowrap">Tác Giả</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 whitespace-nowrap">Loại</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hidden md:table-cell whitespace-nowrap">Trạng Thái</th>
+                            <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500 hidden md:table-cell whitespace-nowrap">Chương</th>
+                            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 whitespace-nowrap">Hành Động</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
@@ -132,7 +132,7 @@ export default async function AdminStoriesPage({
                                                 <div className="h-10 w-8 rounded bg-gray-100 shrink-0" />
                                             )}
                                             <div className="min-w-0">
-                                                <p className="font-medium text-gray-900 text-sm truncate max-w-[180px]">
+                                                <p className="font-medium text-gray-900 text-sm break-words line-clamp-2">
                                                     {story.title}
                                                 </p>
                                                 <div className="flex items-center gap-1.5 mt-0.5">
@@ -163,7 +163,7 @@ export default async function AdminStoriesPage({
                                             {statusMeta.label}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">
+                                    <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell text-center whitespace-nowrap">
                                         {story._count.chapters}
                                     </td>
                                     <td className="px-4 py-3 text-right">
