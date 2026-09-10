@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
           followCount:   true,
           updatedAt:     true,
           genres: {
-            select: { name: true },
+            select: { name: true, type: true },
           },
         },
         orderBy,
@@ -91,10 +91,12 @@ export async function GET(request: NextRequest) {
       prisma.story.count({ where: whereCondition }),
     ]);
 
-    // Map genres array → categories array (for Story.fromJson compatibility)
+    // Map genres → categories: CHỈ lấy Thể loại (GENRE) cho gọn thẻ truyện.
     const mapped = stories.map((s) => ({
       ...s,
-      categories: s.genres.map((g: { name: string }) => g.name),
+      categories: s.genres
+        .filter((g: { name: string; type: string }) => g.type === 'GENRE')
+        .map((g: { name: string }) => g.name),
     }));
 
     const totalPages = Math.ceil(totalItems / limit);

@@ -122,7 +122,7 @@ const StoryDetail = async ({
         title: storyData.title,
         coverImage: storyData.coverImage,
         author: storyData.author,
-        genres: storyData.genres.map(g => g.name),
+        genres: storyData.genres.map((g: { name: string; type: string }) => ({ name: g.name, type: g.type })),
         status: storyData.status === 'COMPLETED' ? 'Hoàn thành' : 'Đang ra',
         isCompleted: storyData.status === 'COMPLETED',
         storyType: (storyData as any).storyType as string ?? 'ORIGINAL',
@@ -238,22 +238,37 @@ const StoryDetail = async ({
                             <span className="text-white/30">✍️ {story.author}</span>
                         </div>
 
-                        {/* Genre tags */}
-                        <div className="flex flex-wrap gap-1.5">
-                            {story.genres.map(g => (
-                                <Link
-                                    key={g}
-                                    href={`/tim-kiem?the-loai=${encodeURIComponent(g)}`}
-                                    className="px-3 py-1 rounded-full text-[11px] font-bold transition-all"
-                                    style={{
-                                        background: 'rgba(232,88,10,0.15)',
-                                        color: '#ff9a5c',
-                                        border: '1px solid rgba(232,88,10,0.3)',
-                                    }}
-                                >
-                                    {g}
-                                </Link>
-                            ))}
+                        {/* Genre tags — nhóm theo facet, mỗi chip link đúng bộ lọc */}
+                        <div className="flex flex-col gap-1.5">
+                            {([
+                                ['GENRE', 'Thể loại', 'the-loai'],
+                                ['BOI_CANH', 'Bối cảnh', 'boi-canh'],
+                                ['LUU_PHAI', 'Lưu phái', 'luu-phai'],
+                                ['TINH_CACH', 'Tính cách', 'tinh-cach'],
+                                ['THI_GIAC', 'Thị giác', 'thi-giac'],
+                            ] as const).map(([type, label, param]) => {
+                                const tags = story.genres.filter(g => g.type === type);
+                                if (tags.length === 0) return null;
+                                return (
+                                    <div key={type} className="flex flex-wrap items-center gap-1.5">
+                                        <span className="text-[10px] uppercase tracking-wide text-white/40 mr-0.5">{label}</span>
+                                        {tags.map(g => (
+                                            <Link
+                                                key={g.name}
+                                                href={`/tim-kiem?${param}=${encodeURIComponent(g.name)}`}
+                                                className="px-3 py-1 rounded-full text-[11px] font-bold transition-all"
+                                                style={{
+                                                    background: 'rgba(232,88,10,0.15)',
+                                                    color: '#ff9a5c',
+                                                    border: '1px solid rgba(232,88,10,0.3)',
+                                                }}
+                                            >
+                                                {g.name}
+                                            </Link>
+                                        ))}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>

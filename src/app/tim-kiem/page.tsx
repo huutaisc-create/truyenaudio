@@ -60,6 +60,11 @@ const FilterPage = () => {
     const router = useRouter();
     const keyword = searchParams.get('tu-khoa');
     const theLoaiParam = searchParams.get('the-loai');
+    const boiCanhParam = searchParams.get('boi-canh');
+    const luuPhaiParam = searchParams.get('luu-phai');
+    const tinhCachParam = searchParams.get('tinh-cach');
+    const thiGiacParam = searchParams.get('thi-giac');
+    const parseCsv = (v: string | null) => (v ? v.split(',').map(s => s.trim()).filter(Boolean) : [] as string[]);
 
     // Local search input state — pre-fill với keyword từ URL
     const [localKeyword, setLocalKeyword] = React.useState(keyword || '');
@@ -82,18 +87,13 @@ const FilterPage = () => {
         router.replace(`/tim-kiem?${params.toString()}`);
     };
 
-    // Hỗ trợ nhiều genre cách nhau bằng dấu phẩy: ?the-loai=Ngôn+Tình,Sủng
-    const theLoaiInitial = theLoaiParam
-        ? theLoaiParam.split(',').map(g => g.trim()).filter(Boolean)
-        : [] as string[]
-
-    // Khởi tạo filter với the-loai từ URL nếu có
+    // Khởi tạo filter từ URL — mỗi facet một param (nhiều giá trị cách nhau bằng dấu phẩy)
     const [filters, setFilters] = useState({
-        theLoai: theLoaiInitial,
-        boiCanh: [] as string[],
-        tinhCach: [] as string[],
-        luuPhai: [] as string[],
-        thiGiac: [] as string[],
+        theLoai: parseCsv(theLoaiParam),
+        boiCanh: parseCsv(boiCanhParam),
+        tinhCach: parseCsv(tinhCachParam),
+        luuPhai: parseCsv(luuPhaiParam),
+        thiGiac: parseCsv(thiGiacParam),
         tinhTrang: [] as string[],
         soChuong: [] as string[]
     });
@@ -124,17 +124,24 @@ const FilterPage = () => {
     const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
 
     // Khi URL param thay đổi (navigate từ trang khác), sync vào filter
-    const prevTheLoaiParam = React.useRef(theLoaiParam);
+    // Đồng bộ filter khi bất kỳ param facet nào trên URL đổi (vd bấm chip ở trang chi tiết)
+    const facetParamKey = [theLoaiParam, boiCanhParam, luuPhaiParam, tinhCachParam, thiGiacParam].join('|');
+    const prevFacetKey = React.useRef(facetParamKey);
     React.useEffect(() => {
-        if (theLoaiParam !== prevTheLoaiParam.current) {
-            prevTheLoaiParam.current = theLoaiParam;
-            const genres = theLoaiParam
-                ? theLoaiParam.split(',').map(g => g.trim()).filter(Boolean)
-                : []
-            setFilters(prev => ({ ...prev, theLoai: genres }));
+        if (facetParamKey !== prevFacetKey.current) {
+            prevFacetKey.current = facetParamKey;
+            setFilters(prev => ({
+                ...prev,
+                theLoai: parseCsv(theLoaiParam),
+                boiCanh: parseCsv(boiCanhParam),
+                luuPhai: parseCsv(luuPhaiParam),
+                tinhCach: parseCsv(tinhCachParam),
+                thiGiac: parseCsv(thiGiacParam),
+            }));
             setPage(1);
         }
-    }, [theLoaiParam]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [facetParamKey]);
 
     // Helper: parse chapter range
     const parseChapterRange = (ranges: string[]) => {
@@ -617,7 +624,7 @@ const FilterPage = () => {
                                             </h3>
 
                                             <div className="flex flex-wrap gap-2 mt-1">
-                                                {story.genres && story.genres.slice(0, 2).map((g: any) => (
+                                                {story.genres && story.genres.filter((g: any) => g.type === 'GENRE').slice(0, 2).map((g: any) => (
                                                     <span key={g.name} className="px-2 py-0.5 rounded border border-zinc-200 bg-zinc-50 text-[11px] text-zinc-600 font-medium">
                                                         {g.name}
                                                     </span>

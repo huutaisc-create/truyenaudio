@@ -24,7 +24,7 @@ export async function GET(
             },
             include: {
                 genres: {
-                    select: { id: true, name: true },
+                    select: { id: true, name: true, type: true },
                 },
                 reviews: {
                     orderBy: { createdAt: 'desc' },
