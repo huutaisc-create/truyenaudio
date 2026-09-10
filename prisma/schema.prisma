@@ -375,3 +375,66 @@ model UserFcmToken {
 
   @@index([userId])
 }
+
+// ─────────────────────────────────────────────
+// Affiliate Popup System
+// ─────────────────────────────────────────────
+model AffiliateCampaign {
+  id            String    @id @default(uuid())
+  name          String                        // tên chiến dịch (nội bộ)
+  imageUrl      String                        // banner popup
+  targetUrl     String                        // link affiliate
+  weight        Int       @default(1)         // tỷ trọng xoay vòng (weighted random)
+  incentiveText String?                       // câu incentive hiển thị trên popup
+  isActive      Boolean   @default(true)
+  startAt       DateTime?                     // lịch chạy (tùy chọn)
+  endAt         DateTime?
+  impressions   Int       @default(0)         // đếm nhanh (denormalized)
+  clicks        Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  events        AffiliateEvent[]
+  clickSessions AffiliateClickSession[]
+}
+
+model AffiliateEvent {
+  id         String            @id @default(uuid())
+  campaignId String
+  campaign   AffiliateCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  deviceId   String
+  userId     String?
+  type       String            // "IMPRESSION" | "CLICK"
+  createdAt  DateTime          @default(now())
+
+  @@index([campaignId, type, createdAt])
+  @@index([createdAt])
+}
+
+model AffiliateClickSession {
+  id         String            @id @default(uuid())
+  campaignId String
+  campaign   AffiliateCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  deviceId   String
+  clickedAt  DateTime          @default(now())
+  expiresAt  DateTime          // clickedAt + sessionDays; > now = đang trong session
+
+  @@unique([deviceId, campaignId])
+  @@index([deviceId, expiresAt])
+}
+
+model AffiliatePopupConfig {
+  id                 String   @id @default("singleton")
+  enabled            Boolean  @default(true)  // công tắc tổng hệ thống popup
+  // Thời điểm hiển thị (admin bật/tắt)
+  onAppOpen          Boolean  @default(true)
+  onAfterChapters    Boolean  @default(false)
+  chaptersThreshold  Int      @default(3)
+  onEnterListen      Boolean  @default(false)
+  onTabChange        Boolean  @default(false)
+  // Nhịp độ & session
+  cooldownMinutes    Int      @default(30)    // giãn cách giữa 2 lần popup
+  sessionDays        Int      @default(7)     // chu kỳ click
+  expiredWeightBoost Int      @default(3)     // nhân tỷ trọng cho link vừa hết session
+  updatedAt          DateTime @updatedAt
+}
