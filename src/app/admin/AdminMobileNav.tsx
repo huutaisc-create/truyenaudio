@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, BookOpen, Users, Coins,
   MessageSquareWarning, Bell, Mic2, Replace,
-  ClipboardList, ChevronRight, BookPlus, Menu, X,
+  ClipboardList, ChevronRight, BookPlus, Menu, X, Megaphone,
 } from 'lucide-react'
 import { ROLE_ACCESS, type AdminRole } from '@/lib/admin-guard'
 
@@ -108,6 +108,13 @@ export default function AdminMobileNav({ role, userName }: Props) {
             <>
               <SectionLabel label="THÔNG BÁO" />
               <NavItem href="/admin/notifications" icon={<Bell size={16} />} label="Push Notification" pathname={pathname} onClick={close} />
+            </>
+          )}
+
+          {r === 'ADMIN' && (
+            <>
+              <SectionLabel label="TIẾP THỊ" />
+              <NavItem href="/admin/affiliate" icon={<Megaphone size={16} />} label="Affiliate Popup" pathname={pathname} onClick={close} />
             </>
           )}
 

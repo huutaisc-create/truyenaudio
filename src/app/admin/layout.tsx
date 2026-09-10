@@ -3,7 +3,7 @@ import Link from 'next/link';
 import {
   LayoutDashboard, BookOpen, Users, Coins,
   MessageSquareWarning, Bell, Mic2, Replace,
-  ClipboardList, ChevronRight, BookPlus,
+  ClipboardList, ChevronRight, BookPlus, Megaphone,
 } from 'lucide-react';
 import { auth } from '@/auth';
 import { ALL_ADMIN_ROLES, ROLE_ACCESS, type AdminRole } from '@/lib/admin-guard';
@@ -81,6 +81,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <>
               <SectionLabel label="THÔNG BÁO" />
               <NavLink href="/admin/notifications" icon={<Bell size={16} />} label="Push Notification" />
+            </>
+          )}
+
+          {/* TIẾP THỊ — chỉ ADMIN */}
+          {r === 'ADMIN' && (
+            <>
+              <SectionLabel label="TIẾP THỊ" />
+              <NavLink href="/admin/affiliate" icon={<Megaphone size={16} />} label="Affiliate Popup" />
             </>
           )}
 
