@@ -10,6 +10,11 @@ const TINH_TRANG = ["Đang Ra", "Hoàn Thành", "Dịch", "Convert"];
 const SO_CHUONG  = ["< 200", "200 - 400", "400 - 600", "600 - 800", "800 - 1000", "> 1000"];
 
 // --- HELPER COMPONENTS ---
+// Item của facet: chuỗi (Tình trạng / Số chương) hoặc { name, count } (thể loại theo DB có số đếm)
+type FacetItem = string | { name: string; count: number };
+const facetName = (i: FacetItem) => (typeof i === 'string' ? i : i.name);
+const facetCount = (i: FacetItem): number | undefined => (typeof i === 'string' ? undefined : i.count);
+
 const FilterSection = ({
     title,
     items,
@@ -17,7 +22,7 @@ const FilterSection = ({
     onToggle
 }: {
     title: string;
-    items: string[];
+    items: FacetItem[];
     selectedItems: string[];
     onToggle: (item: string) => void;
 }) => (
@@ -27,17 +32,19 @@ const FilterSection = ({
         </div>
         <div className="flex-1 flex flex-wrap gap-2">
             {items.map(item => {
-                const isSelected = selectedItems.includes(item);
+                const name = facetName(item);
+                const count = facetCount(item);
+                const isSelected = selectedItems.includes(name);
                 return (
                     <button
-                        key={item}
-                        onClick={() => onToggle(item)}
+                        key={name}
+                        onClick={() => onToggle(name)}
                         className={`px-3 py-1.5 rounded text-[13px] font-medium transition-all ${isSelected
                             ? 'bg-brand-primary text-white shadow-sm shadow-orange-500/20'
                             : 'text-zinc-600 hover:text-brand-primary hover:bg-zinc-50'
                             }`}
                     >
-                        {item}
+                        {name}{count !== undefined && <span className="ml-1 opacity-60">({count})</span>}
                     </button>
                 );
             })}
@@ -92,7 +99,7 @@ const FilterPage = () => {
     });
 
     // Genres từ DB
-    const [genreData, setGenreData] = useState<Record<string, string[]>>({});
+    const [genreData, setGenreData] = useState<Record<string, { name: string; count: number }[]>>({});
     React.useEffect(() => {
         getGenres().then(setGenreData);
     }, []);
@@ -202,7 +209,7 @@ const FilterPage = () => {
         onToggle
     }: {
         title: string;
-        items: string[];
+        items: FacetItem[];
         selectedItems: string[];
         onToggle: (item: string) => void;
     }) => (
@@ -212,17 +219,19 @@ const FilterPage = () => {
             </h3>
             <div className="flex flex-wrap gap-2">
                 {items.map(item => {
-                    const isSelected = selectedItems.includes(item);
+                    const name = facetName(item);
+                    const count = facetCount(item);
+                    const isSelected = selectedItems.includes(name);
                     return (
                         <button
-                            key={item}
-                            onClick={() => onToggle(item)}
+                            key={name}
+                            onClick={() => onToggle(name)}
                             className={`px-3 py-1.5 rounded text-[12px] font-medium transition-all ${isSelected
                                 ? 'bg-brand-primary text-white shadow-sm shadow-orange-500/20'
                                 : 'bg-zinc-100 text-zinc-600 hover:text-brand-primary hover:bg-zinc-200'
                                 }`}
                         >
-                            {item}
+                            {name}{count !== undefined && <span className="ml-1 opacity-60">({count})</span>}
                         </button>
                     );
                 })}
@@ -307,11 +316,11 @@ const FilterPage = () => {
                                     <div className="p-4 flex flex-wrap gap-2 border-t border-zinc-100">
                                         {theLoaiList.map(item => (
                                             <button
-                                                key={item}
-                                                onClick={() => toggleFilter('theLoai', item)}
-                                                className={`px-3 py-1.5 rounded text-xs font-medium border ${filters.theLoai.includes(item) ? 'border-brand-primary bg-brand-primary text-white shadow-sm' : 'border-zinc-100 bg-zinc-50 text-zinc-600'}`}
+                                                key={item.name}
+                                                onClick={() => toggleFilter('theLoai', item.name)}
+                                                className={`px-3 py-1.5 rounded text-xs font-medium border ${filters.theLoai.includes(item.name) ? 'border-brand-primary bg-brand-primary text-white shadow-sm' : 'border-zinc-100 bg-zinc-50 text-zinc-600'}`}
                                             >
-                                                {item}
+                                                {item.name} <span className="opacity-60">({item.count})</span>
                                             </button>
                                         ))}
                                     </div>
@@ -364,11 +373,11 @@ const FilterPage = () => {
                                     <div className="p-4 flex flex-wrap gap-2 border-t border-zinc-100">
                                         {boiCanhList.map(item => (
                                             <button
-                                                key={item}
-                                                onClick={() => toggleFilter('boiCanh', item)}
-                                                className={`px-3 py-1.5 rounded text-xs font-medium border ${filters.boiCanh.includes(item) ? 'border-brand-primary bg-brand-primary text-white shadow-sm' : 'border-zinc-100 bg-zinc-50 text-zinc-600'}`}
+                                                key={item.name}
+                                                onClick={() => toggleFilter('boiCanh', item.name)}
+                                                className={`px-3 py-1.5 rounded text-xs font-medium border ${filters.boiCanh.includes(item.name) ? 'border-brand-primary bg-brand-primary text-white shadow-sm' : 'border-zinc-100 bg-zinc-50 text-zinc-600'}`}
                                             >
-                                                {item}
+                                                {item.name} <span className="opacity-60">({item.count})</span>
                                             </button>
                                         ))}
                                     </div>
@@ -383,11 +392,11 @@ const FilterPage = () => {
                                     <div className="p-4 flex flex-wrap gap-2 border-t border-zinc-100">
                                         {luuPhaiList.map(item => (
                                             <button
-                                                key={item}
-                                                onClick={() => toggleFilter('luuPhai', item)}
-                                                className={`px-3 py-1.5 rounded text-xs font-medium border ${filters.luuPhai.includes(item) ? 'border-brand-primary bg-brand-primary text-white shadow-sm' : 'border-zinc-100 bg-zinc-50 text-zinc-600'}`}
+                                                key={item.name}
+                                                onClick={() => toggleFilter('luuPhai', item.name)}
+                                                className={`px-3 py-1.5 rounded text-xs font-medium border ${filters.luuPhai.includes(item.name) ? 'border-brand-primary bg-brand-primary text-white shadow-sm' : 'border-zinc-100 bg-zinc-50 text-zinc-600'}`}
                                             >
-                                                {item}
+                                                {item.name} <span className="opacity-60">({item.count})</span>
                                             </button>
                                         ))}
                                     </div>
@@ -402,11 +411,11 @@ const FilterPage = () => {
                                     <div className="p-4 flex flex-wrap gap-2 border-t border-zinc-100">
                                         {tinhCachList.map(item => (
                                             <button
-                                                key={item}
-                                                onClick={() => toggleFilter('tinhCach', item)}
-                                                className={`px-3 py-1.5 rounded text-xs font-medium border ${filters.tinhCach.includes(item) ? 'border-brand-primary bg-brand-primary text-white shadow-sm' : 'border-zinc-100 bg-zinc-50 text-zinc-600'}`}
+                                                key={item.name}
+                                                onClick={() => toggleFilter('tinhCach', item.name)}
+                                                className={`px-3 py-1.5 rounded text-xs font-medium border ${filters.tinhCach.includes(item.name) ? 'border-brand-primary bg-brand-primary text-white shadow-sm' : 'border-zinc-100 bg-zinc-50 text-zinc-600'}`}
                                             >
-                                                {item}
+                                                {item.name} <span className="opacity-60">({item.count})</span>
                                             </button>
                                         ))}
                                     </div>
@@ -421,11 +430,11 @@ const FilterPage = () => {
                                     <div className="p-4 flex flex-wrap gap-2 border-t border-zinc-100">
                                         {thiGiacList.map(item => (
                                             <button
-                                                key={item}
-                                                onClick={() => toggleFilter('thiGiac', item)}
-                                                className={`px-3 py-1.5 rounded text-xs font-medium border ${filters.thiGiac.includes(item) ? 'border-brand-primary bg-brand-primary text-white shadow-sm' : 'border-zinc-100 bg-zinc-50 text-zinc-600'}`}
+                                                key={item.name}
+                                                onClick={() => toggleFilter('thiGiac', item.name)}
+                                                className={`px-3 py-1.5 rounded text-xs font-medium border ${filters.thiGiac.includes(item.name) ? 'border-brand-primary bg-brand-primary text-white shadow-sm' : 'border-zinc-100 bg-zinc-50 text-zinc-600'}`}
                                             >
-                                                {item}
+                                                {item.name} <span className="opacity-60">({item.count})</span>
                                             </button>
                                         ))}
                                     </div>

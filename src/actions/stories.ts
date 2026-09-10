@@ -24,22 +24,35 @@ import { auth } from '@/auth';
 import { rewardCredit } from '@/lib/credits';
 import { getVnTodayStart, secsUntilVnMidnight } from '@/lib/date-vn';
 
-export async function getGenres(): Promise<Record<string, string[]>> {
+export async function getGenres(): Promise<Record<string, { name: string; count: number }[]>> {
     try {
         const genres = await db.genre.findMany({
-            select: { name: true, type: true },
-            orderBy: { name: 'asc' },
+            select: {
+                name: true,
+                type: true,
+                _count: { select: { stories: { where: { isHidden: false } } } },
+            },
         });
-        const grouped: Record<string, string[]> = {};
+        // Gom theo type, dedup không phân biệt hoa/thường (cộng dồn số), BỎ tag 0 truyện.
+        const map: Record<string, Map<string, number>> = {};
         for (const g of genres) {
-            if (!grouped[g.type]) grouped[g.type] = [];
-            // Dedup không phân biệt hoa thường (giữ lại cái đầu tiên gặp)
-            const already = grouped[g.type].some(
-                n => n.toLowerCase() === g.name.toLowerCase()
-            );
-            if (!already) grouped[g.type].push(g.name);
+            const c = g._count.stories;
+            if (c <= 0) continue;
+            if (!map[g.type]) map[g.type] = new Map();
+            let found: string | undefined;
+            for (const k of map[g.type].keys()) {
+                if (k.toLowerCase() === g.name.toLowerCase()) { found = k; break; }
+            }
+            if (found) map[g.type].set(found, map[g.type].get(found)! + c);
+            else map[g.type].set(g.name, c);
         }
-        return grouped;
+        const out: Record<string, { name: string; count: number }[]> = {};
+        for (const t of Object.keys(map)) {
+            out[t] = [...map[t].entries()]
+                .map(([name, count]) => ({ name, count }))
+                .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+        }
+        return out;
     } catch {
         return {};
     }
