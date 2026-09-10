@@ -4,21 +4,7 @@ import { updateStory } from "@/actions/admin";
 import { useState } from "react";
 import { Image as ImageIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-
-const STORY_TAGS: Record<string, string[]> = {
-    "Thể Loại": [
-        "Tiên Hiệp", "Huyền Huyễn", "Khoa Huyễn", "Võ Hiệp", "Đô Thị", "Đồng Nhân",
-        "Dã Sử", "Cạnh Kỹ", "Huyền Nghi", "Kiếm Hiệp", "Kỳ Ảo", "Linh Dị",
-        "Mạt Thế", "Ngôn Tình", "Ngược", "Quân Sự", "Quan Trường", "Sắc",
-        "Sủng", "Thám Hiểm", "Trinh Thám", "Trọng Sinh", "Võng Du", "Xuyên Không",
-        "Xuyên Nhanh", "Phương Tây", "Việt Nam", "Light Novel", "Nữ Cường", "Đam Mỹ",
-        "Bách Hợp", "Cung Đấu", "Gia Đấu", "Điền Văn", "Hài Hước", "Lịch Sử"
-    ],
-    "Bối Cảnh": ["Đông Phương", "Tây Phương", "Hiện Đại", "Cổ Đại", "Mạt Thế", "Tương Lai", "Dị Giới", "Huyền Ảo"],
-    "Tính Cách": ["Điềm Đạm", "Nhiệt Huyết", "Vô Sỉ", "Thiết Huyết", "Nhẹ Nhàng", "Cơ Trí", "Lãnh Khốc", "Kiêu Ngạo", "Ngây Thơ"],
-    "Lưu Phái": ["Hệ Thống", "Lão Gia", "Bàn Thờ", "Tùy Thân", "Nhạc Lý", "Ẩm Thực", "Vô Địch", "Xuyên Qua", "Trọng Sinh"],
-    "Thị Giác": ["Nam Chủ", "Nữ Chủ", "Ngôi Thứ Nhất"],
-};
+import StoryGenrePicker from "../StoryGenrePicker";
 
 const inputCls = "mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 dark:bg-zinc-700 dark:border-zinc-600 dark:text-white focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500";
 
@@ -187,26 +173,8 @@ export default function EditStoryForm({ story }: { story: any }) {
                 <input type="hidden" name="coverImage" value={coverUrl} />
             </div>
 
-            {/* Tags */}
-            {Object.entries(STORY_TAGS).map(([label, tags]) => (
-                <div key={label}>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{label}</label>
-                    <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-                        {tags.map(tag => (
-                            <label key={tag} className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-700/50 p-1 rounded transition-colors">
-                                <input
-                                    type="checkbox"
-                                    name="genres"
-                                    value={tag}
-                                    defaultChecked={story.genres.some((g: any) => g.name === tag)}
-                                    className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                                />
-                                <span>{tag}</span>
-                            </label>
-                        ))}
-                    </div>
-                </div>
-            ))}
+            {/* Tags — bộ chọn đa facet + Tìm và thêm */}
+            <StoryGenrePicker initial={(story.genres || []).map((g: any) => ({ name: g.name, type: g.type }))} />
 
             {/* Seeding */}
             <div className="grid grid-cols-2 gap-4">

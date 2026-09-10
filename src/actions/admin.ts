@@ -130,7 +130,7 @@ export async function createStory(formData: FormData) {
     const description = formData.get('description') as string;
     const coverImage = formData.get('coverImage') as string;
     const status = formData.get('status') as string;
-    const selectedGenres = formData.getAll('genres') as string[];
+    // Tag đọc theo từng facet ở phần genreConnect bên dưới
     const viewCount = parseInt(formData.get('viewCount') as string || '0');
     const ratingScore = parseFloat(formData.get('ratingScore') as string || '0');
     const ratingCount = parseInt(formData.get('ratingCount') as string || '0');
@@ -155,10 +155,20 @@ export async function createStory(formData: FormData) {
         const existingStory = await db.story.findUnique({ where: { slug } });
         const finalSlug = existingStory ? `${slug}-${Date.now()}` : slug;
 
-        const genreConnect = selectedGenres.map(gName => ({
-            where: { name_type: { name: gName, type: 'GENRE' } },
-            create: { name: gName, type: 'GENRE' }
-        }));
+        // Đọc tag theo từng facet, connectOrCreate đúng type (không còn ép GENRE)
+        const facetMap: [string, string][] = [
+            ['genres', 'GENRE'], ['boiCanh', 'BOI_CANH'], ['luuPhai', 'LUU_PHAI'],
+            ['tinhCach', 'TINH_CACH'], ['thiGiac', 'THI_GIAC'],
+        ];
+        const genreConnect = facetMap.flatMap(([field, type]) =>
+            (formData.getAll(field) as string[])
+                .map(n => (n || '').trim())
+                .filter(Boolean)
+                .map(name => ({
+                    where: { name_type: { name, type } },
+                    create: { name, type },
+                }))
+        );
 
         const newStory = await db.story.create({
             data: {
@@ -197,7 +207,7 @@ export async function updateStory(id: string, formData: FormData) {
     const description = formData.get('description') as string;
     const coverImage = formData.get('coverImage') as string;
     const status = formData.get('status') as string;
-    const selectedGenres = formData.getAll('genres') as string[];
+    // Tag đọc theo từng facet ở phần genreConnect bên dưới
     const viewCount = parseInt(formData.get('viewCount') as string || '0');
     const ratingScore = parseFloat(formData.get('ratingScore') as string || '0');
     const ratingCount = parseInt(formData.get('ratingCount') as string || '0');
@@ -213,10 +223,20 @@ export async function updateStory(id: string, formData: FormData) {
             data: { genres: { set: [] } }
         });
 
-        const genreConnect = selectedGenres.map(gName => ({
-            where: { name_type: { name: gName, type: 'GENRE' } },
-            create: { name: gName, type: 'GENRE' }
-        }));
+        // Đọc tag theo từng facet, connectOrCreate đúng type (không còn ép GENRE)
+        const facetMap: [string, string][] = [
+            ['genres', 'GENRE'], ['boiCanh', 'BOI_CANH'], ['luuPhai', 'LUU_PHAI'],
+            ['tinhCach', 'TINH_CACH'], ['thiGiac', 'THI_GIAC'],
+        ];
+        const genreConnect = facetMap.flatMap(([field, type]) =>
+            (formData.getAll(field) as string[])
+                .map(n => (n || '').trim())
+                .filter(Boolean)
+                .map(name => ({
+                    where: { name_type: { name, type } },
+                    create: { name, type },
+                }))
+        );
 
         await db.story.update({
             where: { id },
@@ -1180,4 +1200,119 @@ export async function createChaptersBulk(
     revalidatePath(`/admin/stories/${storyId}/chapters`);
 
     return { success: true as const, created, updated, skipped, failed, total: actualTotal };
+}
+
+// ─────────────────────────────────────────────
+// AFFILIATE POPUP
+// ─────────────────────────────────────────────
+function _affParseDate(v: FormDataEntryValue | null): Date | null {
+    const s = (v as string | null)?.trim();
+    if (!s) return null;
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+}
+
+export async function getAffiliateCampaigns() {
+    await checkAdmin();
+    return db.affiliateCampaign.findMany({ orderBy: { createdAt: 'desc' } });
+}
+
+export async function createAffiliateCampaign(formData: FormData) {
+    await checkAdmin();
+    try {
+        await db.affiliateCampaign.create({
+            data: {
+                name: ((formData.get('name') as string) || 'Chiến dịch').trim(),
+                imageUrl: ((formData.get('imageUrl') as string) || '').trim(),
+                targetUrl: ((formData.get('targetUrl') as string) || '').trim(),
+                weight: parseInt((formData.get('weight') as string) || '1') || 1,
+                incentiveText: ((formData.get('incentiveText') as string) || '').trim() || null,
+                isActive: formData.get('isActive') === 'on',
+                startAt: _affParseDate(formData.get('startAt')),
+                endAt: _affParseDate(formData.get('endAt')),
+            },
+        });
+        revalidatePath('/admin/affiliate');
+        return { success: true };
+    } catch (e) { console.error(e); return { error: 'Tạo chiến dịch thất bại' }; }
+}
+
+export async function updateAffiliateCampaign(id: string, formData: FormData) {
+    await checkAdmin();
+    try {
+        await db.affiliateCampaign.update({
+            where: { id },
+            data: {
+                name: ((formData.get('name') as string) || '').trim(),
+                imageUrl: ((formData.get('imageUrl') as string) || '').trim(),
+                targetUrl: ((formData.get('targetUrl') as string) || '').trim(),
+                weight: parseInt((formData.get('weight') as string) || '1') || 1,
+                incentiveText: ((formData.get('incentiveText') as string) || '').trim() || null,
+                isActive: formData.get('isActive') === 'on',
+                startAt: _affParseDate(formData.get('startAt')),
+                endAt: _affParseDate(formData.get('endAt')),
+            },
+        });
+        revalidatePath('/admin/affiliate');
+        return { success: true };
+    } catch (e) { console.error(e); return { error: 'Cập nhật thất bại' }; }
+}
+
+export async function deleteAffiliateCampaign(id: string) {
+    await checkAdmin();
+    try {
+        await db.affiliateCampaign.delete({ where: { id } });
+        revalidatePath('/admin/affiliate');
+        return { success: true };
+    } catch (e) { return { error: 'Xoá thất bại' }; }
+}
+
+export async function getAffiliateConfig() {
+    await checkAdmin();
+    const cfg = await db.affiliatePopupConfig.findUnique({ where: { id: 'singleton' } });
+    return cfg ?? (await db.affiliatePopupConfig.create({ data: { id: 'singleton' } }));
+}
+
+export async function updateAffiliateConfig(formData: FormData) {
+    await checkAdmin();
+    try {
+        const data = {
+            enabled: formData.get('enabled') === 'on',
+            onAppOpen: formData.get('onAppOpen') === 'on',
+            onAfterChapters: formData.get('onAfterChapters') === 'on',
+            chaptersThreshold: parseInt((formData.get('chaptersThreshold') as string) || '3') || 3,
+            onEnterListen: formData.get('onEnterListen') === 'on',
+            onTabChange: formData.get('onTabChange') === 'on',
+            cooldownMinutes: parseInt((formData.get('cooldownMinutes') as string) || '30') || 30,
+            sessionDays: parseInt((formData.get('sessionDays') as string) || '7') || 7,
+            expiredWeightBoost: parseInt((formData.get('expiredWeightBoost') as string) || '3') || 3,
+        };
+        await db.affiliatePopupConfig.upsert({
+            where: { id: 'singleton' },
+            update: data,
+            create: { id: 'singleton', ...data },
+        });
+        revalidatePath('/admin/affiliate');
+        return { success: true };
+    } catch (e) { console.error(e); return { error: 'Lưu cấu hình thất bại' }; }
+}
+
+export async function getAffiliateStats() {
+    await checkAdmin();
+    const since = new Date(Date.now() - 7 * 86400000);
+    const campaigns = await db.affiliateCampaign.findMany({
+        orderBy: { clicks: 'desc' },
+        select: { id: true, name: true, impressions: true, clicks: true, isActive: true },
+    });
+    const recent = await db.affiliateEvent.groupBy({
+        by: ['campaignId', 'type'],
+        where: { createdAt: { gte: since } },
+        _count: { _all: true },
+    });
+    const recentMap: Record<string, { imp: number; clk: number }> = {};
+    for (const r of recent) {
+        const m = (recentMap[r.campaignId] ??= { imp: 0, clk: 0 });
+        if (r.type === 'CLICK') m.clk += r._count._all; else m.imp += r._count._all;
+    }
+    return { campaigns, recentMap };
 }
