@@ -8,7 +8,6 @@ import { createNotification } from '@/lib/notify';
 
 const PAGE_SIZE = 20;
 const MAX_STORIES_PER_DAY = 5;
-const COOLDOWN_SECONDS = 60; // cooldown ép ở BACKEND (client cũng có đếm ngược riêng)
 
 // Map 1 comment sang shape trả về; comment đã xoá → tombstone.
 function toDto(c: any, isLiked: boolean) {
@@ -117,22 +116,8 @@ export async function POST(
       }, { status: 400 });
     }
 
-    // ── [RULE] Cooldown BACKEND: chặn spam gọi API trực tiếp ──
-    const lastComment = await db.comment.findFirst({
-      where: { userId: authUser.id },
-      orderBy: { createdAt: 'desc' },
-      select: { createdAt: true },
-    });
-    if (lastComment) {
-      const elapsed = Date.now() - lastComment.createdAt.getTime();
-      if (elapsed < COOLDOWN_SECONDS * 1000) {
-        const wait = Math.ceil((COOLDOWN_SECONDS * 1000 - elapsed) / 1000);
-        return NextResponse.json(
-          { error: `Vui lòng đợi ${wait}s trước khi bình luận tiếp.`, cooldownSeconds: wait },
-          { status: 429 }
-        );
-      }
-    }
+    // (Bỏ chặn cứng cooldown: bình luận luôn được đăng — cooldown 1 phút chỉ áp cho
+    //  CREDIT, không chặn đăng. Chống spam: đăng nhập + ≥21 ký tự + SpamKeyword + giới hạn credit.)
 
     const [story, spamKeywords] = await Promise.all([
       db.story.findUnique({ where: { slug }, select: { id: true, title: true } }),
