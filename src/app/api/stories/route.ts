@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import db from "@/lib/db";
 import { orderGenreNames } from "@/lib/taxonomy";
-
-const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,7 +63,7 @@ export async function GET(request: NextRequest) {
 
     // ── Query ──────────────────────────────────────────────────────────────
     const [stories, totalItems] = await Promise.all([
-      prisma.story.findMany({
+      db.story.findMany({
         where: whereCondition,
         skip,
         take: limit,
@@ -89,7 +87,7 @@ export async function GET(request: NextRequest) {
         },
         orderBy,
       }),
-      prisma.story.count({ where: whereCondition }),
+      db.story.count({ where: whereCondition }),
     ]);
 
     // Map genres → categories: lấy tag theo THỨ TỰ ƯU TIÊN nhóm (FACET_ORDER), tối đa 3, cho gọn thẻ truyện.
