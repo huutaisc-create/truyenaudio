@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'webtruyen-secret-key-123456';
+const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export async function GET(req: Request) {
     try {

@@ -3,7 +3,7 @@ import db from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'webtruyen-secret-key-123456';
+const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export async function POST(req: Request) {
   try {

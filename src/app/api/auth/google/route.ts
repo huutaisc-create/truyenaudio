@@ -3,7 +3,7 @@ import { OAuth2Client } from 'google-auth-library';
 import db from '@/lib/db';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'webtruyen-secret-key-123456';
+const JWT_SECRET = process.env.JWT_SECRET as string;
 // Web Client ID (NextAuth web login)
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 // App Client ID (Flutter mobile app) — có thể trùng hoặc khác

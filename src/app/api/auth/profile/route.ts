@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { auth } from '@/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'webtruyen-secret-key-123456';
+const JWT_SECRET = process.env.JWT_SECRET as string;
 
 async function getUserId(req: Request): Promise<string | null> {
     // Ưu tiên NextAuth session (web)

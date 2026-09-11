@@ -4,7 +4,7 @@
 import jwt from 'jsonwebtoken';
 import { auth } from '@/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'webtruyen-secret-key-123456';
+const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export interface AuthUser {
   id: string;

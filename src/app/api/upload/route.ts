@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
             folder = 'uploads';
         } else if (type === 'cover') {
             outputBuffer = await sharp(inputBuffer)
-                .resize(600, 800, { fit: 'inside', withoutEnlargement: true })
+                .resize(800, 1066, { fit: 'inside', withoutEnlargement: true })
                 .webp({ quality: 85 })
                 .toBuffer();
             filename = `cover-${timestamp}.webp`;

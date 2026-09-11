@@ -128,15 +128,15 @@ FROM g_target gt
 JOIN "Genre" surv ON surv.name = gt.canonical AND surv.type = gt.newtype
 WHERE gt.canonical IS NOT NULL;
 
--- 6) Dời liên kết truyện từ row cũ → survivor (tránh trùng)
-UPDATE "_GenreToStory" gs
-SET "A" = im.new_id
-FROM id_map im
-WHERE gs."A" = im.old_id
-  AND im.old_id <> im.new_id
-  AND NOT EXISTS (SELECT 1 FROM "_GenreToStory" x WHERE x."A" = im.new_id AND x."B" = gs."B");
+-- 6) Tạo liên kết cho survivor (gộp nhiều alias về 1 tag, tránh trùng khóa)
+INSERT INTO "_GenreToStory" ("A","B")
+SELECT DISTINCT im.new_id, gs."B"
+FROM "_GenreToStory" gs
+JOIN id_map im ON gs."A" = im.old_id
+WHERE im.old_id <> im.new_id
+ON CONFLICT DO NOTHING;
 
--- 7) Xoá liên kết trùng còn sót ở row cũ, rồi xoá row cũ (không phải survivor)
+-- 7) Xoá liên kết cũ, rồi xoá row Genre cũ (không phải survivor)
 DELETE FROM "_GenreToStory" gs USING id_map im
 WHERE gs."A" = im.old_id AND im.old_id <> im.new_id;
 
