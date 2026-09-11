@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getAuthUser } from '@/lib/auth-helper';
+import { createNotification } from '@/lib/notify';
 
 export async function POST(
   req: Request,
@@ -15,10 +16,10 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check comment tồn tại
+    // Check comment tồn tại (thêm userId + storyId để tạo thông báo)
     const comment = await db.comment.findUnique({
       where: { id: commentId },
-      select: { id: true, likeCount: true },
+      select: { id: true, likeCount: true, userId: true, storyId: true },
     });
     if (!comment) {
       return NextResponse.json({ error: 'Comment not found' }, { status: 404 });
@@ -53,6 +54,18 @@ export async function POST(
       where: { id: commentId },
       data: { likeCount: newLikeCount },
     });
+
+    // Chỉ tạo thông báo khi LIKE (không phải bỏ like). Helper tự bỏ qua nếu tự-like.
+    if (isLiked) {
+      await createNotification({
+        recipientId: comment.userId,
+        actorId: authUser.id,
+        type: 'COMMENT_LIKE',
+        groupKey: `like:${commentId}`, // gộp mọi lượt like của cùng comment
+        storyId: comment.storyId,
+        commentId: comment.id,
+      });
+    }
 
     return NextResponse.json({
       success: true,
