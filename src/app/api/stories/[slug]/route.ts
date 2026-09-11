@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import db from "@/lib/db";
+import { orderGenreNames } from "@/lib/taxonomy";
 
 export async function GET(
     request: NextRequest,
@@ -17,7 +16,7 @@ export async function GET(
             );
         }
 
-        const story = await prisma.story.findFirst({
+        const story = await db.story.findFirst({
             where: {
                 slug: slug,
                 isHidden: false,
@@ -49,7 +48,9 @@ export async function GET(
 
         return NextResponse.json({
             success: true,
-            data: story,
+            // categories = top-3 tag theo FACET_ORDER (đồng bộ với /api/stories listing)
+            // để "Truyện liên quan" so khớp đúng; giữ nguyên `genres` (đủ) cho hiển thị tag.
+            data: { ...story, categories: orderGenreNames(story.genres, 3) },
         });
     } catch (error) {
         console.error(`Error fetching story API:`, error);
