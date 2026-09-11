@@ -43,6 +43,10 @@ model User {
   userVips           UserVip[]
   payments           Payment[]
   fcmTokens          UserFcmToken[]
+  // --- Social feature (thêm mới) ---
+  roomMessages       RoomMessage[]
+  chatRoomReads      ChatRoomRead[]
+  notifications      Notification[]      @relation("NotifRecipient")
 }
 
 // --- CREDIT TRANSACTIONS (audit log) ---
@@ -210,20 +214,37 @@ model Review {
 }
 
 model Comment {
-  id          String   @id @default(uuid())
+  id          String        @id @default(uuid())
   content     String
-  likeCount   Int      @default(0)
-  createdAt   DateTime @default(now())
+  likeCount   Int           @default(0)
+  createdAt   DateTime      @default(now())
+
+  // --- Social feature (thêm mới) ---
+  parentId    String?       // null = comment gốc; reply LUÔN trỏ về gốc (nest 1 cấp)
+  replyCount  Int           @default(0)
+  status      CommentStatus @default(VISIBLE)
+  updatedAt   DateTime      @updatedAt
 
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   storyId     String
   story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Comment[] @relation("CommentReplies")
 
   commentLikes CommentLike[]
 
   @@index([storyId, createdAt])
+  @@index([storyId, parentId, createdAt])
+  @@index([parentId, createdAt])
+}
+
+enum CommentStatus {
+  VISIBLE
+  DELETED
+  HIDDEN
 }
 
 model CommentLike {
@@ -444,4 +465,91 @@ model AffiliatePopupConfig {
   sessionDays        Int      @default(7)     // chu kỳ click
   expiredWeightBoost Int      @default(3)     // nhân tỷ trọng cho link vừa hết session
   updatedAt          DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// SOCIAL: Chat phòng "tám chuyện" + Notification tương tác
+// (Bảng thật tạo bằng SQL: prisma/social-migration.sql — KHÔNG migrate dev)
+// ─────────────────────────────────────────────
+
+model ChatRoom {
+  id        String       @id @default(uuid())
+  slug      String       @unique  // seed 1 row: "tam-chuyen"
+  name      String
+  type      ChatRoomType @default(PUBLIC)
+  createdAt DateTime     @default(now())
+
+  messages RoomMessage[]
+  reads    ChatRoomRead[]
+}
+
+enum ChatRoomType {
+  PUBLIC
+  DIRECT
+  GROUP
+}
+
+// Tin nhắn phòng chung — KHÁC ChatMessage (chat-theo-storySlug đã có)
+model RoomMessage {
+  id        String            @id @default(uuid())
+  roomId    String
+  userId    String
+  content   String
+  status    ChatMessageStatus @default(VISIBLE)
+  createdAt DateTime          @default(now())
+
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, createdAt])
+  @@index([userId])
+}
+
+enum ChatMessageStatus {
+  VISIBLE
+  DELETED
+  HIDDEN
+}
+
+// Mốc "đã đọc" của mỗi user trong 1 phòng → badge unread
+model ChatRoomRead {
+  roomId     String
+  userId     String
+  lastReadAt DateTime @default(now())
+
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, userId])
+}
+
+// Thông báo tương tác (reply/like/mention) — KHÁC PushNotification (admin broadcast)
+model Notification {
+  id           String           @id @default(uuid())
+  recipientId  String
+  type         NotificationType
+  storyId      String?
+  commentId    String?
+  roomId       String?
+  messageId    String?
+  groupKey     String           // gộp: vd "like:comment_<id>"
+  actorId      String?
+  actorCount   Int              @default(1)
+  isRead       Boolean          @default(false)
+  lastPushedAt DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  recipient User @relation("NotifRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, isRead, updatedAt])
+  // 2 index dưới KHÔNG khai báo được bằng Prisma (partial) → tạo bằng SQL trong migration:
+  //   UNIQUE (recipientId, groupKey) WHERE isRead = false
+  //   (updatedAt) WHERE isRead = false
+}
+
+enum NotificationType {
+  COMMENT_REPLY
+  COMMENT_LIKE
+  CHAT_MENTION
 }
