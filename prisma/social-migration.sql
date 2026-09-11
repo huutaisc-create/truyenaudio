@@ -7,9 +7,6 @@
 
 BEGIN;
 
--- gen_random_uuid() cho phần seed
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 -- 1) ENUMS
 DO $$ BEGIN CREATE TYPE "CommentStatus" AS ENUM ('VISIBLE','DELETED','HIDDEN');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
@@ -92,9 +89,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS "Notification_unread_group_uq"
 CREATE INDEX IF NOT EXISTS "Notification_unread_idx"
   ON "Notification" ("updatedAt") WHERE "isRead" = false;
 
--- 7) Seed phòng "tám chuyện"
+-- 7) Seed phòng "tám chuyện" (id cố định vì cột id là TEXT, không cần UUID thật)
 INSERT INTO "ChatRoom" ("id","slug","name","type")
-VALUES (gen_random_uuid(), 'tam-chuyen', 'Tám Chuyện', 'PUBLIC')
+VALUES ('room_tam_chuyen', 'tam-chuyen', 'Tám Chuyện', 'PUBLIC')
 ON CONFLICT ("slug") DO NOTHING;
 
 COMMIT;
