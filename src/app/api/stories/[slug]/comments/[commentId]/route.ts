@@ -17,7 +17,7 @@ export async function DELETE(
 
     const comment = await db.comment.findUnique({
       where: { id: commentId },
-      select: { id: true, userId: true },
+      select: { id: true, userId: true, parentId: true, status: true },
     });
     if (!comment) {
       return NextResponse.json({ error: 'Comment not found' }, { status: 404 });
@@ -28,7 +28,23 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await db.comment.delete({ where: { id: commentId } });
+    if (comment.status === 'DELETED') {
+      return NextResponse.json({ success: true }); // đã xoá rồi, idempotent
+    }
+
+    // SOFT-DELETE: đổi trạng thái, GIỮ reply con (không mồ côi)
+    await db.comment.update({
+      where: { id: commentId },
+      data: { status: 'DELETED' },
+    });
+
+    // Nếu là REPLY → giảm replyCount của comment gốc
+    if (comment.parentId) {
+      await db.comment.update({
+        where: { id: comment.parentId },
+        data: { replyCount: { decrement: 1 } },
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

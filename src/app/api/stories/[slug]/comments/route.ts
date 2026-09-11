@@ -4,9 +4,27 @@ import db from '@/lib/db';
 import { getAuthUser } from '@/lib/auth-helper';
 import { rewardCredit, getTaskReward } from '@/lib/credits';
 import { getVnTodayStart, secsUntilVnMidnight } from '@/lib/date-vn';
+import { createNotification } from '@/lib/notify';
 
 const PAGE_SIZE = 20;
 const MAX_STORIES_PER_DAY = 5;
+const COOLDOWN_SECONDS = 60; // cooldown ép ở BACKEND (client cũng có đếm ngược riêng)
+
+// Map 1 comment sang shape trả về; comment đã xoá → tombstone.
+function toDto(c: any, isLiked: boolean) {
+  const deleted = c.status === 'DELETED';
+  return {
+    id: c.id,
+    parentId: c.parentId ?? null,
+    content: deleted ? null : c.content,
+    deleted,
+    likeCount: c.likeCount,
+    replyCount: c.replyCount ?? 0,
+    createdAt: c.createdAt,
+    isLiked,
+    user: deleted ? null : c.user,
+  };
+}
 
 export async function GET(
   req: Request,
@@ -16,6 +34,7 @@ export async function GET(
     const { slug } = await params;
     const { searchParams } = new URL(req.url);
     const after = searchParams.get('after');
+    const parentId = searchParams.get('parentId'); // có → lấy REPLY của comment gốc này
     const limit = Math.min(Number(searchParams.get('limit') || PAGE_SIZE), 50);
 
     const story = await db.story.findUnique({ where: { slug }, select: { id: true } });
@@ -23,9 +42,9 @@ export async function GET(
 
     const authUser = await getAuthUser(req);
 
-    // Kiểm tra user đã bình luận truyện này hôm nay chưa (để frontend set commentLocked đúng sau refresh)
+    // commentedToday: chỉ cần cho lần load đầu của comment GỐC
     let commentedToday = false;
-    if (authUser && !after) {
+    if (authUser && !after && !parentId) {
       const todayStart = getVnTodayStart();
       const tx = await db.creditTransaction.findFirst({
         where: {
@@ -40,7 +59,11 @@ export async function GET(
     }
 
     const comments = await db.comment.findMany({
-      where: { storyId: story.id },
+      where: {
+        storyId: story.id,
+        // parentId=null → comment GỐC; có parentId → REPLY của comment đó
+        parentId: parentId ?? null,
+      },
       include: {
         user: { select: { id: true, name: true, image: true, role: true } },
         commentLikes: authUser
@@ -56,14 +79,9 @@ export async function GET(
     return NextResponse.json({
       success: true,
       commentedToday,
-      data: reversed.map(c => ({
-        id: c.id,
-        content: c.content,
-        likeCount: c.likeCount,
-        createdAt: c.createdAt,
-        isLiked: authUser ? c.commentLikes.length > 0 : false,
-        user: c.user,
-      })),
+      data: reversed.map((c: any) =>
+        toDto(c, authUser ? c.commentLikes.length > 0 : false)
+      ),
       hasMore: comments.length === limit,
       nextCursor: reversed.length > 0 ? reversed[0].id : null,
     });
@@ -83,20 +101,37 @@ export async function POST(
     const authUser = await getAuthUser(req);
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { content } = await req.json();
+    const body = await req.json();
+    const content = body?.content;
+    const parentId: string | null = body?.parentId ?? null;
     const trimmed = content?.trim() ?? '';
 
-    // ── [RULE] Nội dung rỗng → reject ──
+    // ── [RULE] Nội dung rỗng / quá ngắn ──
     if (!trimmed) {
       return NextResponse.json({ error: 'Nội dung không được để trống' }, { status: 400 });
     }
-
-    // ── [RULE] Nội dung <= 20 ký tự → không lưu DB ──
     if (trimmed.length <= 20) {
       return NextResponse.json({
         success: false,
         error: 'Bình luận cần ít nhất 21 ký tự để được đăng.',
       }, { status: 400 });
+    }
+
+    // ── [RULE] Cooldown BACKEND: chặn spam gọi API trực tiếp ──
+    const lastComment = await db.comment.findFirst({
+      where: { userId: authUser.id },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    });
+    if (lastComment) {
+      const elapsed = Date.now() - lastComment.createdAt.getTime();
+      if (elapsed < COOLDOWN_SECONDS * 1000) {
+        const wait = Math.ceil((COOLDOWN_SECONDS * 1000 - elapsed) / 1000);
+        return NextResponse.json(
+          { error: `Vui lòng đợi ${wait}s trước khi bình luận tiếp.`, cooldownSeconds: wait },
+          { status: 429 }
+        );
+      }
     }
 
     const [story, spamKeywords] = await Promise.all([
@@ -112,7 +147,73 @@ export async function POST(
       return NextResponse.json({ error: 'Bình luận chứa nội dung không phù hợp.' }, { status: 400 });
     }
 
-    // ── Lấy lịch sử credit hôm nay ──
+    // ── Nếu là REPLY: kiểm tra comment gốc + ép nest 1 cấp ──
+    let parentIdToSave: string | null = null;
+    let replyRecipientId: string | null = null; // người được reply (nhận thông báo)
+    if (parentId) {
+      const parent = await db.comment.findUnique({
+        where: { id: parentId },
+        select: { id: true, parentId: true, status: true, userId: true, storyId: true },
+      });
+      if (!parent || parent.storyId !== story.id) {
+        return NextResponse.json({ error: 'Bình luận gốc không tồn tại' }, { status: 404 });
+      }
+      if (parent.status !== 'VISIBLE') {
+        return NextResponse.json(
+          { error: 'Bình luận gốc đã bị xoá hoặc ẩn' },
+          { status: 409 }
+        );
+      }
+      // ép nest 1 cấp: reply-của-reply vẫn trỏ về comment GỐC của luồng
+      parentIdToSave = parent.parentId ?? parent.id;
+      replyRecipientId = parent.userId; // báo cho đúng người mình đang reply
+    }
+
+    // ── Tạo comment/reply ──
+    const comment = await db.comment.create({
+      data: {
+        content: trimmed,
+        userId: authUser.id,
+        storyId: story.id,
+        parentId: parentIdToSave,
+      },
+      include: {
+        user: { select: { id: true, name: true, image: true, role: true } },
+      },
+    });
+
+    const commentData = {
+      id: comment.id,
+      parentId: comment.parentId ?? null,
+      content: comment.content,
+      deleted: false,
+      likeCount: comment.likeCount,
+      replyCount: 0,
+      createdAt: comment.createdAt,
+      isLiked: false,
+      user: comment.user,
+    };
+
+    // ── Nếu là REPLY: tăng replyCount gốc + gửi thông báo, KHÔNG tính credit ──
+    if (parentIdToSave) {
+      await db.comment.update({
+        where: { id: parentIdToSave },
+        data: { replyCount: { increment: 1 } },
+      });
+      if (replyRecipientId) {
+        await createNotification({
+          recipientId: replyRecipientId,
+          actorId: authUser.id,
+          type: 'COMMENT_REPLY',
+          groupKey: `reply:${comment.id}`, // mỗi reply 1 thông báo riêng
+          storyId: story.id,
+          commentId: comment.id,
+        });
+      }
+      return NextResponse.json({ success: true, credited: false, data: commentData }, { status: 201 });
+    }
+
+    // ══════ Dưới đây là COMMENT GỐC → giữ nguyên hệ thống credit cũ ══════
     const todayStart = getVnTodayStart();
     const secsUntilMidnight = secsUntilVnMidnight();
 
@@ -137,28 +238,6 @@ export async function POST(
     const isOverDailyLimit = distinctStoryIds.size >= MAX_STORIES_PER_DAY;
     const remainingSlots = MAX_STORIES_PER_DAY - distinctStoryIds.size;
 
-    // ── Luôn lưu bình luận — credit check sau ──
-    const comment = await db.comment.create({
-      data: {
-        content: trimmed,
-        userId: authUser.id,
-        storyId: story.id,
-      },
-      include: {
-        user: { select: { id: true, name: true, image: true, role: true } },
-      },
-    });
-
-    const commentData = {
-      id: comment.id,
-      content: comment.content,
-      likeCount: comment.likeCount,
-      createdAt: comment.createdAt,
-      isLiked: false,
-      user: comment.user,
-    };
-
-    // ── Đã bình luận truyện này hôm nay → lưu bình thường, không credit ──
     if (alreadyThisStory) {
       const slots = MAX_STORIES_PER_DAY - distinctStoryIds.size;
       return NextResponse.json({
@@ -172,7 +251,6 @@ export async function POST(
       }, { status: 201 });
     }
 
-    // ── Vượt max 5 truyện → lưu bình thường, không credit ──
     if (isOverDailyLimit) {
       return NextResponse.json({
         success: true,
@@ -183,8 +261,7 @@ export async function POST(
       }, { status: 201 });
     }
 
-    // ── Tính credit ──
-    const commentReward = await getTaskReward('COMMENT', 0.2)
+    const commentReward = await getTaskReward('COMMENT', 0.2);
     const rewardResult = await rewardCredit(
       authUser.id,
       'REWARD_COMMENT',
