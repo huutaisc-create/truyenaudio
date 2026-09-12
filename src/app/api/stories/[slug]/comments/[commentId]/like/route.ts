@@ -9,17 +9,17 @@ export async function POST(
   { params }: { params: Promise<{ slug: string; commentId: string }> }
 ) {
   try {
-    const { commentId } = await params;
+    const { slug, commentId } = await params;
 
     const authUser = await getAuthUser(req);
     if (!authUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check comment tồn tại (thêm userId + storyId để tạo thông báo)
+    // Check comment tồn tại (thêm userId + storyId + content để tạo thông báo)
     const comment = await db.comment.findUnique({
       where: { id: commentId },
-      select: { id: true, likeCount: true, userId: true, storyId: true },
+      select: { id: true, likeCount: true, userId: true, storyId: true, content: true },
     });
     if (!comment) {
       return NextResponse.json({ error: 'Comment not found' }, { status: 404 });
@@ -57,13 +57,18 @@ export async function POST(
 
     // Chỉ tạo thông báo khi LIKE (không phải bỏ like). Helper tự bỏ qua nếu tự-like.
     if (isLiked) {
+      const preview = comment.content.length > 80
+        ? `${comment.content.slice(0, 80)}…`
+        : comment.content;
       await createNotification({
         recipientId: comment.userId,
         actorId: authUser.id,
         type: 'COMMENT_LIKE',
         groupKey: `like:${commentId}`, // gộp mọi lượt like của cùng comment
         storyId: comment.storyId,
+        storySlug: slug,
         commentId: comment.id,
+        preview,
       });
     }
 

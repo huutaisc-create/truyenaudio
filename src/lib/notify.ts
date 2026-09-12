@@ -12,9 +12,11 @@ interface CreateNotifInput {
   type: NotifType;
   groupKey: string; // gộp: cùng (recipient, groupKey) mà chưa đọc thì gộp vào 1 dòng
   storyId?: string | null;
+  storySlug?: string | null;
   commentId?: string | null;
   roomId?: string | null;
   messageId?: string | null;
+  preview?: string | null;
 }
 
 /**
@@ -41,6 +43,8 @@ export async function createNotification(input: CreateNotifInput) {
         // chỉ tăng khi actor khác actor gần nhất (tránh 1 người thổi số bằng like/unlike)
         actorCount:
           existing.actorId && existing.actorId !== actorId ? { increment: 1 } : undefined,
+        storySlug: input.storySlug ?? undefined,
+        preview: input.preview ?? undefined,
         updatedAt: new Date(),
       },
     });
@@ -52,9 +56,11 @@ export async function createNotification(input: CreateNotifInput) {
         type,
         groupKey,
         storyId: input.storyId ?? null,
+        storySlug: input.storySlug ?? null,
         commentId: input.commentId ?? null,
         roomId: input.roomId ?? null,
         messageId: input.messageId ?? null,
+        preview: input.preview ?? null,
         actorCount: 1,
       },
     });

@@ -192,7 +192,9 @@ export async function POST(
           type: 'COMMENT_REPLY',
           groupKey: `reply:${comment.id}`, // mỗi reply 1 thông báo riêng
           storyId: story.id,
+          storySlug: slug,
           commentId: comment.id,
+          preview: trimmed.length > 80 ? `${trimmed.slice(0, 80)}…` : trimmed,
         });
       }
       return NextResponse.json({ success: true, credited: false, data: commentData }, { status: 201 });
