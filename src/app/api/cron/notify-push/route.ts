@@ -64,12 +64,13 @@ export async function GET(req: Request) {
     const actorMap = new Map(actors.map((a) => [a.id, a.name || 'Ai đó']));
 
     let pushed = 0;
+    let skipped = 0;
     for (const n of due) {
       const actorName = n.actorId ? actorMap.get(n.actorId) ?? 'Ai đó' : 'Ai đó';
       const others = n.actorCount > 1 ? ` và ${n.actorCount - 1} người khác` : '';
       const body = `${actorName}${others} đã thích bình luận của bạn${n.preview ? `: ${n.preview}` : ''}`;
 
-      await sendPushToUser(n.recipientId, {
+      const sent = await sendPushToUser(n.recipientId, {
         title: 'Có lượt thích mới',
         body,
         data: {
@@ -82,14 +83,26 @@ export async function GET(req: Request) {
         },
       });
 
-      await db.notification.update({
-        where: { id: n.id },
-        data: { lastPushedAt: new Date() },
-      });
+      // CHƯA gửi được (thiếu FIREBASE_SERVICE_ACCOUNT_BASE64 hoặc lỗi tạm thời)
+      // → KHÔNG set lastPushedAt, để lượt cron sau gửi lại. Đánh dấu bừa ở đây
+      // đồng nghĩa thông báo đó vĩnh viễn không bao giờ được đẩy đi.
+      if (!sent) {
+        skipped++;
+        continue;
+      }
+
+      // PHẢI dùng raw SQL, KHÔNG dùng db.notification.update():
+      // Notification.updatedAt khai báo @updatedAt nên Prisma sẽ tự bump nó ở
+      // mọi lệnh update, với timestamp sinh lúc query chạy — tức muộn hơn giá
+      // trị lastPushedAt mà JS tính trước đó. Điều kiện quét của cron là
+      // (updatedAt > lastPushedAt) nên dòng vừa đánh dấu lại "đến hạn" ngay,
+      // và user nhận lại đúng thông báo đó mỗi 5 phút cho tới khi đọc nó.
+      // now() của Postgres chạy sau, còn updatedAt giữ nguyên → hết lặp.
+      await db.$executeRaw`UPDATE "Notification" SET "lastPushedAt" = now() WHERE "id" = ${n.id}`;
       pushed++;
     }
 
-    return NextResponse.json({ success: true, pushed });
+    return NextResponse.json({ success: true, pushed, skipped });
   } catch (error) {
     console.error('cron/notify-push error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

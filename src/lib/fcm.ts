@@ -58,17 +58,25 @@ export interface PushPayload {
  * Gửi push tới mọi thiết bị đã đăng ký (UserFcmToken) của 1 user.
  * - "Best effort": không bao giờ throw ra ngoài (push lỗi không được làm hỏng request chính).
  * - Tự xoá token unregistered/invalid khỏi DB để lần sau khỏi gửi lặp vô ích.
+ *
+ * Trả về `true` khi coi như ĐÃ XỬ LÝ XONG thông báo này (gửi đi rồi, hoặc user
+ * không có thiết bị nào để gửi), `false` khi CHƯA gửi được vì lý do tạm thời
+ * (chưa cấu hình FIREBASE_SERVICE_ACCOUNT_BASE64, hoặc lỗi lúc gửi).
+ *
+ * Cron dùng giá trị này để quyết định có set `lastPushedAt` hay không — nếu
+ * đánh dấu bừa khi Firebase chưa cấu hình thì các thông báo đó vĩnh viễn không
+ * bao giờ được gửi lại, kể cả sau khi đã thêm khoá.
  */
-export async function sendPushToUser(userId: string, payload: PushPayload): Promise<void> {
+export async function sendPushToUser(userId: string, payload: PushPayload): Promise<boolean> {
   try {
     const fbApp = getFirebaseApp();
-    if (!fbApp) return;
+    if (!fbApp) return false; // chưa cấu hình khoá → để cron thử lại sau
 
     const tokens = await db.userFcmToken.findMany({
       where: { userId },
       select: { token: true },
     });
-    if (tokens.length === 0) return;
+    if (tokens.length === 0) return true; // không có thiết bị → khỏi thử lại mãi
 
     const messaging = getMessaging(fbApp);
     const res = await messaging.sendEachForMulticast({
@@ -93,7 +101,9 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
     if (deadTokens.length > 0) {
       await db.userFcmToken.deleteMany({ where: { token: { in: deadTokens } } });
     }
+    return true;
   } catch (error) {
     console.error('[fcm] sendPushToUser error:', error);
+    return false; // lỗi tạm thời → cron thử lại lượt sau
   }
 }
