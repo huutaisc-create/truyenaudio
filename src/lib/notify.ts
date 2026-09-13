@@ -1,8 +1,10 @@
 // src/lib/notify.ts
 // Helper tạo/gộp thông báo tương tác (reply/like/mention).
-// LƯU Ý: chỗ này CHỈ ghi DB (để badge + màn thông báo hoạt động qua fetch-on-resume).
-// Gửi FCM push thật sẽ nối sau khi cấu hình firebase-admin (xem TODO ở dưới).
+// Ghi DB (badge + màn thông báo qua fetch-on-resume) + bắn FCM push ngay cho
+// COMMENT_REPLY/CHAT_MENTION (xem src/lib/fcm.ts). COMMENT_LIKE KHÔNG push ở đây —
+// để /api/cron/notify-push gộp theo actorCount rồi push 1 lần (throttle).
 import db from '@/lib/db';
+import { sendPushToUser } from '@/lib/fcm';
 
 export type NotifType = 'COMMENT_REPLY' | 'COMMENT_LIKE' | 'CHAT_MENTION';
 
@@ -69,10 +71,42 @@ export async function createNotification(input: CreateNotifInput) {
     });
   }
 
-  // TODO(FCM): sau khi cấu hình firebase-admin + service account:
-  //   - COMMENT_REPLY / CHAT_MENTION → gửi push NGAY tại đây.
-  //   - COMMENT_LIKE → KHÔNG push ở đây; để cron ~5 phút gom (dựa vào lastPushedAt).
-  //   Lấy token: db.userFcmToken.findMany({ where: { userId: recipientId } }).
+  // Reply/mention: người ta mong phản hồi tức thì → push NGAY, fire-and-forget
+  // (không await — người gửi không phải đợi push xong, xem Social.md 2.1).
+  if (type === 'COMMENT_REPLY' || type === 'CHAT_MENTION') {
+    void pushImmediate(notif.id, recipientId, actorId, type, input);
+  }
 
   return notif;
+}
+
+async function pushImmediate(
+  notificationId: string,
+  recipientId: string,
+  actorId: string,
+  type: NotifType,
+  input: CreateNotifInput
+) {
+  const actor = await db.user.findUnique({ where: { id: actorId }, select: { name: true } });
+  const actorName = actor?.name || 'Ai đó';
+  const preview = input.preview ? `: ${input.preview}` : '';
+
+  const title =
+    type === 'COMMENT_REPLY' ? 'Có người trả lời bình luận của bạn' : 'Bạn được nhắc đến trong Tám Chuyện';
+  const body = `${actorName}${preview}`;
+
+  await sendPushToUser(recipientId, {
+    title,
+    body,
+    highPriority: true,
+    data: {
+      type,
+      notificationId,
+      storySlug: input.storySlug ?? '',
+      commentId: input.commentId ?? '',
+      rootCommentId: input.rootCommentId ?? '',
+      roomId: input.roomId ?? '',
+      messageId: input.messageId ?? '',
+    },
+  });
 }
