@@ -43,6 +43,7 @@ export async function GET(req: Request) {
         storyId: n.storyId,
         storySlug: n.storySlug,
         commentId: n.commentId,
+        rootCommentId: n.rootCommentId,
         roomId: n.roomId,
         messageId: n.messageId,
         preview: n.preview,

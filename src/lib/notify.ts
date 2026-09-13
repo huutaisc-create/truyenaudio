@@ -14,6 +14,7 @@ interface CreateNotifInput {
   storyId?: string | null;
   storySlug?: string | null;
   commentId?: string | null;
+  rootCommentId?: string | null;
   roomId?: string | null;
   messageId?: string | null;
   preview?: string | null;
@@ -44,6 +45,7 @@ export async function createNotification(input: CreateNotifInput) {
         actorCount:
           existing.actorId && existing.actorId !== actorId ? { increment: 1 } : undefined,
         storySlug: input.storySlug ?? undefined,
+        rootCommentId: input.rootCommentId ?? undefined,
         preview: input.preview ?? undefined,
         updatedAt: new Date(),
       },
@@ -58,6 +60,7 @@ export async function createNotification(input: CreateNotifInput) {
         storyId: input.storyId ?? null,
         storySlug: input.storySlug ?? null,
         commentId: input.commentId ?? null,
+        rootCommentId: input.rootCommentId ?? null,
         roomId: input.roomId ?? null,
         messageId: input.messageId ?? null,
         preview: input.preview ?? null,

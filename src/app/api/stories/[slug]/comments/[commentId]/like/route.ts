@@ -19,7 +19,7 @@ export async function POST(
     // Check comment tồn tại (thêm userId + storyId + content để tạo thông báo)
     const comment = await db.comment.findUnique({
       where: { id: commentId },
-      select: { id: true, likeCount: true, userId: true, storyId: true, content: true },
+      select: { id: true, likeCount: true, userId: true, storyId: true, content: true, parentId: true },
     });
     if (!comment) {
       return NextResponse.json({ error: 'Comment not found' }, { status: 404 });
@@ -68,6 +68,7 @@ export async function POST(
         storyId: comment.storyId,
         storySlug: slug,
         commentId: comment.id,
+        rootCommentId: comment.parentId ?? comment.id, // root của comment được like
         preview,
       });
     }

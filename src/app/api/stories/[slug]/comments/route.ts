@@ -194,6 +194,7 @@ export async function POST(
           storyId: story.id,
           storySlug: slug,
           commentId: comment.id,
+          rootCommentId: parentIdToSave, // thread gốc để app mở + cuộn tới reply
           preview: trimmed.length > 80 ? `${trimmed.slice(0, 80)}…` : trimmed,
         });
       }

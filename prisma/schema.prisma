@@ -528,10 +528,11 @@ model Notification {
   id           String           @id @default(uuid())
   recipientId  String
   type         NotificationType
-  storyId      String?
-  storySlug    String?          // để deep-link mở đúng truyện
-  commentId    String?
-  roomId       String?
+  storyId       String?
+  storySlug     String?          // để deep-link mở đúng truyện
+  commentId     String?
+  rootCommentId String?          // thread gốc cần mở (reply); = commentId nếu là comment gốc
+  roomId        String?
   messageId    String?
   preview      String?          // trích đoạn nội dung (hiện dưới câu thông báo)
   groupKey     String           // gộp: vd "like:comment_<id>"
