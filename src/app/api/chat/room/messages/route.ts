@@ -60,7 +60,13 @@ export async function POST(req: Request) {
 
     const spamKeywords = await db.spamKeyword.findMany({ select: { keyword: true } });
     const lower = content.toLowerCase();
-    const hit = spamKeywords.find(k => lower.includes(k.keyword));
+    // Phải lowercase CẢ keyword (keyword lưu hoa sẽ không bao giờ khớp) và bỏ
+    // qua keyword rỗng/toàn khoảng trắng — ''.includes() luôn true, 1 dòng rác
+    // trong bảng SpamKeyword sẽ chặn TOÀN BỘ tin nhắn.
+    const hit = spamKeywords.find(k => {
+      const kw = (k.keyword || '').trim().toLowerCase();
+      return kw.length > 0 && lower.includes(kw);
+    });
     if (hit) {
       return NextResponse.json({ error: 'Tin nhắn chứa nội dung không phù hợp.' }, { status: 400 });
     }
