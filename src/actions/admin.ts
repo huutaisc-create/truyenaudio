@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { ALL_ADMIN_ROLES } from '@/lib/admin-guard'
 import { fetchChapterContent } from '@/lib/chapterContent'
 import { FACET_ORDER, FACET_PARAM } from '@/lib/taxonomy'
+import { queueNewStory, queueStoryUpdate } from '@/lib/storyAnnounce'
 
 async function checkAdmin() {
     const session = await auth()
@@ -188,6 +189,12 @@ export async function createStory(formData: FormData) {
                 }
             }
         });
+
+        // Xếp hàng thông báo "truyện mới" (không bắn push tại đây — cron gom rồi gửi,
+        // xem src/lib/storyAnnounce.ts). Truyện lúc này thường CHƯA CÓ CHƯƠNG nào;
+        // cron sẽ tự đợi tới khi totalChapters > 0 rồi mới báo, để người bấm vào
+        // thông báo không rơi vào một truyện trống trơn.
+        await queueNewStory(newStory.id);
 
         return { success: true, id: newStory.id };
     } catch (error) {
@@ -389,6 +396,11 @@ export async function createChapter(storyId: string, formData: FormData) {
                 lastChapterAt: new Date()
             }
         });
+
+        // Thêm 1 chương → ghi nợ 1 chương vào hàng đợi thông báo.
+        // CHỈ ở đây và createChaptersBulk, KHÔNG ở updateChapter: sửa nội dung
+        // chương cũ không phải là "truyện có chương mới".
+        await queueStoryUpdate(storyId, 1);
 
         return { success: true, id: newChapter.id };
     } catch (error) {
@@ -1196,6 +1208,11 @@ export async function createChaptersBulk(
             ...(created > 0 && { lastChapterAt: new Date() }),
         },
     });
+
+    // Chỉ tính SỐ CHƯƠNG THỰC SỰ MỚI (created), không tính updated/skipped.
+    if (created > 0) {
+        await queueStoryUpdate(storyId, created);
+    }
 
     revalidatePath(`/admin/stories/${storyId}`);
     revalidatePath(`/admin/stories/${storyId}/chapters`);

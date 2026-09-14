@@ -103,6 +103,11 @@ export async function flushStoryAnnouncements(): Promise<FlushResult> {
         JOIN "Story" s ON s."id" = q."storyId"
         WHERE q."kind" = 'NEW' AND q."pendingSince" IS NOT NULL
           AND s."isHidden" = false
+          -- Chưa có chương nào thì CHƯA báo: truyện tạo từ trang admin lúc đầu
+          -- luôn rỗng, admin thêm chương sau. Báo sớm thì người bấm vào thông báo
+          -- rơi vào một truyện trống. Dòng vẫn nằm trong hàng đợi, tự tới lượt khi
+          -- có chương đầu tiên.
+          AND s."totalChapters" > 0
         ORDER BY q."pendingSince" ASC
         LIMIT 1
       `;
