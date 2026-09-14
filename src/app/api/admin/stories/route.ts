@@ -152,7 +152,11 @@ export async function POST(request: NextRequest) {
             const actualTotal = await db.chapter.count({ where: { storyId: story.id } });
             await db.story.update({
                 where: { id: story.id },
-                data:  { totalChapters: actualTotal },
+                data:  {
+                    totalChapters: actualTotal,
+                    // Có chương mới thật sự → đẩy truyện lên đầu "Mới Cập Nhật"
+                    ...(insertedCount > 0 && { lastChapterAt: new Date() }),
+                },
             });
         }
 

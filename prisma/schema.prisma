@@ -92,6 +92,13 @@ model Story {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  // Mốc "Mới Cập Nhật": thời điểm truyện được tạo HOẶC có chương mới nhất.
+  // KHÔNG dùng updatedAt cho việc này — updatedAt bị @updatedAt bump mỗi lần
+  // story.update() chạy, kể cả khi chỉ tăng viewCount lúc user đọc chương,
+  // nên "Mới Cập Nhật" hoá ra là "vừa có người đọc". Cột này chỉ đổi khi
+  // thêm chương mới (xem createChapter / bulk import / POST /api/admin/stories).
+  lastChapterAt   DateTime  @default(now())
+
   // AI-generated SEO review (Gemini)
   aiReview        String?
 
@@ -116,6 +123,7 @@ model Story {
 
   // Index cho listing /api/stories (loc isHidden + sap xep) & muc noi bat
   @@index([isHidden, updatedAt])
+  @@index([isHidden, lastChapterAt])
   @@index([isHidden, viewCount])
   @@index([isHidden, ratingCount])
   @@index([isHidden, createdAt])

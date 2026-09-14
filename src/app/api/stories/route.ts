@@ -55,11 +55,15 @@ export async function GET(request: NextRequest) {
     }
 
     // ── Order by ──────────────────────────────────────────────────────────
-    let orderBy: any = { updatedAt: "desc" }; // default
+    // Mặc định = "mới cập nhật": lastChapterAt (lúc tạo truyện / lúc thêm chương mới).
+    // KHÔNG dùng updatedAt — @updatedAt bị bump cả khi chỉ tăng viewCount lúc user đọc,
+    // khiến danh sách thành "truyện vừa có người mở" thay vì "truyện có chương mới".
+    let orderBy: any = [{ lastChapterAt: "desc" }, { id: "desc" }]; // default
     if (sort === "viewCount")   orderBy = { viewCount:   "desc" };
     if (sort === "ratingCount") orderBy = { ratingCount: "desc" };
     if (sort === "popular")     orderBy = [{ viewCount: "desc" }, { ratingCount: "desc" }];
     if (sort === "newest")      orderBy = { createdAt:   "desc" }; // truyện mới tạo gần đây
+    if (sort === "updatedAt")   orderBy = [{ lastChapterAt: "desc" }, { id: "desc" }];
 
     // ── Query ──────────────────────────────────────────────────────────────
     const [stories, totalItems] = await Promise.all([

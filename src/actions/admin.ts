@@ -384,7 +384,9 @@ export async function createChapter(storyId: string, formData: FormData) {
             where: { id: storyId },
             data: {
                 totalChapters: { increment: 1 },
-                updatedAt: new Date()
+                updatedAt: new Date(),
+                // Mốc "Mới Cập Nhật" — đẩy truyện lên đầu danh sách khi có chương mới
+                lastChapterAt: new Date()
             }
         });
 
@@ -1186,7 +1188,13 @@ export async function createChaptersBulk(
     const actualTotal = await db.chapter.count({ where: { storyId } });
     await db.story.update({
         where: { id: storyId },
-        data: { totalChapters: actualTotal, updatedAt: new Date() },
+        data: {
+            totalChapters: actualTotal,
+            updatedAt: new Date(),
+            // Chỉ đẩy lên "Mới Cập Nhật" khi thực sự có chương MỚI được tạo.
+            // Sửa nội dung chương cũ (updated) không tính là cập nhật truyện.
+            ...(created > 0 && { lastChapterAt: new Date() }),
+        },
     });
 
     revalidatePath(`/admin/stories/${storyId}`);

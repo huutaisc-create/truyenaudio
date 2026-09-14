@@ -82,8 +82,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Sort
-    let orderBy: Prisma.StoryOrderByWithRelationInput = { viewCount: 'desc' }
-    if (sortBy === 'new' || sortBy === 'Mới Cập Nhật') orderBy = { updatedAt: 'desc' }
+    // "Mới Cập Nhật" = truyện mới thêm HOẶC vừa có chương mới lên đầu → lastChapterAt.
+    // KHÔNG dùng updatedAt: @updatedAt bị bump cả khi chỉ tăng viewCount lúc user đọc,
+    // nên trước đây danh sách này thực chất là "truyện vừa có người mở".
+    let orderBy: Prisma.StoryOrderByWithRelationInput | Prisma.StoryOrderByWithRelationInput[] =
+      { viewCount: 'desc' }
+    if (sortBy === 'new' || sortBy === 'Mới Cập Nhật') orderBy = [{ lastChapterAt: 'desc' }, { id: 'desc' }]
     else if (sortBy === 'rating' || sortBy === 'Đánh Giá') orderBy = { ratingScore: 'desc' }
     else if (sortBy === 'nominated' || sortBy === 'Đề Cử') orderBy = { nominationCount: 'desc' }
 

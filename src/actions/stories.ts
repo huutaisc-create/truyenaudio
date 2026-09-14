@@ -128,12 +128,16 @@ export async function searchStories(params: SearchParams) {
     if (month && year) {
         const from = new Date(year, month - 1, 1)
         const to   = new Date(year, month, 1)
-        where.updatedAt = { gte: from, lt: to }
+        // Lọc theo tháng cập nhật → cũng dùng lastChapterAt cho khớp nghĩa "có chương mới"
+        where.lastChapterAt = { gte: from, lt: to }
     }
 
-    let orderBy: Prisma.StoryOrderByWithRelationInput = { viewCount: 'desc' }
+    // "Mới Cập Nhật" phải dựa vào lastChapterAt (lúc tạo truyện / lúc có chương mới),
+    // KHÔNG phải updatedAt — updatedAt bị bump mỗi lần tăng viewCount lúc user đọc.
+    let orderBy: Prisma.StoryOrderByWithRelationInput | Prisma.StoryOrderByWithRelationInput[] =
+        { viewCount: 'desc' }
     switch (sortBy) {
-        case 'Mới Cập Nhật': case 'new': orderBy = { updatedAt: 'desc' }; break
+        case 'Mới Cập Nhật': case 'new': orderBy = [{ lastChapterAt: 'desc' }, { id: 'desc' }]; break
         case 'Đề Cử': case 'rating': orderBy = { ratingScore: 'desc' }; break
         case 'Đánh Giá': orderBy = { ratingScore: 'desc' }; break
         default: orderBy = { viewCount: 'desc' }
