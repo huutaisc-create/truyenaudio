@@ -47,6 +47,11 @@ model User {
   roomMessages       RoomMessage[]
   chatRoomReads      ChatRoomRead[]
   notifications      Notification[]      @relation("NotifRecipient")
+  // --- Kênh bài đăng "Tám Chuyện" ---
+  channelPosts            ChannelPost[]
+  channelPostLikes        ChannelPostLike[]
+  channelPostComments     ChannelPostComment[]
+  channelPostCommentLikes ChannelPostCommentLike[]
 }
 
 // --- CREDIT TRANSACTIONS (audit log) ---
@@ -534,6 +539,8 @@ model Notification {
   rootCommentId String?          // thread gốc cần mở (reply); = commentId nếu là comment gốc
   roomId        String?
   messageId    String?
+  postId        String?          // bài đăng kênh — CÓ postId nghĩa là mở bài đăng,
+                                 // không có thì mở truyện (xem social-migration-4.sql)
   preview      String?          // trích đoạn nội dung (hiện dưới câu thông báo)
   groupKey     String           // gộp: vd "like:comment_<id>"
   actorId      String?
@@ -555,4 +562,81 @@ enum NotificationType {
   COMMENT_REPLY
   COMMENT_LIKE
   CHAT_MENTION
+}
+
+// ── KÊNH BÀI ĐĂNG "TÁM CHUYỆN" ────────────────────────────────────────────────
+// Admin đăng bài (text + ảnh), user thích và bình luận. Thay cho mô hình nhắn tin
+// ngang hàng RoomMessage (bảng đó GIỮ LẠI, chỉ không dùng nữa).
+// Bảng thật tạo bằng prisma/social-migration-4.sql — KHÔNG chạy `prisma migrate dev`.
+
+model ChannelPost {
+  id           String        @id @default(uuid())
+  content      String
+  images       String[]      @default([])   // URL ảnh đã nén WebP qua /api/upload
+  status       CommentStatus @default(VISIBLE)
+  likeCount    Int           @default(0)    // denormalize — khỏi COUNT(*) mỗi lần load feed
+  commentCount Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  likes    ChannelPostLike[]
+  comments ChannelPostComment[]
+
+  // Index thật là partial (WHERE status = 'VISIBLE') → khai báo bằng SQL, xem migration.
+  @@index([createdAt])
+}
+
+model ChannelPostLike {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  postId String
+  post   ChannelPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([postId])
+}
+
+model ChannelPostComment {
+  id         String        @id @default(uuid())
+  content    String
+  parentId   String?       // null = gốc; reply LUÔN trỏ về gốc (nest 1 cấp)
+  replyCount Int           @default(0)
+  likeCount  Int           @default(0)
+  status     CommentStatus @default(VISIBLE)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  postId String
+  post   ChannelPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  parent  ChannelPostComment?  @relation("ChannelPostCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies ChannelPostComment[] @relation("ChannelPostCommentReplies")
+
+  commentLikes ChannelPostCommentLike[]
+
+  @@index([postId, parentId, createdAt])
+  @@index([parentId, createdAt])
+}
+
+model ChannelPostCommentLike {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  commentId String
+  comment   ChannelPostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
 }

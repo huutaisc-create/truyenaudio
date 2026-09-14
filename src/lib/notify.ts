@@ -19,6 +19,9 @@ interface CreateNotifInput {
   rootCommentId?: string | null;
   roomId?: string | null;
   messageId?: string | null;
+  /** Bài đăng kênh. CÓ postId → client mở BÀI ĐĂNG; không có → mở truyện.
+   *  (Cố ý không thêm giá trị enum mới — xem prisma/social-migration-4.sql.) */
+  postId?: string | null;
   preview?: string | null;
 }
 
@@ -48,6 +51,7 @@ export async function createNotification(input: CreateNotifInput) {
           existing.actorId && existing.actorId !== actorId ? { increment: 1 } : undefined,
         storySlug: input.storySlug ?? undefined,
         rootCommentId: input.rootCommentId ?? undefined,
+        postId: input.postId ?? undefined,
         preview: input.preview ?? undefined,
         updatedAt: new Date(),
       },
@@ -65,6 +69,7 @@ export async function createNotification(input: CreateNotifInput) {
         rootCommentId: input.rootCommentId ?? null,
         roomId: input.roomId ?? null,
         messageId: input.messageId ?? null,
+        postId: input.postId ?? null,
         preview: input.preview ?? null,
         actorCount: 1,
       },
@@ -107,6 +112,7 @@ async function pushImmediate(
       rootCommentId: input.rootCommentId ?? '',
       roomId: input.roomId ?? '',
       messageId: input.messageId ?? '',
+      postId: input.postId ?? '',
     },
   });
 }

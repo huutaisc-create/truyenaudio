@@ -107,3 +107,58 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
     return false; // lỗi tạm thời → cron thử lại lượt sau
   }
 }
+
+/**
+ * Gửi push cho TOÀN BỘ thiết bị đã đăng ký — dùng khi admin đăng bài mới ở kênh.
+ *
+ * KHÁC sendPushToUser ở chỗ đây là broadcast: KHÔNG tạo bản ghi Notification cho
+ * từng người (vài nghìn user = vài nghìn dòng cho một sự kiện duy nhất). Người
+ * dùng biết có bài mới qua chấm đỏ trên tab, push chỉ để "tới ngay".
+ *
+ * Trả về số thiết bị gửi thành công. Không bao giờ throw.
+ */
+export async function sendPushToAllDevices(payload: PushPayload): Promise<number> {
+  try {
+    const fbApp = getFirebaseApp();
+    if (!fbApp) return 0;
+
+    const tokens = await db.userFcmToken.findMany({ select: { token: true } });
+    if (tokens.length === 0) return 0;
+
+    const messaging = getMessaging(fbApp);
+    const deadTokens: string[] = [];
+    let sent = 0;
+
+    // sendEachForMulticast chỉ nhận tối đa 500 token mỗi lần → chia lô.
+    const CHUNK = 500;
+    for (let i = 0; i < tokens.length; i += CHUNK) {
+      const chunk = tokens.slice(i, i + CHUNK);
+      const res = await messaging.sendEachForMulticast({
+        tokens: chunk.map((t) => t.token),
+        notification: { title: payload.title, body: payload.body },
+        data: payload.data ?? {},
+        android: { priority: payload.highPriority ? 'high' : 'normal' },
+      });
+
+      sent += res.successCount;
+      res.responses.forEach((r, idx) => {
+        if (r.success) return;
+        const code = r.error?.code ?? '';
+        if (
+          code.includes('registration-token-not-registered') ||
+          code.includes('invalid-argument')
+        ) {
+          deadTokens.push(chunk[idx].token);
+        }
+      });
+    }
+
+    if (deadTokens.length > 0) {
+      await db.userFcmToken.deleteMany({ where: { token: { in: deadTokens } } });
+    }
+    return sent;
+  } catch (error) {
+    console.error('[fcm] sendPushToAllDevices error:', error);
+    return 0;
+  }
+}
