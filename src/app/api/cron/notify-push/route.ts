@@ -20,6 +20,7 @@ interface DueRow {
   actorId: string | null;
   actorCount: number;
   commentId: string | null;
+  postId: string | null;
   storyId: string | null;
   storySlug: string | null;
   rootCommentId: string | null;
@@ -35,7 +36,7 @@ export async function GET(req: Request) {
     // So sánh CỘT-với-CỘT (updatedAt > lastPushedAt) → không seek được bằng Prisma where thường,
     // dùng raw SQL trên partial index "Notification_unread_idx" (WHERE isRead = false).
     const due = await db.$queryRaw<DueRow[]>`
-      SELECT "id", "recipientId", "actorId", "actorCount", "commentId", "storyId", "storySlug", "rootCommentId", "preview"
+      SELECT "id", "recipientId", "actorId", "actorCount", "commentId", "postId", "storyId", "storySlug", "rootCommentId", "preview"
       FROM "Notification"
       WHERE "isRead" = false
         AND "type" = 'COMMENT_LIKE'
@@ -63,10 +64,13 @@ export async function GET(req: Request) {
     for (const n of due) {
       const actorName = n.actorId ? actorMap.get(n.actorId) ?? 'Ai đó' : 'Ai đó';
       const others = n.actorCount > 1 ? ` và ${n.actorCount - 1} người khác` : '';
-      const body = `${actorName}${others} đã thích bình luận của bạn${n.preview ? `: ${n.preview}` : ''}`;
+      // Thích BÀI ĐĂNG (có postId, không có commentId) khác thích BÌNH LUẬN.
+      const isPostLike = !!n.postId && !n.commentId;
+      const what = isPostLike ? 'bài đăng' : 'bình luận';
+      const body = `${actorName}${others} đã thích ${what} của bạn${n.preview ? `: ${n.preview}` : ''}`;
 
       const sent = await sendPushToUser(n.recipientId, {
-        title: 'Có lượt thích mới',
+        title: isPostLike ? 'Có người thích bài đăng của bạn' : 'Có lượt thích mới',
         body,
         // TRƯỚC ĐÂY THIẾU 2 DÒNG NÀY nên push like bị Android hoãn/nuốt khi máy
         // ngủ (priority mặc định = normal). Đó là lý do tắt app thì chỉ thấy thông
@@ -80,6 +84,10 @@ export async function GET(req: Request) {
           storySlug: n.storySlug ?? '',
           commentId: n.commentId ?? '',
           rootCommentId: n.rootCommentId ?? '',
+          // THIẾU DÒNG NÀY thì bấm vào thông báo lượt thích trên bài đăng sẽ không
+          // đi đâu cả: app dựa vào postId để biết mở bài nào, không có thì nó quay
+          // sang storySlug — mà thông báo của kênh thì storySlug rỗng.
+          postId: n.postId ?? '',
         },
       });
 

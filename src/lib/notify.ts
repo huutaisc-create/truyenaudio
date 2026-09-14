@@ -107,6 +107,8 @@ async function pushImmediate(
   // Bình luận GỐC dưới một bài đăng cũng dùng loại COMMENT_REPLY (khỏi thêm enum),
   // phân biệt bằng: có postId mà KHÔNG có rootCommentId → không phải trả lời ai cả.
   const isPostComment = !!input.postId && !input.rootCommentId;
+  // Thích BÀI ĐĂNG (không kèm commentId) khác thích BÌNH LUẬN.
+  const isPostLike = !!input.postId && !input.commentId;
 
   const title =
     type === 'COMMENT_REPLY'
@@ -114,7 +116,9 @@ async function pushImmediate(
         ? 'Có bình luận mới trong bài đăng của bạn'
         : 'Có người trả lời bình luận của bạn'
       : type === 'COMMENT_LIKE'
-        ? 'Có lượt thích mới'
+        ? isPostLike
+          ? 'Có người thích bài đăng của bạn'
+          : 'Có lượt thích mới'
         : 'Bạn được nhắc đến trong Tám Chuyện';
   const body = `${actorName}${preview}`;
   const channel: PushChannel = type === 'COMMENT_LIKE' ? 'like' : 'comment';
