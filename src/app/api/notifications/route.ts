@@ -46,6 +46,9 @@ export async function GET(req: Request) {
         rootCommentId: n.rootCommentId,
         roomId: n.roomId,
         messageId: n.messageId,
+        // CÓ postId → app mở bài đăng kênh; không có → mở truyện.
+        // (Cố ý không thêm giá trị enum mới, xem prisma/social-migration-4.sql.)
+        postId: n.postId,
         preview: n.preview,
         createdAt: n.createdAt,
         updatedAt: n.updatedAt,
