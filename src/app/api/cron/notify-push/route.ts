@@ -10,21 +10,9 @@ import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { sendPushToUser } from '@/lib/fcm';
 import { flushStoryAnnouncements } from '@/lib/storyAnnounce';
+import { checkCronSecret } from '@/lib/cronAuth';
 
 const BATCH_LIMIT = 500;
-
-function checkSecret(req: Request): boolean {
-  const configured = process.env.CRON_SECRET;
-  if (!configured) return false; // fail-closed: chưa cấu hình → không chạy
-
-  const authHeader = req.headers.get('Authorization');
-  if (authHeader === `Bearer ${configured}`) return true;
-
-  const { searchParams } = new URL(req.url);
-  if (searchParams.get('secret') === configured) return true;
-
-  return false;
-}
 
 interface DueRow {
   id: string;
@@ -39,7 +27,7 @@ interface DueRow {
 }
 
 export async function GET(req: Request) {
-  if (!checkSecret(req)) {
+  if (!checkCronSecret(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

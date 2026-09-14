@@ -561,6 +561,9 @@ model Notification {
   recipient User @relation("NotifRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
 
   @@index([recipientId, isRead, updatedAt])
+  // Dọn thông báo cũ hơn N ngày (/api/cron/cleanup) quét theo cột này.
+  // Bảng thật tạo index bằng prisma/social-migration-6.sql.
+  @@index([createdAt])
   // 2 index dưới KHÔNG khai báo được bằng Prisma (partial) → tạo bằng SQL trong migration:
   //   UNIQUE (recipientId, groupKey) WHERE isRead = false
   //   (updatedAt) WHERE isRead = false

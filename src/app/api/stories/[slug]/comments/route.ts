@@ -102,22 +102,15 @@ export async function POST(
 
     const body = await req.json();
     const content = body?.content;
-    // Chuỗi rỗng cũng phải quy về null: `?? null` chỉ bắt undefined/null, mà ''
-    // lọt xuống dưới sẽ bị `if (parentId)` coi là false → reply âm thầm biến thành
-    // bình luận gốc, không ai được báo. Đúng triệu chứng đang gặp.
+    // Chuỗi rỗng PHẢI quy về null. `?? null` chỉ bắt undefined/null, nên khi app
+    // gửi parentId: "" thì nó lọt xuống dưới và bị `if (parentId)` coi là false →
+    // reply âm thầm lưu thành bình luận GỐC, chủ bình luận không hề được báo.
+    // Lỗi này đã xảy ra thật (14/09) và im lặng hoàn toàn — đừng rút gọn lại
+    // thành `?? null`.
     const rawParentId = body?.parentId;
     const parentId: string | null =
       typeof rawParentId === 'string' && rawParentId.trim() !== '' ? rawParentId.trim() : null;
     const trimmed = content?.trim() ?? '';
-
-    // [LOG TẠM — gỡ sau khi tìm ra vì sao reply mất parentId]
-    // In đúng thứ server NHẬN ĐƯỢC: thiếu hẳn khoá, null, chuỗi rỗng hay id thật.
-    console.log(
-      '[comments POST] parentId nhận được =',
-      JSON.stringify(rawParentId),
-      '| kiểu:', typeof rawParentId,
-      '| các khoá trong body:', Object.keys(body ?? {}).join(',')
-    );
 
     // ── [RULE] Nội dung rỗng / quá ngắn ──
     if (!trimmed) {
