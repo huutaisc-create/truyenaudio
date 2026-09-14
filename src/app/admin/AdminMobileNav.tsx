@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, BookOpen, Users, Coins,
   MessageSquareWarning, Bell, Mic2, Replace,
-  ClipboardList, ChevronRight, BookPlus, Menu, X, Megaphone,
+  ClipboardList, ChevronRight, BookPlus, Menu, X, Megaphone, Newspaper,
 } from 'lucide-react'
 import { ROLE_ACCESS, type AdminRole } from '@/lib/admin-guard'
 
@@ -101,6 +101,13 @@ export default function AdminMobileNav({ role, userName }: Props) {
               <NavItem href="/admin/moderation/comments" icon={<MessageSquareWarning size={16} />} label="Bình luận"      pathname={pathname} onClick={close} />
               <NavItem href="/admin/moderation/reviews"  icon={<MessageSquareWarning size={16} />} label="Đánh giá"       pathname={pathname} onClick={close} />
               <NavItem href="/admin/moderation/keywords" icon={<ChevronRight size={16} />}         label="Từ khóa cấm"   pathname={pathname} onClick={close} />
+            </>
+          )}
+
+          {ROLE_ACCESS.channel.includes(r) && (
+            <>
+              <SectionLabel label="KÊNH TÁM CHUYỆN" />
+              <NavItem href="/admin/channel" icon={<Newspaper size={16} />} label="Bài đăng" pathname={pathname} onClick={close} />
             </>
           )}
 

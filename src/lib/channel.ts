@@ -13,13 +13,16 @@ export const MAX_PAGE_SIZE = 50;
 /** Cooldown gửi bình luận, ÉP Ở BACKEND. */
 export const COMMENT_COOLDOWN_MS = 15 * 1000;
 
+/** Role được phép quản trị kênh — khớp với ROLE_ACCESS.channel của trang admin. */
+export const CHANNEL_ROLES = ['ADMIN', 'EDITOR'];
+
 /**
- * Trả về user nếu là ADMIN, ngược lại null.
+ * Trả về user nếu có quyền quản trị kênh, ngược lại null.
  * Dùng `getAuthUser` nên chấp nhận cả JWT (app) lẫn session NextAuth (trang admin web).
  */
 export async function getAdminUser(req: Request): Promise<AuthUser | null> {
   const user = await getAuthUser(req);
-  if (!user || user.role !== 'ADMIN') return null;
+  if (!user || !CHANNEL_ROLES.includes(user.role)) return null;
   return user;
 }
 

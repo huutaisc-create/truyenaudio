@@ -44,6 +44,7 @@ export const ROLE_ACCESS = {
   economy:      ['ADMIN', 'FINANCE'] as AdminRole[],
   moderation:   ['ADMIN', 'MODERATOR'] as AdminRole[],
   notifications:['ADMIN', 'EDITOR'] as AdminRole[],
+  channel:      ['ADMIN', 'EDITOR'] as AdminRole[],   // kênh bài đăng "Tám Chuyện"
   voices:       ['ADMIN', 'EDITOR'] as AdminRole[],
   logs:         ['ADMIN'] as AdminRole[],
 };

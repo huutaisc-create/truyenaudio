@@ -3,7 +3,7 @@ import Link from 'next/link';
 import {
   LayoutDashboard, BookOpen, Users, Coins,
   MessageSquareWarning, Bell, Mic2, Replace,
-  ClipboardList, ChevronRight, BookPlus, Megaphone,
+  ClipboardList, ChevronRight, BookPlus, Megaphone, Newspaper,
 } from 'lucide-react';
 import { auth } from '@/auth';
 import { ALL_ADMIN_ROLES, ROLE_ACCESS, type AdminRole } from '@/lib/admin-guard';
@@ -73,6 +73,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <NavLink href="/admin/moderation/comments" icon={<MessageSquareWarning size={16} />} label="Bình luận" />
               <NavLink href="/admin/moderation/reviews"  icon={<MessageSquareWarning size={16} />} label="Đánh giá" />
               <NavLink href="/admin/moderation/keywords" icon={<ChevronRight size={16} />}         label="Từ khóa cấm" />
+            </>
+          )}
+
+          {/* KÊNH TÁM CHUYỆN */}
+          {ROLE_ACCESS.channel.includes(r) && (
+            <>
+              <SectionLabel label="KÊNH TÁM CHUYỆN" />
+              <NavLink href="/admin/channel" icon={<Newspaper size={16} />} label="Bài đăng" />
             </>
           )}
 
