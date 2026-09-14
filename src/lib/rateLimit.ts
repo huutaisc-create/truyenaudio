@@ -41,7 +41,9 @@ export interface RateLimitResult {
 }
 
 /**
- * Cho phép tối đa `limit` lần với cùng `key` trong `windowMs` mili giây.
+ * Tính LUÔN một lượt rồi trả kết quả. Dùng cho hành động mà mọi lần gọi đều đáng
+ * tính, ví dụ đăng ký tài khoản.
+ *
  * Cửa sổ cố định (fixed window) — đơn giản, đủ dùng, không cần chính xác tuyệt đối.
  */
 export function rateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
@@ -63,4 +65,41 @@ export function rateLimit(key: string, limit: number, windowMs: number): RateLim
 
   bucket.count += 1;
   return { ok: true, retryAfterSec: 0 };
+}
+
+// ── Biến thể cho ĐĂNG NHẬP ────────────────────────────────────────────────────
+// Đăng nhập cần tách "kiểm tra" khỏi "tính lượt": chỉ lần nhập SAI mới đáng bị
+// tính. Nếu tính cả lần đúng thì người dùng bình thường đăng nhập vài lần trong
+// ngày cũng bị khoá, còn kẻ dò mật khẩu thì vẫn dò đủ số lần như nhau.
+
+/** Kiểm tra đã vượt giới hạn chưa — KHÔNG tính thêm lượt nào. */
+export function isRateLimited(key: string, limit: number): RateLimitResult {
+  const now = Date.now();
+  const bucket = buckets.get(key);
+
+  if (!bucket || now > bucket.resetAt || bucket.count < limit) {
+    return { ok: true, retryAfterSec: 0 };
+  }
+  return {
+    ok: false,
+    retryAfterSec: Math.max(1, Math.ceil((bucket.resetAt - now) / 1000)),
+  };
+}
+
+/** Ghi nhận một lần thất bại. */
+export function recordFailure(key: string, windowMs: number): void {
+  const now = Date.now();
+  const bucket = buckets.get(key);
+
+  if (!bucket || now > bucket.resetAt) {
+    if (buckets.size > MAX_KEYS) sweepExpired(now);
+    buckets.set(key, { count: 1, resetAt: now + windowMs });
+    return;
+  }
+  bucket.count += 1;
+}
+
+/** Xoá bộ đếm — gọi khi thao tác thành công (vd đăng nhập đúng). */
+export function resetRateLimit(key: string): void {
+  buckets.delete(key);
 }
