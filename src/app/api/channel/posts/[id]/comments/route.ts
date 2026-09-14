@@ -97,7 +97,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const post = await db.channelPost.findUnique({
       where: { id: postId },
-      select: { id: true, status: true },
+      select: { id: true, status: true, authorId: true },
     });
     if (!post || post.status !== 'VISIBLE') {
       return NextResponse.json({ error: 'Bài đăng không tồn tại' }, { status: 404 });
@@ -141,8 +141,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     recordFailure(cdKey, COMMENT_COOLDOWN_MS); // ghi nhận lượt gửi cho cooldown
 
-    // Báo cho chủ comment gốc. postId có mặt → client mở BÀI ĐĂNG, không phải truyện.
-    if (parentAuthorId && parentAuthorId !== authUser.id) {
+    const preview = content.length > 80 ? `${content.slice(0, 80)}…` : content;
+
+    if (parentAuthorId) {
+      // TRẢ LỜI một bình luận → báo cho chủ bình luận đó.
+      // (createNotification tự bỏ qua khi người nhận chính là người gửi.)
       void createNotification({
         recipientId: parentAuthorId,
         actorId: authUser.id,
@@ -151,7 +154,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         postId,
         commentId: comment.id,
         rootCommentId: rootId,
-        preview: content.length > 80 ? `${content.slice(0, 80)}…` : content,
+        preview,
+      });
+    } else {
+      // BÌNH LUẬN GỐC trên bài đăng → báo cho CHỦ BÀI ĐĂNG (admin).
+      //
+      // Trước đây thiếu nhánh này: chỉ khi ai đó trả lời một bình luận mới có thông
+      // báo, còn người ta vào bình luận thẳng dưới bài thì chủ bài không hề biết —
+      // đúng trường hợp hay gặp nhất. Gộp theo BÀI (không theo từng bình luận) để
+      // 30 người bình luận vào cùng một bài chỉ thành một dòng "A và 29 người khác".
+      void createNotification({
+        recipientId: post.authorId,
+        actorId: authUser.id,
+        type: 'COMMENT_REPLY',
+        groupKey: `post-comment:${postId}`,
+        postId,
+        commentId: comment.id,
+        preview,
       });
     }
 

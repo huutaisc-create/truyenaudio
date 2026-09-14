@@ -91,13 +91,21 @@ function androidConfig(payload: PushPayload) {
   const ch = payload.channel ? PUSH_CHANNELS[payload.channel] : undefined;
   return {
     priority: (payload.highPriority === false ? 'normal' : 'high') as 'high' | 'normal',
-    ...(ch ? { collapseKey: ch.tag } : {}),
+    // ⚠ KHÔNG dùng collapseKey: FCM chỉ cho phép 4 collapse key cùng lúc trên mỗi
+    // thiết bị, mà ở đây có 5 nhóm — vượt thì Google gộp/bỏ bớt một cách khó lường.
+    // `tag` bên dưới đã làm đúng việc cần (thông báo cùng nhóm thay thế nhau trên
+    // khay) và không dính giới hạn đó. Khác biệt duy nhất bị mất là gộp lúc máy
+    // đang offline — không đáng để đánh đổi.
     notification: {
       ...(ch ? { channelId: ch.id, tag: ch.tag } : {}),
       sound: 'default',
-      // Bấm vào là mở app (Flutter tự nhận qua onMessageOpenedApp/getInitialMessage).
-      clickAction: 'FLUTTER_NOTIFICATION_CLICK',
     },
+    // ⚠ TUYỆT ĐỐI KHÔNG set `clickAction` ở đây.
+    // clickAction biến cú bấm thành Intent với action đó; MainActivity của app KHÔNG
+    // khai báo intent-filter nào khớp, nên Android chỉ mở app trống — message không
+    // đi kèm, getInitialMessage() trả null và app không điều hướng tới bài/truyện.
+    // Đã từng thêm dòng này và làm hỏng việc bấm thông báo bài đăng. FlutterFire đời
+    // mới không cần nó.
   };
 }
 

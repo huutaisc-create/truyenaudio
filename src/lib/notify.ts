@@ -1,10 +1,15 @@
 // src/lib/notify.ts
 // Helper tạo/gộp thông báo tương tác (reply/like/mention).
-// Ghi DB (badge + màn thông báo qua fetch-on-resume) + bắn FCM push ngay cho
-// COMMENT_REPLY/CHAT_MENTION (xem src/lib/fcm.ts). COMMENT_LIKE KHÔNG push ở đây —
-// để /api/cron/notify-push gộp theo actorCount rồi push 1 lần (throttle).
+// Ghi DB (badge + màn thông báo qua fetch-on-resume) + bắn FCM push NGAY cho
+// COMMENT_REPLY/CHAT_MENTION, và cho COMMENT_LIKE khi đó là LƯỢT THÍCH ĐẦU TIÊN
+// của nhóm (dòng thông báo vừa được tạo mới).
+//
+// Vì sao like cũng push ngay ở lượt đầu: trước đây like giao hết cho cron 5 phút,
+// nên chuông trong app (fetch-on-resume) đã nhảy số từ lâu mà thông báo hệ thống
+// mãi sau mới tới — nhìn như hỏng. Từ lượt thứ hai trở đi mới để cron gộp theo
+// actorCount rồi bắn 1 lần, để 20 người thích cùng lúc không thành 20 lần rung máy.
 import db from '@/lib/db';
-import { sendPushToUser } from '@/lib/fcm';
+import { sendPushToUser, type PushChannel } from '@/lib/fcm';
 
 export type NotifType = 'COMMENT_REPLY' | 'COMMENT_LIKE' | 'CHAT_MENTION';
 
@@ -78,7 +83,10 @@ export async function createNotification(input: CreateNotifInput) {
 
   // Reply/mention: người ta mong phản hồi tức thì → push NGAY, fire-and-forget
   // (không await — người gửi không phải đợi push xong, xem Social.md 2.1).
-  if (type === 'COMMENT_REPLY' || type === 'CHAT_MENTION') {
+  // Like: chỉ push ngay ở lượt ĐẦU (existing == null); lượt sau để cron gộp.
+  const pushNow =
+    type === 'COMMENT_REPLY' || type === 'CHAT_MENTION' || (type === 'COMMENT_LIKE' && !existing);
+  if (pushNow) {
     void pushImmediate(notif.id, recipientId, actorId, type, input);
   }
 
@@ -96,15 +104,26 @@ async function pushImmediate(
   const actorName = actor?.name || 'Ai đó';
   const preview = input.preview ? `: ${input.preview}` : '';
 
-  const title =
-    type === 'COMMENT_REPLY' ? 'Có người trả lời bình luận của bạn' : 'Bạn được nhắc đến trong Tám Chuyện';
-  const body = `${actorName}${preview}`;
+  // Bình luận GỐC dưới một bài đăng cũng dùng loại COMMENT_REPLY (khỏi thêm enum),
+  // phân biệt bằng: có postId mà KHÔNG có rootCommentId → không phải trả lời ai cả.
+  const isPostComment = !!input.postId && !input.rootCommentId;
 
-  await sendPushToUser(recipientId, {
+  const title =
+    type === 'COMMENT_REPLY'
+      ? isPostComment
+        ? 'Có bình luận mới trong bài đăng của bạn'
+        : 'Có người trả lời bình luận của bạn'
+      : type === 'COMMENT_LIKE'
+        ? 'Có lượt thích mới'
+        : 'Bạn được nhắc đến trong Tám Chuyện';
+  const body = `${actorName}${preview}`;
+  const channel: PushChannel = type === 'COMMENT_LIKE' ? 'like' : 'comment';
+
+  const sent = await sendPushToUser(recipientId, {
     title,
     body,
     highPriority: true,
-    channel: 'comment', // gom chung nhóm "Bình luận & trả lời" trên khay thông báo
+    channel, // gom theo nhóm chức năng trên khay thông báo
     data: {
       type,
       notificationId,
@@ -116,4 +135,13 @@ async function pushImmediate(
       postId: input.postId ?? '',
     },
   });
+
+  // Đánh dấu ĐÃ ĐẨY để cron khỏi bắn lại đúng thông báo này 5 phút sau.
+  // PHẢI dùng raw SQL: Notification.updatedAt khai báo @updatedAt nên
+  // db.notification.update() sẽ tự bump updatedAt lên muộn hơn lastPushedAt, và
+  // điều kiện quét của cron (updatedAt > lastPushedAt) lại thành đúng ngay lập tức
+  // → user nhận lại cùng một thông báo mỗi 5 phút (xem cron/notify-push).
+  if (sent) {
+    await db.$executeRaw`UPDATE "Notification" SET "lastPushedAt" = now() WHERE "id" = ${notificationId}`;
+  }
 }
