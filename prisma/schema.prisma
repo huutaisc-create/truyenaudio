@@ -552,7 +552,7 @@ model Notification {
   preview      String?          // trích đoạn nội dung (hiện dưới câu thông báo)
   groupKey     String           // gộp: vd "like:comment_<id>"
   actorId      String?
-  actorCount   Int              @default(1)
+  actorCount   Int              @default(1)  // STORY_UPDATE dùng lại cột này làm SỐ CHƯƠNG MỚI
   isRead       Boolean          @default(false)
   lastPushedAt DateTime?
   createdAt    DateTime         @default(now())
@@ -570,6 +570,24 @@ enum NotificationType {
   COMMENT_REPLY
   COMMENT_LIKE
   CHAT_MENTION
+  NEW_STORY      // truyện mới thêm vào hệ thống — báo cho tất cả user
+  STORY_UPDATE   // truyện có chương mới — báo cho người theo dõi/từng nghe
+}
+
+// Hàng đợi thông báo truyện — chống spam khi import hàng loạt.
+// Bảng thật tạo bằng prisma/social-migration-5.sql — KHÔNG chạy `prisma migrate dev`.
+// Logic đọc/ghi: src/lib/storyAnnounce.ts
+model StoryAnnounceQueue {
+  id           String    @id @default(uuid())
+  storyId      String
+  kind         String    // 'NEW' | 'UPDATE'
+  pendingCount Int       @default(0)  // UPDATE: số chương mới cộng dồn; NEW: cờ 0/1
+  pendingSince DateTime?              // NULL = không nợ thông báo nào
+  lastSentAt   DateTime?              // mốc cho cửa chặn 30 phút
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([storyId, kind])
+  @@index([kind, pendingSince])
 }
 
 // ── KÊNH BÀI ĐĂNG "TÁM CHUYỆN" ────────────────────────────────────────────────

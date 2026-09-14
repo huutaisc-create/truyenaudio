@@ -47,11 +47,58 @@ function getFirebaseApp(): App | null {
   }
 }
 
+/**
+ * Kênh thông báo Android — GOM THÔNG BÁO THEO CHỨC NĂNG.
+ *
+ * Mỗi loại một `channelId` + một `tag`:
+ *  - channelId: Android xếp thông báo vào đúng nhóm, và người dùng tắt/bật riêng
+ *    từng loại trong Cài đặt (vd chỉ muốn nhận truyện cập nhật, không muốn like).
+ *    ⚠ Kênh phải được TẠO PHÍA APP thì mới có tác dụng phân loại. Chừng nào app
+ *    chưa tạo, Android dồn hết vào kênh mặc định — thông báo vẫn hiện bình thường,
+ *    chỉ là chưa tách nhóm được (xem ghi chú trong Social_Final.md).
+ *  - tag: thông báo cùng tag sẽ THAY THẾ nhau trên khay thay vì chất đống. Ví dụ
+ *    3 truyện cập nhật liên tiếp không đẩy thành 3 dòng riêng.
+ */
+export const PUSH_CHANNELS = {
+  comment: { id: 'noti_comment', tag: 'comment' },   // trả lời / nhắc tên
+  like: { id: 'noti_like', tag: 'like' },            // lượt thích
+  post: { id: 'noti_post', tag: 'post' },            // bảng tin (bài đăng kênh)
+  newStory: { id: 'noti_story_new', tag: 'story_new' },
+  storyUpdate: { id: 'noti_story_update', tag: 'story_update' },
+} as const;
+
+export type PushChannel = keyof typeof PUSH_CHANNELS;
+
 export interface PushPayload {
   title: string;
   body: string;
   data?: Record<string, string>;
   highPriority?: boolean;
+  /** Nhóm chức năng của thông báo — xem PUSH_CHANNELS. */
+  channel?: PushChannel;
+}
+
+/**
+ * Dựng phần cấu hình Android của message.
+ *
+ * ⚠ priority PHẢI là 'high' cho mọi thông báo người dùng cần thấy ngay. Với
+ * priority 'normal', Android ở chế độ Doze (máy nằm yên, màn hình tắt — đúng lúc
+ * app đã đóng) được phép HOÃN message tới hàng chục phút hoặc gộp bỏ. Đây chính
+ * là lý do push bài đăng (đang để high) thì hiện, còn push like bình luận (để
+ * mặc định normal) thì im ru khi tắt app.
+ */
+function androidConfig(payload: PushPayload) {
+  const ch = payload.channel ? PUSH_CHANNELS[payload.channel] : undefined;
+  return {
+    priority: (payload.highPriority === false ? 'normal' : 'high') as 'high' | 'normal',
+    ...(ch ? { collapseKey: ch.tag } : {}),
+    notification: {
+      ...(ch ? { channelId: ch.id, tag: ch.tag } : {}),
+      sound: 'default',
+      // Bấm vào là mở app (Flutter tự nhận qua onMessageOpenedApp/getInitialMessage).
+      clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+    },
+  };
 }
 
 /**
@@ -83,7 +130,7 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
       tokens: tokens.map((t) => t.token),
       notification: { title: payload.title, body: payload.body },
       data: payload.data ?? {},
-      android: { priority: payload.highPriority ? 'high' : 'normal' },
+      android: androidConfig(payload),
     });
 
     const deadTokens: string[] = [];
@@ -137,7 +184,7 @@ export async function sendPushToAllDevices(payload: PushPayload): Promise<number
         tokens: chunk.map((t) => t.token),
         notification: { title: payload.title, body: payload.body },
         data: payload.data ?? {},
-        android: { priority: payload.highPriority ? 'high' : 'normal' },
+        android: androidConfig(payload),
       });
 
       sent += res.successCount;
@@ -159,6 +206,64 @@ export async function sendPushToAllDevices(payload: PushPayload): Promise<number
     return sent;
   } catch (error) {
     console.error('[fcm] sendPushToAllDevices error:', error);
+    return 0;
+  }
+}
+
+/**
+ * Gửi push cho MỘT DANH SÁCH user (vd mọi người đang theo dõi một truyện).
+ *
+ * Khác việc gọi sendPushToUser() trong vòng lặp ở chỗ: lấy token của tất cả họ
+ * bằng MỘT query rồi bắn theo lô 500. Một truyện có 2.000 người theo dõi mà lặp
+ * thì thành 2.000 query + 2.000 lần gọi Firebase.
+ *
+ * Trả về số thiết bị gửi thành công. Không bao giờ throw.
+ */
+export async function sendPushToUsers(userIds: string[], payload: PushPayload): Promise<number> {
+  if (userIds.length === 0) return 0;
+  try {
+    const fbApp = getFirebaseApp();
+    if (!fbApp) return 0;
+
+    const tokens = await db.userFcmToken.findMany({
+      where: { userId: { in: userIds } },
+      select: { token: true },
+    });
+    if (tokens.length === 0) return 0;
+
+    const messaging = getMessaging(fbApp);
+    const deadTokens: string[] = [];
+    let sent = 0;
+
+    const CHUNK = 500; // giới hạn cứng của sendEachForMulticast
+    for (let i = 0; i < tokens.length; i += CHUNK) {
+      const chunk = tokens.slice(i, i + CHUNK);
+      const res = await messaging.sendEachForMulticast({
+        tokens: chunk.map((t) => t.token),
+        notification: { title: payload.title, body: payload.body },
+        data: payload.data ?? {},
+        android: androidConfig(payload),
+      });
+
+      sent += res.successCount;
+      res.responses.forEach((r, idx) => {
+        if (r.success) return;
+        const code = r.error?.code ?? '';
+        if (
+          code.includes('registration-token-not-registered') ||
+          code.includes('invalid-argument')
+        ) {
+          deadTokens.push(chunk[idx].token);
+        }
+      });
+    }
+
+    if (deadTokens.length > 0) {
+      await db.userFcmToken.deleteMany({ where: { token: { in: deadTokens } } });
+    }
+    return sent;
+  } catch (error) {
+    console.error('[fcm] sendPushToUsers error:', error);
     return 0;
   }
 }

@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import db from "@/lib/db";
+import { queueNewStory, queueStoryUpdate } from "@/lib/storyAnnounce";
 
 const UPLOAD_SECRET = process.env.UPLOAD_SECRET || "df5e8753a931894d842645d812d2b23fe89917d87def1633c8926f2c67728a5c";
 
@@ -78,6 +79,15 @@ export async function POST(request: NextRequest) {
                 return { id: genre.id };
             })
         );
+
+        // Truyện đã có sẵn hay chưa — PHẢI hỏi TRƯỚC upsert, vì upsert không nói
+        // cho biết nó vừa tạo mới hay chỉ cập nhật. Dùng để phân biệt thông báo
+        // "truyện mới" với "truyện cập nhật" (xem src/lib/storyAnnounce.ts).
+        const existingStory = await db.story.findUnique({
+            where: { slug: resolvedSlug },
+            select: { id: true },
+        });
+        const isNewStory = !existingStory;
 
         // ── Upsert Story ───────────────────────────────────────
         const story = await db.story.upsert({
@@ -158,6 +168,17 @@ export async function POST(request: NextRequest) {
                     ...(insertedCount > 0 && { lastChapterAt: new Date() }),
                 },
             });
+        }
+
+        // ── Xếp hàng thông báo (KHÔNG bắn push ở đây) ──────────
+        // Chỉ ghi nợ vào StoryAnnounceQueue; cron 5 phút mới gom lại gửi, để script
+        // import đổ hàng chục lô chương không biến thành hàng chục lần rung máy.
+        // Truyện mới thì CHỈ báo "truyện mới" — báo kèm "có N chương mới" cho một
+        // truyện chưa ai từng đọc là thừa.
+        if (isNewStory) {
+            await queueNewStory(story.id);
+        } else if (insertedCount > 0) {
+            await queueStoryUpdate(story.id, insertedCount);
         }
 
         return NextResponse.json({

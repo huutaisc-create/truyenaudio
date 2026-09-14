@@ -5,7 +5,16 @@ import { getAuthUser } from '@/lib/auth-helper';
 
 const PAGE_SIZE = 20;
 
-// GET /api/notifications?after=&limit=  → danh sách thông báo của user hiện tại
+// Nhóm chức năng cho bộ lọc trong app (chuông): mỗi nhóm là một tập loại thông báo.
+// CHAT_MENTION xếp chung "bình luận" — thông báo cũ của phòng chat, vẫn phải xem được.
+const CATEGORY_TYPES: Record<string, string[]> = {
+  comment: ['COMMENT_REPLY', 'CHAT_MENTION'],
+  like: ['COMMENT_LIKE'],
+  new_story: ['NEW_STORY'],
+  story_update: ['STORY_UPDATE'],
+};
+
+// GET /api/notifications?after=&limit=&category=  → danh sách thông báo của user hiện tại
 export async function GET(req: Request) {
   try {
     const authUser = await getAuthUser(req);
@@ -14,9 +23,16 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const after = searchParams.get('after');
     const limit = Math.min(Number(searchParams.get('limit') || PAGE_SIZE), 50);
+    const category = searchParams.get('category');
+    const types = category ? CATEGORY_TYPES[category] : undefined;
 
     const items = await db.notification.findMany({
-      where: { recipientId: authUser.id },
+      where: {
+        recipientId: authUser.id,
+        // category lạ (app cũ gửi tên nhóm không còn dùng) → bỏ qua bộ lọc,
+        // trả về tất cả, hơn là trả rỗng làm người dùng tưởng mất thông báo.
+        ...(types ? { type: { in: types as never[] } } : {}),
+      },
       orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
       take: limit,
       ...(after && { cursor: { id: after }, skip: 1 }),
@@ -32,6 +48,18 @@ export async function GET(req: Request) {
       : [];
     const actorMap = Object.fromEntries(actors.map(a => [a.id, a]));
 
+    // Thông báo truyện mới / truyện cập nhật KHÔNG có actor — thứ cần hiện là TÊN
+    // TRUYỆN. Lấy theo lô cho mọi thông báo có storyId (rẻ, và cũng có ích cho
+    // reply/like để sau này muốn hiện tên truyện thì đã có sẵn).
+    const storyIds = [...new Set(items.map(i => i.storyId).filter(Boolean))] as string[];
+    const stories = storyIds.length
+      ? await db.story.findMany({
+          where: { id: { in: storyIds } },
+          select: { id: true, title: true, coverImage: true },
+        })
+      : [];
+    const storyMap = Object.fromEntries(stories.map(s => [s.id, s]));
+
     return NextResponse.json({
       success: true,
       data: items.map(n => ({
@@ -42,6 +70,8 @@ export async function GET(req: Request) {
         actor: n.actorId ? actorMap[n.actorId] ?? null : null,
         storyId: n.storyId,
         storySlug: n.storySlug,
+        storyTitle: n.storyId ? storyMap[n.storyId]?.title ?? null : null,
+        storyCover: n.storyId ? storyMap[n.storyId]?.coverImage ?? null : null,
         commentId: n.commentId,
         rootCommentId: n.rootCommentId,
         roomId: n.roomId,

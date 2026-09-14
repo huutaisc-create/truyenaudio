@@ -104,6 +104,7 @@ async function pushImmediate(
     title,
     body,
     highPriority: true,
+    channel: 'comment', // gom chung nhóm "Bình luận & trả lời" trên khay thông báo
     data: {
       type,
       notificationId,
