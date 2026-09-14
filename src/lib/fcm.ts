@@ -112,7 +112,17 @@ function androidConfig(payload: PushPayload) {
     notification: {
       ...(ch ? { channelId: ch.id } : {}),
       ...(tag ? { tag } : {}),
-      sound: 'default',
+      // KHÔNG đặt `sound`: thông báo hiện im lặng, không kêu, không rung.
+      //
+      // Đây là app nghe truyện — người dùng hay để máy bên cạnh lúc ngủ hoặc đang
+      // nghe chương khác; một tiếng "ting" báo có truyện mới lúc 2h sáng là phiền
+      // chứ không giúp gì. Thông báo vẫn hiện đầy đủ trên khay và màn khoá.
+      //
+      // ⚠ Từ Android 8 trở đi, ÂM THANH DO KÊNH QUYẾT ĐỊNH, không do message.
+      // Bỏ dòng này chỉ đúng một nửa — nửa còn lại nằm ở MainActivity.kt: kênh phải
+      // được tạo với setSound(null, null). Kênh đã tạo rồi thì KHÔNG sửa được bằng
+      // code (Android khoá thuộc tính kênh sau lần tạo đầu); phải gỡ cài app hoặc
+      // đổi channelId mới ăn.
     },
     // ⚠ TUYỆT ĐỐI KHÔNG set `clickAction` ở đây.
     // clickAction biến cú bấm thành Intent với action đó; MainActivity của app KHÔNG
