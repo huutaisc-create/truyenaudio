@@ -18,7 +18,18 @@ import { randomUUID } from 'crypto';
 import db from '@/lib/db';
 import { sendPushToAllDevices, sendPushToUsers } from '@/lib/fcm';
 
-const GATE_MINUTES = 30;
+/**
+ * Cửa chặn giữa 2 lần báo, tính bằng phút. Mặc định 30.
+ *
+ * Đặt `STORY_ANNOUNCE_GATE_MINUTES=0` trong .env để TẮT HẲN cửa chặn — mỗi lượt cron
+ * là báo ngay, dùng lúc test cho khỏi ngồi đợi nửa tiếng. Nhớ bỏ ra (hoặc trả về 30)
+ * khi chạy thật, không thì import hàng loạt sẽ nổ máy người dùng liên tục.
+ */
+const GATE_MINUTES = (() => {
+  const raw = Number(process.env.STORY_ANNOUNCE_GATE_MINUTES);
+  return Number.isFinite(raw) && raw >= 0 ? raw : 30;
+})();
+
 /** Thời điểm "cũ hơn mốc này thì được phép báo tiếp". */
 function gateCutoff(): Date {
   return new Date(Date.now() - GATE_MINUTES * 60 * 1000);
@@ -81,10 +92,22 @@ interface QueueRow {
 export interface FlushResult {
   newStories: number;
   updatedStories: number;
+  /** Số THIẾT BỊ Firebase nhận được — 0 nghĩa là không máy nào được đẩy. */
+  devicesPushed: number;
+  /** Số người nhận của các thông báo "truyện cập nhật" — 0 nghĩa là chưa ai theo dõi. */
+  updateRecipients: number;
+  /** Cửa chặn đang đặt bao nhiêu phút (để biết .env có ăn không). */
+  gateMinutes: number;
 }
 
 export async function flushStoryAnnouncements(): Promise<FlushResult> {
-  const result: FlushResult = { newStories: 0, updatedStories: 0 };
+  const result: FlushResult = {
+    newStories: 0,
+    updatedStories: 0,
+    devicesPushed: 0,
+    updateRecipients: 0,
+    gateMinutes: GATE_MINUTES,
+  };
 
   // ── 1) TRUYỆN MỚI — toàn cục, mỗi 30 phút đúng 1 truyện ──
   try {
@@ -112,7 +135,7 @@ export async function flushStoryAnnouncements(): Promise<FlushResult> {
         LIMIT 1
       `;
       if (rows.length > 0) {
-        await announceNewStory(rows[0]);
+        result.devicesPushed += await announceNewStory(rows[0]);
         result.newStories = 1;
       }
     }
@@ -135,7 +158,9 @@ export async function flushStoryAnnouncements(): Promise<FlushResult> {
       LIMIT ${UPDATE_PER_RUN}
     `;
     for (const row of rows) {
-      await announceStoryUpdate(row);
+      const r = await announceStoryUpdate(row);
+      result.devicesPushed += r.sent;
+      result.updateRecipients += r.recipients;
       result.updatedStories++;
     }
   } catch (error) {
@@ -147,7 +172,8 @@ export async function flushStoryAnnouncements(): Promise<FlushResult> {
 
 // ─────────────────────────────────────────────────────────────
 
-async function announceNewStory(row: QueueRow) {
+/** Trả về số thiết bị đã đẩy được (để cron báo ra ngoài, tiện chẩn đoán). */
+async function announceNewStory(row: QueueRow): Promise<number> {
   // Dòng trong chuông cho MỌI user. Lấy id theo lô để không nạp cả bảng User vào RAM.
   const users = await db.user.findMany({ select: { id: true } });
   await insertStoryNotifications(
@@ -157,13 +183,14 @@ async function announceNewStory(row: QueueRow) {
     1
   );
 
-  await sendPushToAllDevices({
+  const sent = await sendPushToAllDevices({
     title: 'Truyện mới',
     body: row.title,
     highPriority: true,
     channel: 'newStory',
     data: { type: 'NEW_STORY', storyId: row.storyId, storySlug: row.slug },
   });
+  console.log(`[storyAnnounce] NEW "${row.title}" → đẩy tới ${sent} thiết bị`);
 
   // Xong nợ: xoá cờ, ghi mốc để cửa chặn 30 phút toàn cục có hiệu lực.
   await db.$executeRaw`
@@ -171,9 +198,11 @@ async function announceNewStory(row: QueueRow) {
     SET "pendingCount" = 0, "pendingSince" = NULL, "lastSentAt" = now(), "updatedAt" = now()
     WHERE "id" = ${row.id}
   `;
+
+  return sent;
 }
 
-async function announceStoryUpdate(row: QueueRow) {
+async function announceStoryUpdate(row: QueueRow): Promise<{ sent: number; recipients: number }> {
   // Người theo dõi = có trong Tủ Sách HOẶC từng nghe truyện này.
   const [library, history] = await Promise.all([
     db.library.findMany({ where: { storyId: row.storyId }, select: { userId: true } }),
@@ -183,10 +212,11 @@ async function announceStoryUpdate(row: QueueRow) {
 
   // Không ai theo dõi → vẫn phải xoá nợ, nếu không dòng này kẹt lại mãi trong hàng đợi.
   const count = row.pendingCount;
+  let sent = 0;
   if (recipients.length > 0) {
     await insertStoryNotifications(recipients, row, 'STORY_UPDATE', count);
 
-    await sendPushToUsers(recipients, {
+    sent = await sendPushToUsers(recipients, {
       title: row.title,
       body: count > 1 ? `Có ${count} chương mới` : 'Có chương mới',
       highPriority: true,
@@ -194,6 +224,9 @@ async function announceStoryUpdate(row: QueueRow) {
       data: { type: 'STORY_UPDATE', storyId: row.storyId, storySlug: row.slug },
     });
   }
+  console.log(
+    `[storyAnnounce] UPDATE "${row.title}" +${count} chương → ${recipients.length} người theo dõi, đẩy tới ${sent} thiết bị`
+  );
 
   // TRỪ ĐÚNG SỐ ĐÃ BÁO chứ không gán 0: trong lúc đang gửi có thể có chương mới
   // được ghi nợ thêm, gán 0 là nuốt mất phần đó.
@@ -205,6 +238,8 @@ async function announceStoryUpdate(row: QueueRow) {
         "updatedAt" = now()
     WHERE "id" = ${row.id}
   `;
+
+  return { sent, recipients: recipients.length };
 }
 
 /**
