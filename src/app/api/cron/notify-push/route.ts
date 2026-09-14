@@ -72,6 +72,9 @@ export async function GET(req: Request) {
       const sent = await sendPushToUser(n.recipientId, {
         title: isPostLike ? 'Có người thích bài đăng của bạn' : 'Có lượt thích mới',
         body,
+        // Cùng dòng thông báo → cùng tag → bản gộp mới thay bản cũ trên khay,
+        // đúng ý "A và 3 người khác" thay cho "A đã thích...".
+        tag: n.id,
         // TRƯỚC ĐÂY THIẾU 2 DÒNG NÀY nên push like bị Android hoãn/nuốt khi máy
         // ngủ (priority mặc định = normal). Đó là lý do tắt app thì chỉ thấy thông
         // báo bài đăng (vốn để high) mà không thấy like.

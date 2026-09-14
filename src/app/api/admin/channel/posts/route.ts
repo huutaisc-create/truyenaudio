@@ -86,6 +86,9 @@ export async function POST(req: Request) {
         title: 'Có bài đăng mới',
         body: preview,
         highPriority: true,
+        channel: 'post',
+        // Tag theo BÀI: đăng 2 bài liên tiếp thì hiện 2 dòng, không đè nhau.
+        tag: `post:${post.id}`,
         data: { type: 'NEW_POST', postId: post.id },
       });
     }

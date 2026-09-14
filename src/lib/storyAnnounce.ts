@@ -188,6 +188,8 @@ async function announceNewStory(row: QueueRow): Promise<number> {
     body: row.title,
     highPriority: true,
     channel: 'newStory',
+    // Tag theo TRUYỆN: hai truyện mới khác nhau phải là hai dòng riêng.
+    tag: `story_new:${row.storyId}`,
     data: { type: 'NEW_STORY', storyId: row.storyId, storySlug: row.slug },
   });
   console.log(`[storyAnnounce] NEW "${row.title}" → đẩy tới ${sent} thiết bị`);
@@ -221,6 +223,9 @@ async function announceStoryUpdate(row: QueueRow): Promise<{ sent: number; recip
       body: count > 1 ? `Có ${count} chương mới` : 'Có chương mới',
       highPriority: true,
       channel: 'storyUpdate',
+      // Tag theo TRUYỆN: truyện A và truyện B cùng có chương mới → hai dòng.
+      // Cùng truyện A báo lần nữa (sau cửa chặn) → thay dòng cũ, hợp lý.
+      tag: `story_update:${row.storyId}`,
       data: { type: 'STORY_UPDATE', storyId: row.storyId, storySlug: row.slug },
     });
   }

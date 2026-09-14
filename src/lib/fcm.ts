@@ -48,23 +48,23 @@ function getFirebaseApp(): App | null {
 }
 
 /**
- * Kênh thông báo Android — GOM THÔNG BÁO THEO CHỨC NĂNG.
+ * Kênh thông báo Android — phân loại để người dùng tắt/bật riêng từng nhóm.
  *
- * Mỗi loại một `channelId` + một `tag`:
- *  - channelId: Android xếp thông báo vào đúng nhóm, và người dùng tắt/bật riêng
- *    từng loại trong Cài đặt (vd chỉ muốn nhận truyện cập nhật, không muốn like).
- *    ⚠ Kênh phải được TẠO PHÍA APP thì mới có tác dụng phân loại. Chừng nào app
- *    chưa tạo, Android dồn hết vào kênh mặc định — thông báo vẫn hiện bình thường,
- *    chỉ là chưa tách nhóm được (xem ghi chú trong Social_Final.md).
- *  - tag: thông báo cùng tag sẽ THAY THẾ nhau trên khay thay vì chất đống. Ví dụ
- *    3 truyện cập nhật liên tiếp không đẩy thành 3 dòng riêng.
+ * `channelId` quyết định thông báo nằm nhóm nào trong Cài đặt (vd chỉ muốn nhận
+ * truyện cập nhật, không muốn lượt thích).
+ * ⚠ Kênh phải được TẠO PHÍA APP (MainActivity.kt) thì mới có tác dụng phân loại.
+ * Chừng nào app chưa tạo, Android dồn hết vào kênh mặc định — thông báo vẫn hiện
+ * bình thường, chỉ là chưa tách nhóm được.
+ *
+ * `fallbackTag` CHỈ dùng khi nơi gọi quên truyền `tag` riêng — xem ghi chú ở
+ * androidConfig() để hiểu vì sao tag phải theo ĐỐI TƯỢNG chứ không theo loại.
  */
 export const PUSH_CHANNELS = {
-  comment: { id: 'noti_comment', tag: 'comment' },   // trả lời / nhắc tên
-  like: { id: 'noti_like', tag: 'like' },            // lượt thích
-  post: { id: 'noti_post', tag: 'post' },            // bảng tin (bài đăng kênh)
-  newStory: { id: 'noti_story_new', tag: 'story_new' },
-  storyUpdate: { id: 'noti_story_update', tag: 'story_update' },
+  comment: { id: 'noti_comment', fallbackTag: 'comment' },   // trả lời / nhắc tên
+  like: { id: 'noti_like', fallbackTag: 'like' },            // lượt thích
+  post: { id: 'noti_post', fallbackTag: 'post' },            // bảng tin (bài đăng kênh)
+  newStory: { id: 'noti_story_new', fallbackTag: 'story_new' },
+  storyUpdate: { id: 'noti_story_update', fallbackTag: 'story_update' },
 } as const;
 
 export type PushChannel = keyof typeof PUSH_CHANNELS;
@@ -76,6 +76,11 @@ export interface PushPayload {
   highPriority?: boolean;
   /** Nhóm chức năng của thông báo — xem PUSH_CHANNELS. */
   channel?: PushChannel;
+  /**
+   * Định danh của ĐỐI TƯỢNG được báo (id thông báo, id truyện, id bài đăng…).
+   * Hai push cùng `tag` thì cái sau ĐÈ cái trước trên khay.
+   */
+  tag?: string;
 }
 
 /**
@@ -89,6 +94,14 @@ export interface PushPayload {
  */
 function androidConfig(payload: PushPayload) {
   const ch = payload.channel ? PUSH_CHANNELS[payload.channel] : undefined;
+  // TAG PHẢI THEO ĐỐI TƯỢNG, KHÔNG THEO LOẠI.
+  //
+  // Android coi tag là định danh của thông báo: trùng tag thì cái mới đè cái cũ.
+  // Ban đầu ở đây để tag theo loại (mọi "truyện cập nhật" chung một tag) — hậu quả
+  // là truyện A báo chương mới, rồi truyện B báo, thì dòng của A biến mất, người
+  // dùng mất tin. Đè chỉ đúng khi CHÍNH sự việc đó được cập nhật (vd bình luận của
+  // bạn có thêm lượt thích → dòng cũ nên được thay bằng "B và 3 người khác").
+  const tag = payload.tag ?? ch?.fallbackTag;
   return {
     priority: (payload.highPriority === false ? 'normal' : 'high') as 'high' | 'normal',
     // ⚠ KHÔNG dùng collapseKey: FCM chỉ cho phép 4 collapse key cùng lúc trên mỗi
@@ -97,7 +110,8 @@ function androidConfig(payload: PushPayload) {
     // khay) và không dính giới hạn đó. Khác biệt duy nhất bị mất là gộp lúc máy
     // đang offline — không đáng để đánh đổi.
     notification: {
-      ...(ch ? { channelId: ch.id, tag: ch.tag } : {}),
+      ...(ch ? { channelId: ch.id } : {}),
+      ...(tag ? { tag } : {}),
       sound: 'default',
     },
     // ⚠ TUYỆT ĐỐI KHÔNG set `clickAction` ở đây.

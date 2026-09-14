@@ -127,7 +127,11 @@ async function pushImmediate(
     title,
     body,
     highPriority: true,
-    channel, // gom theo nhóm chức năng trên khay thông báo
+    channel, // nhóm chức năng (để người dùng tắt/bật riêng trong Cài đặt)
+    // Tag = id của DÒNG thông báo này. Lượt thích tiếp theo của cùng bình luận sẽ
+    // gộp vào đúng dòng đó và push lại với cùng tag → thay thế, không chất đống.
+    // Bình luận khác, truyện khác thì tag khác → hiện thành dòng riêng.
+    tag: notificationId,
     data: {
       type,
       notificationId,
