@@ -1,3 +1,10 @@
+// ⚠️ ROUTE CŨ — APP KHÔNG CÒN GỌI (giữ lại có chủ đích, chưa xoá).
+//
+// Thuộc mô hình PHÒNG CHAT NHẮN TIN NGANG HÀNG, đã bị thay bằng KÊNH BÀI ĐĂNG.
+// Route đang phục vụ app nằm ở `src/app/api/channel/*`.
+//
+// Bảng `RoomMessage` vẫn còn trong DB nhưng không được ghi thêm.
+// Chi tiết: Social_Final.md — PHẦN 8.
 // src/app/api/chat/room/unread-count/route.ts
 // Badge tin nhắn chưa đọc của phòng "tam-chuyen" (KHÁC unread-count của /api/notifications).
 import { NextResponse } from 'next/server';

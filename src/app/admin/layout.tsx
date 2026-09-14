@@ -76,10 +76,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </>
           )}
 
-          {/* KÊNH TÁM CHUYỆN */}
+          {/* KÊNH BÀI ĐĂNG */}
           {ROLE_ACCESS.channel.includes(r) && (
             <>
-              <SectionLabel label="KÊNH TÁM CHUYỆN" />
+              <SectionLabel label="BÀI ĐĂNG" />
               <NavLink href="/admin/channel" icon={<Newspaper size={16} />} label="Bài đăng" />
             </>
           )}

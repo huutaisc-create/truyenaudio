@@ -1,3 +1,10 @@
+// ⚠️ ROUTE CHẾT — app không gọi, và cũng KHÔNG THỂ gọi.
+//
+// Route này chỉ xác thực bằng session NextAuth (`auth()`), tức chỉ dùng được từ
+// web. App Flutter đăng nhập bằng JWT nên luôn nhận 401 ở đây.
+//
+// ĐỪNG NHẦM với bình luận truyện đang chạy: `/api/stories/[slug]/comments`.
+// Chi tiết: Social_Final.md — PHẦN 8.8.
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { auth } from '@/auth';

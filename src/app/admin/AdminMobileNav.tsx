@@ -106,7 +106,7 @@ export default function AdminMobileNav({ role, userName }: Props) {
 
           {ROLE_ACCESS.channel.includes(r) && (
             <>
-              <SectionLabel label="KÊNH TÁM CHUYỆN" />
+              <SectionLabel label="BÀI ĐĂNG" />
               <NavItem href="/admin/channel" icon={<Newspaper size={16} />} label="Bài đăng" pathname={pathname} onClick={close} />
             </>
           )}

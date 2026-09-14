@@ -33,7 +33,7 @@ export default async function ChannelAdminPage() {
     <div className="space-y-5 max-w-3xl">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Kênh Tám Chuyện{' '}
+          Bài Đăng{' '}
           <span className="text-base font-normal text-gray-400">({posts.length})</span>
         </h1>
       </div>

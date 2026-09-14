@@ -83,7 +83,7 @@ export async function POST(req: Request) {
     if (sendPush) {
       const preview = content.length > 120 ? `${content.slice(0, 120)}…` : content;
       pushed = await sendPushToAllDevices({
-        title: 'Tám Chuyện có bài mới',
+        title: 'Có bài đăng mới',
         body: preview,
         highPriority: true,
         data: { type: 'NEW_POST', postId: post.id },

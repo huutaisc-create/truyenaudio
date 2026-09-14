@@ -1,3 +1,15 @@
+// ⚠️ ĐỌC KỸ: file này TÊN CŨ nhưng VẪN ĐANG CHẠY — đừng xoá nhầm.
+//
+// `ensureTamChuyenRoom()` hiện được KÊNH BÀI ĐĂNG dùng lại: `/api/channel/read`
+// và `/api/channel/unread-count` lấy `roomId` từ đây để đọc/ghi mốc `lastReadAt`
+// trong bảng `ChatRoomRead`. Kênh chỉ cần đúng một mốc thời gian nên tái sử dụng
+// bảng sẵn có thay vì tạo bảng mới.
+//
+// Các route `/api/chat/room/*` (mô hình nhắn tin cũ) cũng còn import file này,
+// nhưng chúng đã chết. Slug `tam-chuyen` và id `room_tam_chuyen` giữ nguyên vì
+// đổi là phải sửa dữ liệu thật trong DB, trong khi người dùng không nhìn thấy.
+//
+// Chi tiết: Social_Final.md — PHẦN 8.7.
 // src/lib/chatRoom.ts
 // Helper dùng chung cho phòng chat "Tám chuyện" (1 phòng công khai duy nhất).
 import db from '@/lib/db';

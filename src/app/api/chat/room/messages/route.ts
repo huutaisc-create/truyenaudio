@@ -1,3 +1,10 @@
+// ⚠️ ROUTE CŨ — APP KHÔNG CÒN GỌI (giữ lại có chủ đích, chưa xoá).
+//
+// Thuộc mô hình PHÒNG CHAT NHẮN TIN NGANG HÀNG, đã bị thay bằng KÊNH BÀI ĐĂNG.
+// Route đang phục vụ app nằm ở `src/app/api/channel/*`.
+//
+// Bảng `RoomMessage` vẫn còn trong DB nhưng không được ghi thêm.
+// Chi tiết: Social_Final.md — PHẦN 8.
 // src/app/api/chat/room/messages/route.ts
 // Phòng chat công khai "Tám chuyện" — KHÁC ChatMessage theo storySlug (route cũ: /api/chat/[storySlug]/messages).
 import { NextResponse } from 'next/server';
