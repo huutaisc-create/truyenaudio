@@ -62,6 +62,10 @@ export async function GET(
         storyId: story.id,
         // parentId=null → comment GỐC; có parentId → REPLY của comment đó
         parentId: parentId ?? null,
+        // Ẩn bởi admin (từ hàng đợi Báo cáo) → KHÔNG trả về nữa.
+        // Dùng `not: HIDDEN` chứ không phải `equals: VISIBLE`, vì comment
+        // DELETED vẫn phải trả về để render tombstone "đã xoá" giữ mạch reply.
+        status: { not: 'HIDDEN' },
       },
       include: {
         user: { select: { id: true, name: true, image: true, role: true } },

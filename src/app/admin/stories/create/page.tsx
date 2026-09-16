@@ -162,6 +162,22 @@ export default function CreateStoryPage() {
                         </label>
                     </div>
 
+                    {/* Nội dung 18+ — age-gate trên app mobile */}
+                    <div className="col-span-2 flex items-start gap-2">
+                        <input
+                            id="isAdult"
+                            type="checkbox"
+                            name="isAdult"
+                            className="mt-0.5 rounded border-gray-300 text-rose-500 focus:ring-rose-500"
+                        />
+                        <label htmlFor="isAdult" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                            Nội dung 18+ (tình cảm/gợi dục)
+                            <span className="block text-xs text-gray-500 dark:text-gray-400">
+                                Trên app: bìa bị làm mờ kèm nhãn 18+, phải xác nhận đủ 18 tuổi mới nghe được.
+                            </span>
+                        </label>
+                    </div>
+
                     {/* Seeding */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Lượt Xem (Seeding)</label>

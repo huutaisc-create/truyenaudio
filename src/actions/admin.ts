@@ -139,6 +139,7 @@ export async function createStory(formData: FormData) {
     const storyType = (formData.get('storyType') as string) || 'ORIGINAL';
     const isHidden = formData.get('isHidden') === 'on';
     const isCompleted = formData.get('isCompleted') === 'on';
+    const isAdult = formData.get('isAdult') === 'on';
     const translatorName = (formData.get('translatorName') as string) || null;
     const sourceUrl = (formData.get('sourceUrl') as string) || null;
 
@@ -182,6 +183,7 @@ export async function createStory(formData: FormData) {
                 storyType,
                 isHidden,
                 isCompleted,
+                isAdult,
                 translatorName: translatorName || undefined,
                 sourceUrl: sourceUrl || undefined,
                 genres: {
@@ -218,6 +220,7 @@ export async function updateStory(id: string, formData: FormData) {
     const storyType = (formData.get('storyType') as string) || 'ORIGINAL';
     const isHidden = formData.get('isHidden') === 'on';
     const isCompleted = formData.get('isCompleted') === 'on';
+    const isAdult = formData.get('isAdult') === 'on';
     const translatorName = (formData.get('translatorName') as string) || null;
     const sourceUrl = (formData.get('sourceUrl') as string) || null;
 
@@ -252,6 +255,7 @@ export async function updateStory(id: string, formData: FormData) {
                 storyType,
                 isHidden,
                 isCompleted,
+                isAdult,
                 translatorName: translatorName || null,
                 sourceUrl: sourceUrl || null,
                 genres: {
@@ -349,6 +353,20 @@ export async function toggleFeaturedStory(storyId: string, feature: boolean) {
     } else {
         await db.story.update({ where: { id: storyId }, data: { isFeatured: false, featuredOrder: 0 } })
     }
+    revalidatePath('/admin/stories')
+    revalidatePath('/')
+}
+
+/**
+ * Bật/tắt cờ 18+ cho truyện (age-gate nội dung tình cảm/gợi dục).
+ *
+ * App mobile đọc cờ này để: làm mờ bìa + gắn nhãn 18+ ở danh sách, và chặn
+ * màn hình nghe cho tới khi người dùng xác nhận đủ 18 tuổi. Yêu cầu của chính
+ * sách UGC Google Play — xem check_list_pre_publish.md bên repo mobile.
+ */
+export async function toggleStoryAdult(storyId: string, adult: boolean) {
+    await checkAdmin()
+    await db.story.update({ where: { id: storyId }, data: { isAdult: adult } })
     revalidatePath('/admin/stories')
     revalidatePath('/')
 }
@@ -1333,4 +1351,173 @@ export async function getAffiliateStats() {
         if (r.type === 'CLICK') m.clk += r._count._all; else m.imp += r._count._all;
     }
     return { campaigns, recentMap };
+}
+
+// --- BÁO CÁO (REPORT) ACTIONS ---
+// Hàng đợi báo cáo từ app mobile (yêu cầu chính sách UGC Google Play).
+// `Report.targetId` là tham chiếu ĐA HÌNH (không phải khoá ngoại) nên phải nạp
+// nội dung bị báo cáo theo từng loại, không join thẳng được.
+
+const REPORT_REASON_LABEL: Record<string, string> = {
+    SPAM: 'Spam / quảng cáo',
+    SEXUAL: 'Nội dung khiêu dâm',
+    VIOLENCE: 'Bạo lực / gây sốc',
+    HARASSMENT: 'Quấy rối / xúc phạm',
+    HATE: 'Thù ghét / phân biệt',
+    OTHER: 'Khác',
+}
+
+export async function getReports(status = 'PENDING', page = 1) {
+    await checkAdmin()
+    const take = 20
+    const skip = (page - 1) * take
+    const where = status === 'ALL' ? {} : { status }
+
+    const [reports, total, counts] = await Promise.all([
+        db.report.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            take,
+            skip,
+            include: { reporter: { select: { id: true, name: true, email: true } } },
+        }),
+        db.report.count({ where }),
+        db.report.groupBy({ by: ['status'], _count: true }),
+    ])
+
+    const idsOf = (t: string) => reports.filter(r => r.targetType === t).map(r => r.targetId)
+
+    const [comments, posts, postComments, users] = await Promise.all([
+        db.comment.findMany({
+            where: { id: { in: idsOf('COMMENT') } },
+            select: {
+                id: true, content: true, status: true,
+                user: { select: { id: true, name: true } },
+                story: { select: { title: true, slug: true } },
+            },
+        }),
+        db.channelPost.findMany({
+            where: { id: { in: idsOf('CHANNEL_POST') } },
+            select: { id: true, content: true, status: true, author: { select: { id: true, name: true } } },
+        }),
+        db.channelPostComment.findMany({
+            where: { id: { in: idsOf('CHANNEL_POST_COMMENT') } },
+            select: { id: true, content: true, status: true, user: { select: { id: true, name: true } } },
+        }),
+        db.user.findMany({
+            where: { id: { in: idsOf('USER') } },
+            select: { id: true, name: true, email: true },
+        }),
+    ])
+
+    const byId = <T extends { id: string }>(arr: T[]) =>
+        Object.fromEntries(arr.map(x => [x.id, x])) as Record<string, T>
+    const cMap = byId(comments), pMap = byId(posts), pcMap = byId(postComments), uMap = byId(users)
+
+    const items = reports.map(r => {
+        let target: {
+            content: string; authorId: string | null; authorName: string;
+            contentStatus: string | null; context: string; missing: boolean;
+        } = { content: '', authorId: null, authorName: '—', contentStatus: null, context: '', missing: true }
+
+        if (r.targetType === 'COMMENT') {
+            const c = cMap[r.targetId]
+            if (c) target = {
+                content: c.content, authorId: c.user?.id ?? null, authorName: c.user?.name ?? '—',
+                contentStatus: c.status, context: `Bình luận truyện "${c.story?.title ?? '—'}"`, missing: false,
+            }
+        } else if (r.targetType === 'CHANNEL_POST') {
+            const p = pMap[r.targetId]
+            if (p) target = {
+                content: p.content, authorId: p.author?.id ?? null, authorName: p.author?.name ?? '—',
+                contentStatus: p.status, context: 'Bài đăng kênh', missing: false,
+            }
+        } else if (r.targetType === 'CHANNEL_POST_COMMENT') {
+            const pc = pcMap[r.targetId]
+            if (pc) target = {
+                content: pc.content, authorId: pc.user?.id ?? null, authorName: pc.user?.name ?? '—',
+                contentStatus: pc.status, context: 'Bình luận trong kênh', missing: false,
+            }
+        } else if (r.targetType === 'USER') {
+            const u = uMap[r.targetId]
+            if (u) target = {
+                content: u.email, authorId: u.id, authorName: u.name ?? '—',
+                contentStatus: null, context: 'Tài khoản người dùng', missing: false,
+            }
+        }
+
+        return {
+            ...r,
+            reasonLabel: REPORT_REASON_LABEL[r.reason] ?? r.reason,
+            target,
+        }
+    })
+
+    const countMap: Record<string, number> = {}
+    for (const c of counts) countMap[c.status] = (c as any)._count
+
+    return { reports: items, total, totalPages: Math.ceil(total / take), countMap }
+}
+
+/**
+ * Xử lý một báo cáo.
+ *  - 'DISMISS': nội dung không vi phạm → đóng báo cáo, giữ nguyên nội dung.
+ *  - 'HIDE'   : ẩn nội dung khỏi public (status = HIDDEN, KHÔNG xoá dữ liệu),
+ *               đồng thời đóng luôn mọi báo cáo PENDING khác cùng trỏ vào nội
+ *               dung đó — tránh admin phải xử lý lặp lại cùng một thứ.
+ */
+export async function resolveReport(reportId: string, action: 'DISMISS' | 'HIDE') {
+    const session = await checkAdmin()
+
+    const report = await db.report.findUnique({ where: { id: reportId } })
+    if (!report) return { error: 'Không tìm thấy báo cáo' }
+
+    if (action === 'HIDE') {
+        const { targetType, targetId } = report
+        if (targetType === 'COMMENT') {
+            await db.comment.update({ where: { id: targetId }, data: { status: 'HIDDEN' } }).catch(() => {})
+        } else if (targetType === 'CHANNEL_POST') {
+            await db.channelPost.update({ where: { id: targetId }, data: { status: 'HIDDEN' } }).catch(() => {})
+        } else if (targetType === 'CHANNEL_POST_COMMENT') {
+            await db.channelPostComment.update({ where: { id: targetId }, data: { status: 'HIDDEN' } }).catch(() => {})
+        }
+        // USER: không ẩn được tài khoản ở đây — xử lý bên /admin/users.
+
+        await db.report.updateMany({
+            where: { targetType, targetId, status: 'PENDING' },
+            data: { status: 'ACTIONED', reviewedAt: new Date(), reviewedBy: session.user.id! },
+        })
+    } else {
+        await db.report.update({
+            where: { id: reportId },
+            data: { status: 'DISMISSED', reviewedAt: new Date(), reviewedBy: session.user.id! },
+        })
+    }
+
+    await db.adminLog.create({
+        data: {
+            adminId: session.user.id!,
+            action: action === 'HIDE' ? 'REPORT_HIDE_CONTENT' : 'REPORT_DISMISS',
+            targetType: report.targetType,
+            targetId: report.targetId,
+            detail: `reason=${report.reason}`,
+        },
+    }).catch(() => {})
+
+    revalidatePath('/admin/moderation/reports')
+    return { success: true }
+}
+
+/** Bỏ ẩn nội dung đã bị ẩn nhầm (đưa status về VISIBLE). */
+export async function unhideReportedContent(targetType: string, targetId: string) {
+    await checkAdmin()
+    if (targetType === 'COMMENT') {
+        await db.comment.update({ where: { id: targetId }, data: { status: 'VISIBLE' } }).catch(() => {})
+    } else if (targetType === 'CHANNEL_POST') {
+        await db.channelPost.update({ where: { id: targetId }, data: { status: 'VISIBLE' } }).catch(() => {})
+    } else if (targetType === 'CHANNEL_POST_COMMENT') {
+        await db.channelPostComment.update({ where: { id: targetId }, data: { status: 'VISIBLE' } }).catch(() => {})
+    }
+    revalidatePath('/admin/moderation/reports')
+    return { success: true }
 }

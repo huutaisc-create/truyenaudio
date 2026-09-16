@@ -3,7 +3,7 @@ import Link from 'next/link';
 import {
   LayoutDashboard, BookOpen, Users, Coins,
   MessageSquareWarning, Bell, Mic2, Replace,
-  ClipboardList, ChevronRight, BookPlus, Megaphone, Newspaper,
+  ClipboardList, ChevronRight, BookPlus, Megaphone, Newspaper, Flag,
 } from 'lucide-react';
 import { auth } from '@/auth';
 import { ALL_ADMIN_ROLES, ROLE_ACCESS, type AdminRole } from '@/lib/admin-guard';
@@ -70,6 +70,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           {ROLE_ACCESS.moderation.includes(r) && (
             <>
               <SectionLabel label="KIỂM DUYỆT" />
+              <NavLink href="/admin/moderation/reports"  icon={<Flag size={16} />}                 label="Báo cáo" />
               <NavLink href="/admin/moderation/comments" icon={<MessageSquareWarning size={16} />} label="Bình luận" />
               <NavLink href="/admin/moderation/reviews"  icon={<MessageSquareWarning size={16} />} label="Đánh giá" />
               <NavLink href="/admin/moderation/keywords" icon={<ChevronRight size={16} />}         label="Từ khóa cấm" />

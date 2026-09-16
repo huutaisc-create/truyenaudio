@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import StoriesSearchInput from "./StoriesSearchInput";
 import ToggleHiddenButton from "./ToggleHiddenButton";
 import ToggleFeaturedButton from "./ToggleFeaturedButton";
+import ToggleAdultButton from "./ToggleAdultButton";
 import { Suspense } from "react";
 
 const STORY_TYPE_META: Record<string, { label: string; cls: string }> = {
@@ -149,6 +150,11 @@ export default async function AdminStoriesPage({
                                                             ★ Hot
                                                         </span>
                                                     )}
+                                                    {story.isAdult && (
+                                                        <span className="inline-flex items-center gap-0.5 rounded bg-rose-100 px-1 text-[10px] text-rose-700 font-bold">
+                                                            18+
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -175,6 +181,8 @@ export default async function AdminStoriesPage({
                                             <ToggleFeaturedButton storyId={story.id} isFeatured={story.isFeatured ?? false} />
                                             {/* Ẩn/Hiện */}
                                             <ToggleHiddenButton storyId={story.id} isHidden={story.isHidden ?? false} />
+                                            {/* Gắn cờ 18+ (age-gate trên app) */}
+                                            <ToggleAdultButton storyId={story.id} isAdult={story.isAdult ?? false} />
                                             {/* Sửa */}
                                             <Link href={`/admin/stories/${story.id}`} className="text-indigo-500 hover:text-indigo-700">
                                                 <Edit className="h-4 w-4" />
