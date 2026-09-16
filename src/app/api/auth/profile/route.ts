@@ -30,7 +30,7 @@ export async function PATCH(req: Request) {
         }
 
         const body = await req.json();
-        const { name, image, currentPassword, newPassword } = body;
+        const { name, image, currentPassword, newPassword, ageConfirmed } = body;
 
         if (name !== undefined && (!name || name.trim().length < 2)) {
             return NextResponse.json({ error: 'Tên phải ít nhất 2 ký tự' }, { status: 400 });
@@ -39,6 +39,9 @@ export async function PATCH(req: Request) {
         const updateData: any = {};
         if (name) updateData.name = name.trim();
         if (image !== undefined) updateData.image = image;
+        // Xác nhận đủ 18 tuổi (age-gate nội dung 18+) — chỉ cho phép bật, không cho tắt
+        // qua API này (tránh client cũ lỡ gửi false ghi đè xác nhận đã lưu).
+        if (ageConfirmed === true) updateData.ageConfirmed = true;
 
         if (newPassword) {
             if (!currentPassword) {
@@ -65,7 +68,7 @@ export async function PATCH(req: Request) {
         const updatedUser = await db.user.update({
             where: { id: userId },
             data: updateData,
-            select: { id: true, email: true, name: true, image: true, role: true },
+            select: { id: true, email: true, name: true, image: true, role: true, ageConfirmed: true },
         });
 
         return NextResponse.json({ message: 'Cập nhật thành công', user: updatedUser });

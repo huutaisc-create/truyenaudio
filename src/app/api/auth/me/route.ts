@@ -31,6 +31,7 @@ export async function GET(req: Request) {
                 createdAt: true,
                 googleId: true,
                 chaptersRead: true,
+                ageConfirmed: true,
                 // Thống kê nhanh
                 _count: {
                     select: {
@@ -53,6 +54,7 @@ export async function GET(req: Request) {
             role: user.role,
             createdAt: user.createdAt,
             chaptersRead: user.chaptersRead,
+            ageConfirmed: user.ageConfirmed,
             hasPassword: false, // không expose
             hasGoogle: !!user.googleId,
             stats: {

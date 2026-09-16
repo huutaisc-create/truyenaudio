@@ -85,6 +85,7 @@ export async function GET(request: NextRequest) {
           likeCount:     true,
           followCount:   true,
           updatedAt:     true,
+          isAdult:       true,
           genres: {
             select: { name: true, type: true },
           },

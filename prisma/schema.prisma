@@ -25,6 +25,7 @@ model User {
   favoriteGenres  String[]  @default([])     // thể loại yêu thích
   lastCheckIn     DateTime? // Ngày điểm danh gần nhất (UTC midnight)
   currentStreak   Int       @default(0)      // Chuỗi ngày liên tiếp hiện tại
+  ageConfirmed    Boolean   @default(false)   // đã xác nhận đủ 18 tuổi (age-gate nội dung 18+) — đồng bộ qua PATCH /api/auth/profile
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -52,6 +53,10 @@ model User {
   channelPostLikes        ChannelPostLike[]
   channelPostComments     ChannelPostComment[]
   channelPostCommentLikes ChannelPostCommentLike[]
+  // --- Báo cáo / Chặn (yêu cầu chính sách UGC Google Play) ---
+  reportsSubmitted        Report[]                 @relation("ReportsSubmitted")
+  blocksInitiated         UserBlock[]              @relation("BlocksInitiated")
+  blocksReceived          UserBlock[]              @relation("BlocksReceived")
 }
 
 // --- CREDIT TRANSACTIONS (audit log) ---
@@ -110,6 +115,7 @@ model Story {
   featuredOrder   Int       @default(0)            // thứ tự ưu tiên hiển thị (nhỏ hơn = lên trước)
   sourceUrl       String?                          // link nguồn gốc (convert/dịch)
   translatorName  String?                          // tên dịch giả / converter
+  isAdult         Boolean   @default(false)        // nội dung 18+/gợi dục — che bìa + age-gate trước khi mở (chính sách UGC Google Play)
 
   chapters        Chapter[]
   genres          Genre[]
@@ -668,4 +674,44 @@ model ChannelPostCommentLike {
   comment   ChannelPostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
 
   @@unique([userId, commentId])
+}
+
+// ── BÁO CÁO NỘI DUNG / CHẶN NGƯỜI DÙNG ──────────────────────────────────────
+// Yêu cầu bắt buộc của chính sách UGC Google Play cho app có bình luận/kênh/chat.
+// Bảng thật tạo bằng prisma/social-migration-7.sql — KHÔNG chạy `prisma migrate dev`.
+
+model Report {
+  id           String    @id @default(uuid())
+  reporterId   String
+  reporter     User      @relation("ReportsSubmitted", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  targetType   String    // "COMMENT" | "CHANNEL_POST" | "CHANNEL_POST_COMMENT" | "USER"
+  targetId     String
+  targetUserId String?   // id tác giả nội dung bị báo cáo — lọc nhanh theo người mà không phải join
+
+  reason       String    // "SPAM" | "SEXUAL" | "VIOLENCE" | "HARASSMENT" | "HATE" | "OTHER"
+  note         String?
+
+  status       String    @default("PENDING") // "PENDING" | "REVIEWED" | "ACTIONED" | "DISMISSED"
+  createdAt    DateTime  @default(now())
+  reviewedAt   DateTime?
+  reviewedBy   String?
+
+  @@unique([reporterId, targetType, targetId]) // chặn spam report trùng lặp cùng 1 đối tượng
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
+}
+
+model UserBlock {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  blockerId String
+  blocker   User     @relation("BlocksInitiated", fields: [blockerId], references: [id], onDelete: Cascade)
+
+  blockedId String
+  blocked   User     @relation("BlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
 }

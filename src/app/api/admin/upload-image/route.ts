@@ -1,9 +1,24 @@
 // src/app/api/admin/upload-image/route.ts
 // Upload ảnh bìa truyện lên disk, serve tĩnh qua Next.js tại /covers/<slug>.<ext>
+//
+// Dùng bởi script admin ngoài repo (import truyện hàng loạt...), không phải web UI
+// hay app mobile — auth bằng secret header dùng chung (X-Upload-Secret), không phải
+// session admin. Đây là thiết kế có chủ đích, KHÔNG phải lỗ hổng ở việc dùng secret.
+//
+// Rà soát 2026-09-16 — vá 3 lỗ hổng thật sự:
+//  1) Hardcode fallback secret trong code (giống lỗi JWT_SECRET đã vá trước đây) —
+//     bỏ fallback, thiếu env = fail-closed (401), không cho phép dùng secret công khai.
+//  2) Bypass whitelist MIME: code cũ dùng `ALLOWED_MIME[mime] ?? file.name extension`
+//     — mime lạ (hoặc giả header) vẫn lọt qua bằng cách lấy đuôi file client tự đặt,
+//     ghi thẳng ra /covers/*.<đuôi bất kỳ> (SVG chứa script, hoặc đuôi thực thi khác).
+//     → giờ CHỈ chấp nhận mime nằm trong whitelist, không fallback theo tên file.
+//  3) Path traversal qua `slug`: chưa validate, "../../etc/x" từng ghi được ra ngoài
+//     thư mục covers/. → giờ bắt buộc slug khớp /^[a-z0-9-]+$/.
+//  + Thêm giới hạn dung lượng 8MB (giống /api/upload đã có).
 
 import { NextRequest, NextResponse } from "next/server";
 
-const UPLOAD_SECRET = process.env.UPLOAD_SECRET || "df5e8753a931894d842645d812d2b23fe89917d87def1633c8926f2c67728a5c";
+const UPLOAD_SECRET = process.env.UPLOAD_SECRET;
 
 const ALLOWED_MIME: Record<string, string> = {
     "image/jpeg":  "jpg",
@@ -14,8 +29,17 @@ const ALLOWED_MIME: Record<string, string> = {
     "image/avif":  "avif",
 };
 
+const MAX_BYTES = 8 * 1024 * 1024; // 8MB — ảnh bìa gốc chưa nén, rộng rãi hơn /api/upload
+const SLUG_RE = /^[a-z0-9-]+$/;
+
 export async function POST(request: NextRequest) {
-    // Auth
+    // Auth — fail-closed: thiếu UPLOAD_SECRET trong env thì KHÔNG cho qua bằng bất
+    // kỳ giá trị nào (trước đây có fallback hardcode, bỏ luôn cho khớp quy tắc
+    // JWT_SECRET đã áp dụng ở auth-helper.ts).
+    if (!UPLOAD_SECRET) {
+        console.error("upload-image: thiếu UPLOAD_SECRET trong env — từ chối toàn bộ request");
+        return NextResponse.json({ success: false, message: "Server misconfigured" }, { status: 500 });
+    }
     const secret = request.headers.get("X-Upload-Secret");
     if (!secret || secret !== UPLOAD_SECRET) {
         return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
@@ -33,14 +57,28 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const mime = file.type?.toLowerCase() || "";
-        const ext = ALLOWED_MIME[mime]
-            ?? file.name.slice(file.name.lastIndexOf(".") + 1).toLowerCase()
-            ?? "jpg";
-
-        if (!ALLOWED_MIME[mime] && !ext) {
+        // Chặn path traversal — slug chỉ được chữ thường/số/gạch ngang, không '/' '..' v.v.
+        if (!SLUG_RE.test(slug)) {
             return NextResponse.json(
-                { success: false, message: `Unsupported image type: ${mime}` },
+                { success: false, message: "slug không hợp lệ (chỉ a-z, 0-9, dấu -)" },
+                { status: 400 }
+            );
+        }
+
+        if (file.size > MAX_BYTES) {
+            return NextResponse.json(
+                { success: false, message: `File quá lớn, tối đa ${MAX_BYTES / 1024 / 1024}MB` },
+                { status: 400 }
+            );
+        }
+
+        // CHỈ chấp nhận mime nằm trong whitelist — không fallback theo đuôi file
+        // client tự khai (đó là lỗ hổng cho phép ghi file .svg/.php/bất kỳ ra đĩa).
+        const mime = file.type?.toLowerCase() || "";
+        const ext = ALLOWED_MIME[mime];
+        if (!ext) {
+            return NextResponse.json(
+                { success: false, message: `Unsupported image type: ${mime || "(rỗng)"}` },
                 { status: 400 }
             );
         }

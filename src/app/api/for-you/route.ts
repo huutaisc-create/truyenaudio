@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
             slug: true,
             coverImage: true,
             status: true,
+            isAdult: true,
         },
     })
 

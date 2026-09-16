@@ -20,6 +20,37 @@ API public qua `https://api.mytruyenaudio.com` (Cloudflare, SSL Flexible). Prod 
 - DB prod (127.0.0.1 trên VPS) nằm trong `.env` — Prisma CLI đọc file này. (`.env.local` / DB dev Neon còn trong repo nhưng không dùng.)
 - Dùng singleton `import db from '@/lib/db'`, KHÔNG `new PrismaClient()` mỗi route.
 
+### Giải thích "drift" là gì, cho lần sau đọc lại (ghi 2026-09-16)
+
+Prisma có 2 nguồn "sự thật" về cấu trúc DB: `schema.prisma` (mô tả bảng/cột muốn có) và
+`prisma/migrations/` + bảng `_prisma_migrations` trong chính Postgres (lịch sử "đã chạy
+migration nào"). Bình thường 2 thứ này phải khớp nhau.
+
+Repo này chỉ có **đúng 1 migration chính thức**: `20260316225856_init` (3/2026). Mọi thay đổi
+bảng từ đó tới giờ (`social-migration-2.sql` → `social-migration-8.sql`: chat, kênh bài đăng,
+Report, UserBlock, `isAdult`, `ageConfirmed`...) đều chạy tay bằng `psql`, KHÔNG đi qua Prisma
+migration. Đúng quy tắc an toàn (tránh mất data), nhưng hệ quả: `schema.prisma` mô tả DB có
+hàng chục bảng/cột, còn `migrations/` + lịch sử trong DB thì vẫn tưởng chỉ có mỗi `init`. Đó là
+"drift" — 2 nguồn lệch nhau rất xa.
+
+Rủi ro cụ thể: `prisma migrate dev` so sánh migration history với schema hiện tại để tính phần
+chênh cần áp thêm. Lệch nhiều như vậy nó không tự vá được → sẽ đòi RESET database (xoá sạch,
+tạo lại từ migration history) để đồng bộ. Trên prod = mất trắng data. Đây là lý do tuyệt đối
+không chạy `migrate dev`.
+
+Lưu ý phụ: `npm run build` (dùng khi deploy) có sẵn bước `prisma migrate deploy` ở giữa
+(`prisma generate && prisma migrate deploy && next build`). Lệnh này AN TOÀN hơn `migrate dev`
+nhiều — không tự reset, chỉ áp migration còn thiếu trong `migrations/`. Vì thư mục đó chỉ có 1
+file và đã đánh dấu "đã chạy" từ lâu nên hiện tại bước này chạy êm, không lỗi. Nhưng là bom hẹn
+giờ nhẹ: nếu sau này có migration mới đúng chuẩn Prisma được thêm vào `migrations/`, `migrate
+deploy` có thể phát hiện lịch sử không khớp DB thật và báo lỗi, làm gãy build/deploy.
+
+**Cách xử lý đúng khi user sẵn sàng dọn (KHÔNG tự làm khi chưa được yêu cầu, và làm trên
+backup trước):** "baseline" lại migration history — `prisma db pull` để Prisma đọc đúng cấu
+trúc DB thật, tạo migration mới mô tả đúng hiện trạng, rồi đánh dấu đã áp dụng bằng `prisma
+migrate resolve --applied <tên>` (KHÔNG chạy migration đó thật vì DB đã có sẵn rồi). Sau đó
+lịch sử khớp thực tế, không đụng dữ liệu, và từ đó tạo migration mới bình thường được.
+
 ## Bảo mật / quy ước đã chốt
 
 - **JWT_SECRET**: đã bỏ fallback hardcode trong code — BẮT BUỘC set trong env (dev `.env.local`, prod `.env` trên VPS), cùng giá trị. Thiếu là auth hỏng (fail-closed, có chủ đích).

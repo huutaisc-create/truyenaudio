@@ -112,6 +112,7 @@ export async function POST(req: Request) {
                     role: user.role,
                     image: user.image,
                     chaptersRead: user.chaptersRead,
+                ageConfirmed: user.ageConfirmed,
                 },
             },
             { status: 201 }

@@ -98,6 +98,7 @@ export async function GET(request: NextRequest) {
           id: true, title: true, slug: true, coverImage: true,
           author: true, status: true, viewCount: true,
           ratingScore: true, ratingCount: true, totalChapters: true,
+          isAdult: true,
           genres: { select: { name: true, type: true } },
         }
       }),
