@@ -1356,6 +1356,23 @@ export async function getAffiliateStats() {
     return { campaigns, recentMap };
 }
 
+/**
+ * Toàn bộ tag đang tồn tại trong DB (mọi nhóm) — cho bộ chọn tag ở form
+ * Tạo/Sửa truyện hiển thị lại các tag admin đã tự thêm trước đó.
+ *
+ * Trước đây bộ chọn chỉ dựng từ TAXONOMY cứng + tag của riêng truyện đang mở,
+ * nên tag admin tự thêm ở truyện A không hiện khi sửa truyện B hay lúc thêm
+ * truyện mới → admin tưởng thêm không được và gõ lại tay (sinh ra tag trùng
+ * lệch hoa-thường, vd "Ngọt Văn" / "Ngọt văn").
+ */
+export async function getAllGenres() {
+    await checkAdmin()
+    return db.genre.findMany({
+        select: { name: true, type: true },
+        orderBy: [{ type: 'asc' }, { name: 'asc' }],
+    })
+}
+
 // --- BÁO CÁO (REPORT) ACTIONS ---
 // Hàng đợi báo cáo từ app mobile (yêu cầu chính sách UGC Google Play).
 // `Report.targetId` là tham chiếu ĐA HÌNH (không phải khoá ngoại) nên phải nạp

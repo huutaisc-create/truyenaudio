@@ -7,13 +7,33 @@
 // - Mỗi nhóm có ô "+ Thêm tag" để admin tự thêm tag mới khi cần.
 // - Giữ tag cũ ngoài taxonomy (đánh dấu "thêm") để không mất khi lưu.
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Sparkles, Plus } from 'lucide-react'
+import { getAllGenres } from '@/actions/admin'
 import {
   FACET_ORDER, FACET_LABEL, FACET_PARAM, TAXONOMY, classifyTokens, type FacetType,
 } from '@/lib/taxonomy'
 
 type Tag = { name: string; type: FacetType }
+
+// So khớp bỏ qua hoa/thường + khoảng trắng thừa.
+const normTag = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase()
+
+// Gộp nhiều danh sách, loại trùng theo normTag, giữ tên xuất hiện ĐẦU TIÊN
+// (ưu tiên cách viết chuẩn trong TAXONOMY).
+function mergeUnique(...lists: string[][]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const list of lists) {
+    for (const n of list) {
+      const k = normTag(n)
+      if (!k || seen.has(k)) continue
+      seen.add(k)
+      out.push(n)
+    }
+  }
+  return out
+}
 
 function emptySets(): Record<FacetType, Set<string>> {
   return Object.fromEntries(FACET_ORDER.map(f => [f, new Set<string>()])) as Record<FacetType, Set<string>>
@@ -41,6 +61,29 @@ export default function StoryGenrePicker({ initial = [] }: { initial?: Tag[] }) 
     return e
   }, [initial])
 
+  // Tag ĐÃ CÓ TRONG DB nhưng ngoài taxonomy — nạp 1 lần khi mở form, để tag
+  // admin tự thêm ở truyện khác vẫn chọn lại được (không phải gõ tay lần nữa).
+  const [dbExtras, setDbExtras] = useState<Record<FacetType, string[]>>(emptyArrays)
+
+  useEffect(() => {
+    let alive = true
+    getAllGenres()
+      .then(rows => {
+        if (!alive) return
+        const e = emptyArrays()
+        rows.forEach(r => {
+          const t = r.type as FacetType
+          if (!e[t]) return                              // type lạ ngoài 7 nhóm → bỏ qua
+          if (TAXONOMY[t].some(x => normTag(x) === normTag(r.name))) return
+          if (e[t].some(x => normTag(x) === normTag(r.name))) return
+          e[t].push(r.name)
+        })
+        setDbExtras(e)
+      })
+      .catch(() => { /* hỏng mạng thì vẫn dùng được với tag chuẩn */ })
+    return () => { alive = false }
+  }, [])
+
   // Tag admin tự thêm mới (chưa có trong taxonomy) theo từng nhóm.
   const [customExtras, setCustomExtras] = useState<Record<FacetType, string[]>>(emptyArrays)
   const [customInput, setCustomInput] = useState<Record<FacetType, string>>(emptyStrings)
@@ -56,18 +99,13 @@ export default function StoryGenrePicker({ initial = [] }: { initial?: Tag[] }) 
     })
   }
 
-  // So khớp bỏ qua hoa/thường và khoảng trắng thừa. Không có bước này thì gõ
-  // "ngọt văn" khi đã có "Ngọt Văn" sẽ đẻ ra MỘT TAG MỚI trùng nghĩa — lỗi này
-  // đã thật sự xảy ra trên DB (tồn tại cả "Ngọt Văn" lẫn "Ngọt văn").
-  const normTag = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase()
-
   function addCustom(type: FacetType) {
     const raw = (customInput[type] || '').trim().replace(/\s+/g, ' ')
     if (!raw) return
 
     // Đã có sẵn (tag chuẩn / tag cũ của truyện / vừa thêm) → tick lại đúng tag đó
     // thay vì tạo bản sao lệch hoa-thường.
-    const existing = [...TAXONOMY[type], ...initialExtras[type], ...customExtras[type]]
+    const existing = [...TAXONOMY[type], ...dbExtras[type], ...initialExtras[type], ...customExtras[type]]
       .find(n => normTag(n) === normTag(raw))
     const name = existing ?? raw
 
@@ -130,7 +168,7 @@ export default function StoryGenrePicker({ initial = [] }: { initial?: Tag[] }) 
       <p className="text-xs text-gray-500 dark:text-gray-400">Đã chọn <b className="text-brand-primary">{totalSelected}</b> tag</p>
 
       {FACET_ORDER.map(type => {
-        const opts = [...TAXONOMY[type], ...initialExtras[type], ...customExtras[type]]
+        const opts = mergeUnique(TAXONOMY[type], dbExtras[type], initialExtras[type], customExtras[type])
         return (
           <div key={type}>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{FACET_LABEL[type]}</label>
