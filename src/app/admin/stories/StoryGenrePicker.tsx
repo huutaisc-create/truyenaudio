@@ -56,10 +56,24 @@ export default function StoryGenrePicker({ initial = [] }: { initial?: Tag[] }) 
     })
   }
 
+  // So khớp bỏ qua hoa/thường và khoảng trắng thừa. Không có bước này thì gõ
+  // "ngọt văn" khi đã có "Ngọt Văn" sẽ đẻ ra MỘT TAG MỚI trùng nghĩa — lỗi này
+  // đã thật sự xảy ra trên DB (tồn tại cả "Ngọt Văn" lẫn "Ngọt văn").
+  const normTag = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase()
+
   function addCustom(type: FacetType) {
-    const name = (customInput[type] || '').trim()
-    if (!name) return
-    setCustomExtras(prev => prev[type].includes(name) ? prev : { ...prev, [type]: [...prev[type], name] })
+    const raw = (customInput[type] || '').trim().replace(/\s+/g, ' ')
+    if (!raw) return
+
+    // Đã có sẵn (tag chuẩn / tag cũ của truyện / vừa thêm) → tick lại đúng tag đó
+    // thay vì tạo bản sao lệch hoa-thường.
+    const existing = [...TAXONOMY[type], ...initialExtras[type], ...customExtras[type]]
+      .find(n => normTag(n) === normTag(raw))
+    const name = existing ?? raw
+
+    if (!existing) {
+      setCustomExtras(prev => prev[type].includes(name) ? prev : { ...prev, [type]: [...prev[type], name] })
+    }
     setSelected(prev => { const n = { ...prev, [type]: new Set(prev[type]) }; n[type].add(name); return n })
     setCustomInput(prev => ({ ...prev, [type]: '' }))
   }
