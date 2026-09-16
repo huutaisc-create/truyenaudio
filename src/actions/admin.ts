@@ -225,11 +225,6 @@ export async function updateStory(id: string, formData: FormData) {
     const sourceUrl = (formData.get('sourceUrl') as string) || null;
 
     try {
-        await db.story.update({
-            where: { id },
-            data: { genres: { set: [] } }
-        });
-
         // Đọc tag theo từng facet (data-driven từ taxonomy), connectOrCreate đúng type
         const genreConnect = FACET_ORDER.flatMap((facet) =>
             (formData.getAll(FACET_PARAM[facet]) as string[])
@@ -259,6 +254,12 @@ export async function updateStory(id: string, formData: FormData) {
                 translatorName: translatorName || null,
                 sourceUrl: sourceUrl || null,
                 genres: {
+                    // `set: []` phải nằm CHUNG update với connectOrCreate.
+                    // Trước đây tách làm 2 lệnh: lệnh 1 xoá sạch tag, nếu lệnh 2
+                    // lỗi giữa chừng thì truyện mất TOÀN BỘ tag mà form vẫn báo
+                    // "Đã cập nhật thành công". Gộp lại → 1 lệnh, lỗi thì không
+                    // có gì bị xoá.
+                    set: [],
                     connectOrCreate: genreConnect
                 }
             }
@@ -266,9 +267,11 @@ export async function updateStory(id: string, formData: FormData) {
 
         revalidatePath(`/admin/stories/${id}`);
         return { success: true };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Update Story Error:", error);
-        return { error: "Failed to update story" };
+        // Trả kèm lý do thật để form hiện ra được, thay vì chuỗi chung chung
+        // khiến không ai biết vì sao lưu hỏng.
+        return { error: error?.message ? String(error.message).slice(0, 300) : "Failed to update story" };
     }
 }
 

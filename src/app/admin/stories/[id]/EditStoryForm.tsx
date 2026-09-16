@@ -40,8 +40,15 @@ export default function EditStoryForm({ story }: { story: any }) {
     async function handleSubmit(formData: FormData) {
         setIsSubmitting(true);
         if (coverUrl) formData.set('coverImage', coverUrl);
-        await updateStory(story.id, formData);
+        // updateStory TRẢ VỀ { error } khi hỏng chứ không ném exception — trước
+        // đây không đọc giá trị này nên lưu hỏng vẫn báo "thành công", người dùng
+        // tưởng đã lưu (vd tag tự thêm biến mất mà không hiểu vì sao).
+        const res = await updateStory(story.id, formData);
         setIsSubmitting(false);
+        if (res && 'error' in res && res.error) {
+            alert("Lưu THẤT BẠI: " + res.error);
+            return;
+        }
         router.refresh();
         alert("Đã cập nhật thành công!");
     }
