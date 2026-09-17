@@ -15,6 +15,12 @@ API public qua `https://api.mytruyenaudio.com` (Cloudflare, SSL Flexible). Prod 
 - **DB đang có "drift"** (lịch sử migration KHÔNG khớp DB thật, do dự án quản bằng db push).
 - **TUYỆT ĐỐI KHÔNG chạy `prisma migrate dev`** → nó đòi "reset schema = mất TOÀN BỘ data". Nếu nó hỏi reset → trả lời **N**.
 - Thêm/sửa index hay schema trên DB thật: chạy **SQL trực tiếp** (psql) với `CREATE INDEX IF NOT EXISTS ...`, hoặc `prisma db push` cẩn thận. `schema.prisma` cứ khai báo `@@index` để đồng bộ, nhưng tạo index thật bằng SQL.
+- **Chạy psql trên VPS PHẢI nạp env trước**, không thì `$DATABASE_URL` rỗng → psql tự fallback qua Unix socket với role hệ thống (vd `root`) → lỗi `role "root" does not exist`. Nạp bằng:
+  ```
+  export $(grep -v '^#' .env | xargs)
+  psql "$DATABASE_URL" -f prisma/social-migration-N.sql
+  ```
+  (Prisma CLI — `prisma generate`, `prisma migrate deploy` — tự đọc `.env`, không cần bước này; chỉ `psql` gọi trực tiếp mới cần.)
 - **KHÔNG chạy/test ở local.** User chỉ làm việc trên VPS (prod). Mọi hướng dẫn chỉ đưa lệnh chạy trên VPS —
   không nhắc `npm run dev`, DB dev Neon, `.env.local`, hay bước chạy prisma ở máy local.
 - DB prod (127.0.0.1 trên VPS) nằm trong `.env` — Prisma CLI đọc file này. (`.env.local` / DB dev Neon còn trong repo nhưng không dùng.)
