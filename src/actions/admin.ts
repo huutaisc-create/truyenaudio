@@ -143,9 +143,10 @@ export async function createStory(formData: FormData) {
     const translatorName = (formData.get('translatorName') as string) || null;
     const sourceUrl = (formData.get('sourceUrl') as string) || null;
 
-    if (!title || !author) {
+    if (!title) {
         return { error: "Missing required fields" };
     }
+    const authorValue = author && author.trim() ? author.trim() : null;
 
     const slug = title
         .toLowerCase()
@@ -173,7 +174,7 @@ export async function createStory(formData: FormData) {
             data: {
                 title,
                 slug: finalSlug,
-                author,
+                author: authorValue,
                 description,
                 coverImage,
                 status,
@@ -210,6 +211,7 @@ export async function updateStory(id: string, formData: FormData) {
 
     const title = formData.get('title') as string;
     const author = formData.get('author') as string;
+    const authorValue = author && author.trim() ? author.trim() : null;
     const description = formData.get('description') as string;
     const coverImage = formData.get('coverImage') as string;
     const status = formData.get('status') as string;
@@ -240,7 +242,7 @@ export async function updateStory(id: string, formData: FormData) {
             where: { id },
             data: {
                 title,
-                author,
+                author: authorValue,
                 description,
                 coverImage,
                 status,
@@ -304,7 +306,17 @@ export async function deleteStory(id: string) {
     }
 }
 
-export async function getStories(query?: string, page = 1, storyType?: string, showHidden?: boolean) {
+export type StorySortBy = 'recent' | 'chapters';
+export type StorySortDir = 'asc' | 'desc';
+
+export async function getStories(
+    query?: string,
+    page = 1,
+    storyType?: string,
+    showHidden?: boolean,
+    sortBy: StorySortBy = 'recent',
+    sortDir: StorySortDir = 'desc',
+) {
     await checkAdmin();
     const take = 20;
     const skip = (page - 1) * take;
@@ -325,10 +337,16 @@ export async function getStories(query?: string, page = 1, storyType?: string, s
 
     const where = conditions.length > 0 ? { AND: conditions } : {};
 
+    // 'recent': truyện vừa tạo hoặc vừa được admin cập nhật lên đầu (updatedAt).
+    // 'chapters': sắp xếp theo số chương, tăng/giảm dần theo sortDir.
+    const orderBy = sortBy === 'chapters'
+        ? { chapters: { _count: sortDir } }
+        : { updatedAt: sortDir };
+
     const [stories, total] = await Promise.all([
         db.story.findMany({
             where,
-            orderBy: { updatedAt: 'desc' },
+            orderBy: orderBy as any,
             take,
             skip,
             include: { _count: { select: { chapters: true } } }

@@ -63,8 +63,10 @@ export default function EditStoryForm({ story }: { story: any }) {
 
             {/* Tác giả */}
             <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tác Giả</label>
-                <input name="author" defaultValue={story.author} className={inputCls} required />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Tác Giả <span className="font-normal text-gray-400">(không bắt buộc)</span>
+                </label>
+                <input name="author" defaultValue={story.author ?? ''} className={inputCls} />
             </div>
 
             {/* Loại truyện + Trạng thái */}

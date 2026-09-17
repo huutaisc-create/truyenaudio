@@ -72,10 +72,12 @@ export default function CreateStoryPage() {
                         <input name="title" required className={inputCls} />
                     </div>
 
-                    {/* Tác giả */}
+                    {/* Tác giả — không bắt buộc */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tác Giả</label>
-                        <input name="author" required className={inputCls} />
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Tác Giả <span className="font-normal text-gray-400">(không bắt buộc)</span>
+                        </label>
+                        <input name="author" className={inputCls} />
                     </div>
 
                     {/* Trạng thái */}

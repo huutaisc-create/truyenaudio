@@ -1,6 +1,6 @@
 import { getStories, deleteStory } from "@/actions/admin";
 import Link from "next/link";
-import { Plus, Edit, Trash2, EyeOff } from "lucide-react";
+import { Plus, Edit, Trash2, EyeOff, ArrowUpDown } from "lucide-react";
 import DeleteStoryButton from "./DeleteStoryButton";
 import { redirect } from 'next/navigation';
 import StoriesSearchInput from "./StoriesSearchInput";
@@ -23,7 +23,7 @@ const STATUS_META: Record<string, { label: string; cls: string }> = {
 export default async function AdminStoriesPage({
     searchParams,
 }: {
-    searchParams: Promise<{ query?: string; page?: string; type?: string; hidden?: string }>;
+    searchParams: Promise<{ query?: string; page?: string; type?: string; hidden?: string; sort?: string }>;
 }) {
     const params = await searchParams;
     const query = params.query || "";
@@ -31,7 +31,12 @@ export default async function AdminStoriesPage({
     const storyType = params.type || "";
     const showHidden = params.hidden === '1';
 
-    const { stories, total, totalPages } = await getStories(query, page, storyType || undefined, showHidden || undefined);
+    // sort: 'recent' (mặc định — mới tạo/cập nhật lên đầu), 'chapters_asc', 'chapters_desc'
+    const sort = params.sort || 'recent';
+    const sortBy = sort === 'chapters_asc' || sort === 'chapters_desc' ? 'chapters' : 'recent';
+    const sortDir = sort === 'chapters_asc' ? 'asc' : 'desc';
+
+    const { stories, total, totalPages } = await getStories(query, page, storyType || undefined, showHidden || undefined, sortBy, sortDir);
 
     async function handleDelete(id: string) {
         "use server"
@@ -76,6 +81,7 @@ export default async function AdminStoriesPage({
                                 ...(query && { query }),
                                 ...(opt.value && { type: opt.value }),
                                 ...(showHidden && { hidden: '1' }),
+                                ...(sort !== 'recent' && { sort }),
                             })}`}
                             className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                                 storyType === opt.value
@@ -93,6 +99,7 @@ export default async function AdminStoriesPage({
                             ...(query && { query }),
                             ...(storyType && { type: storyType }),
                             ...(!showHidden && { hidden: '1' }),
+                            ...(sort !== 'recent' && { sort }),
                         })}`}
                         className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                             showHidden
@@ -104,6 +111,33 @@ export default async function AdminStoriesPage({
                         {showHidden ? 'Đang xem: Ẩn' : 'Truyện bị ẩn'}
                     </Link>
                 </div>
+
+                {/* Sort control */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                    {[
+                        { value: 'recent', label: 'Mới nhất' },
+                        { value: 'chapters_asc', label: 'Chương: Thấp → Cao' },
+                        { value: 'chapters_desc', label: 'Chương: Cao → Thấp' },
+                    ].map(opt => (
+                        <Link
+                            key={opt.value}
+                            href={`/admin/stories?${new URLSearchParams({
+                                ...(query && { query }),
+                                ...(storyType && { type: storyType }),
+                                ...(showHidden && { hidden: '1' }),
+                                ...(opt.value !== 'recent' && { sort: opt.value }),
+                            })}`}
+                            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                                sort === opt.value
+                                    ? 'bg-orange-500 text-white'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                        >
+                            <ArrowUpDown className="h-3 w-3" />
+                            {opt.label}
+                        </Link>
+                    ))}
+                </div>
             </div>
 
             {/* Table */}
@@ -112,10 +146,10 @@ export default async function AdminStoriesPage({
                     <thead className="bg-gray-50">
                         <tr>
                             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 w-full">Tên Truyện</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hidden sm:table-cell whitespace-nowrap">Tác Giả</th>
                             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 whitespace-nowrap">Loại</th>
                             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hidden md:table-cell whitespace-nowrap">Trạng Thái</th>
                             <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500 hidden md:table-cell whitespace-nowrap">Chương</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hidden sm:table-cell whitespace-nowrap">Ngày Tạo</th>
                             <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 whitespace-nowrap">Hành Động</th>
                         </tr>
                     </thead>
@@ -159,9 +193,6 @@ export default async function AdminStoriesPage({
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell whitespace-nowrap">
-                                        {story.author}
-                                    </td>
                                     <td className="px-4 py-3 whitespace-nowrap">
                                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${typeMeta.cls}`}>
                                             {typeMeta.label}
@@ -174,6 +205,9 @@ export default async function AdminStoriesPage({
                                     </td>
                                     <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell text-center whitespace-nowrap">
                                         {story._count.chapters}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell whitespace-nowrap">
+                                        {new Date(story.createdAt).toLocaleDateString('vi-VN')}
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                         <div className="flex items-center justify-end gap-2.5">
@@ -218,6 +252,7 @@ export default async function AdminStoriesPage({
                                 ...(query && { query }),
                                 ...(storyType && { type: storyType }),
                                 ...(showHidden && { hidden: '1' }),
+                                ...(sort !== 'recent' && { sort }),
                                 page: String(p),
                             })}`}
                             className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${

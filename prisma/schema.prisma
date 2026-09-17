@@ -83,7 +83,7 @@ model Story {
   id              String    @id @default(uuid())
   slug            String    @unique
   title           String
-  author          String
+  author          String?
   description     String?
   coverImage      String?
   status          String    @default("ONGOING")
