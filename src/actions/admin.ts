@@ -306,7 +306,7 @@ export async function deleteStory(id: string) {
     }
 }
 
-export type StorySortBy = 'recent' | 'chapters';
+export type StorySortBy = 'created' | 'chapters';
 export type StorySortDir = 'asc' | 'desc';
 
 export async function getStories(
@@ -314,7 +314,7 @@ export async function getStories(
     page = 1,
     storyType?: string,
     showHidden?: boolean,
-    sortBy: StorySortBy = 'recent',
+    sortBy: StorySortBy = 'created',
     sortDir: StorySortDir = 'desc',
 ) {
     await checkAdmin();
@@ -337,11 +337,13 @@ export async function getStories(
 
     const where = conditions.length > 0 ? { AND: conditions } : {};
 
-    // 'recent': truyện vừa tạo hoặc vừa được admin cập nhật lên đầu (updatedAt).
-    // 'chapters': sắp xếp theo số chương, tăng/giảm dần theo sortDir.
+    // 'created': theo ngày tạo (mặc định mới nhất lên đầu). KHÔNG dùng updatedAt —
+    // nó bị bump mỗi lần có người đọc (tăng viewCount) nên thứ tự nhảy lung tung.
+    // 'chapters': theo số chương, tăng/giảm dần theo sortDir.
+    // Thêm id làm tiêu chí phụ để phân trang ổn định khi trùng giá trị.
     const orderBy = sortBy === 'chapters'
-        ? { chapters: { _count: sortDir } }
-        : { updatedAt: sortDir };
+        ? [{ chapters: { _count: sortDir } }, { id: 'asc' }]
+        : [{ createdAt: sortDir }, { id: 'asc' }];
 
     const [stories, total] = await Promise.all([
         db.story.findMany({
