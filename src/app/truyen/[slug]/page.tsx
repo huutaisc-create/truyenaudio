@@ -101,7 +101,7 @@ const StoryDetail = async ({
         await Promise.all([
             getChaptersByStoryId(storyData.id, currentPage),
             getRelatedStories(storyData.id, storyData.genres.map(g => g.name), 5),
-            getStoriesByAuthor(storyData.author, storyData.id, 4),
+            storyData.author ? getStoriesByAuthor(storyData.author, storyData.id, 4) : Promise.resolve([]),
             getTopNominations(5),
             db.review.findMany({
                 where: { storyId: storyData.id },
